@@ -25,8 +25,8 @@ $ProjectDir = "c:\Users\Administrator\Desktop\webwrold"
 $GhExe      = "D:\githubcil\gh.exe"
 $RepoName   = "jingyu"
 $RepoDesc   = "Jingyu (Jing-Yu) - an end-to-end encrypted healing web app: guqin 5-yin music, encrypted diary bottles, mood checkin, spirit garden, and a secret admin backend. Non-commercial. Privacy-first. Light-touch."
-# Topics: AVOID DASHES (PowerShell parser interprets -xxx as a parameter)
-$Topics     = @("fastapi","jinja2","healing","mental-health","privacy","sqlite","python","jinja","healing-app","diary","end_to_end_encryption")
+# Topics: use hyphens only (GitHub rejects underscores), max 50 chars each
+$Topics     = @("fastapi","jinja2","healing","mental-health","privacy","sqlite","python","jinja","healing-app","diary","end-to-end-encryption")
 
 Set-Location $ProjectDir
 
@@ -78,8 +78,11 @@ Write-Host "[5/6] gh repo create $RepoName (public) + push ..." -ForegroundColor
     --description $RepoDesc
 Write-Host "      OK" -ForegroundColor Green
 
-Write-Host "[6/6] Set topics ..." -ForegroundColor Yellow
-& $GhExe repo edit $RepoName --add-topic $Topics
+Write-Host "[6/6] Set topics (loop, --add-topic accepts only 1 arg) ..." -ForegroundColor Yellow
+foreach ($t in $Topics) {
+    & $GhExe repo edit $RepoName --add-topic $t | Out-Null
+    Write-Host ("      + " + $t) -ForegroundColor DarkGray
+}
 Write-Host "      OK" -ForegroundColor Green
 
 Write-Host ""

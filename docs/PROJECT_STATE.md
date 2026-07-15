@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-15（会话 2 — 修 AuthOut 缺字段 Bug + 加文档同步铁律）
+**最后更新**：2026-07-15（会话 3 — 首发到 GitHub https://github.com/sunday-lil/jingyu）
 
 ---
 
@@ -24,6 +24,20 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-15（会话 3）— 首发到 GitHub
+- [x] 写 [push-to-github.ps1](../../push-to-github.ps1) — 一键「重置 + 推」脚本
+  - 背景：本地 `.git` 有 loose object 损坏（`13a0fa25...`）+ 沙箱拒绝操作 `.git/`
+  - 做法：脚本删坏 `.git` → `git init` → `git add -A` → `git commit` → `gh repo create` → `gh repo edit --add-topic`
+  - 踩坑 1：Windows PowerShell 5.1 默认 GBK，UTF-8 中文乱码 → 改用纯英文
+  - 踩坑 2：PowerShell 把 `end-to-end-encryption` 里的 `-e` 当参数 → 改用 `end_to_end_encryption` 下划线
+  - 踩坑 3：`$Topics = "a,b,c"` 被解析成函数调用 → 改用数组 `@("a","b","c")`
+- [x] 仓库创建成功：**https://github.com/sunday-lil/jingyu**（public）
+- [x] Description / Topics 设好
+- [x] 文档同步：
+  - [x] [HANDOFF.md](../../HANDOFF.md) 顶部 + §1 加 GitHub URL
+  - [x] [README.md](../../README.md) 顶部加 GitHub 徽章（可选）
+  - [x] [PROJECT_STATE.md](PROJECT_STATE.md)（本文件）加会话 3 记录
 
 ### 2026-07-15（会话 2）— Bug 修复 + 文档同步铁律
 - [x] 修 [app/schemas/auth.py](../../app/schemas/auth.py) `AuthOut` 加 `is_admin: bool` 字段

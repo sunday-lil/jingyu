@@ -41,6 +41,8 @@ python start.py --init-db # 启动前重置数据库
 - **当前数据库内的真实首管密码**（2026-07-15 测试用）：`GKmZinzvoXQbaK2D`
   > 这是会话中通过直接改 SQLite 写回的固定密码，便于人工测试；生产环境请改 `.env` → `QI_ADMIN_PASSWORD=` 强密码。
 
+**GitHub**：`https://github.com/sunday-lil/jingyu`（public, MIT 友好，私有项目只发了一次）
+
 ---
 
 ## 2. 技术栈（已定，不要再讨论）
@@ -601,3 +603,5 @@ assert r.status_code in (200, 201)
 > 写于 2026-07-14 — 项目状态：完整可运行，所有 4 Phase 已交付
 >
 > 末次更新 2026-07-15（会话 2）：补 §6.11 Pydantic schema 字段缺失踩坑、§12 文档自动同步铁律、首管密码现状说明。
+>
+> 末次更新 2026-07-15（会话 3）：首发到 GitHub — `https://github.com/sunday-lil/jingyu`（public）。

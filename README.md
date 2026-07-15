@@ -2,6 +2,11 @@
 
 > **非商业 · 纯治愈 · 强隐私 · 轻运营**
 
+[![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Status](https://img.shields.io/badge/status-v1%20shipped-success)]()
+
 一个旨在缓解现代人焦虑情绪、关注心理健康的 Web 应用。通过「古琴五音疗愈」与「私密情绪记录」相结合，提供一个安全、安静、无压力的精神角落。
 
 > 🤖 **AI 接手请先看 [HANDOFF.md](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md)**，那是元信息 + 关键决策 + 踩坑清单的汇总。
