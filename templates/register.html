@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}启程 · 静屿{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card fade-in">
+    <h1 class="auth-card__title">启 程</h1>
+    <div class="auth-card__verse">「每片海，都曾是雪山」</div>
+    <form class="auth-form" data-action="register">
+      <div class="form-field">
+        <label class="form-label" for="nickname">起一个名字</label>
+        <input type="text" name="nickname" id="nickname" class="form-input" required minlength="2" maxlength="20" autocomplete="username">
+        <div class="form-hint">2-20 字。无需真实姓名。</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="password">设一个密码</label>
+        <input type="password" name="password" id="password" class="form-input" required minlength="6" autocomplete="new-password">
+        <div class="form-hint">至少 6 位。<strong>请记住</strong>，它将用来加密你的日记。</div>
+      </div>
+      <div class="form-error" style="min-height:20px;margin-bottom:12px;"></div>
+      <button type="submit" class="btn btn--primary btn--block btn--lg">启 程</button>
+    </form>
+    <div class="auth-card__footer">
+      已经来过？ <a href="/login">入境 →</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/auth.js"></script>
+{% endblock %}

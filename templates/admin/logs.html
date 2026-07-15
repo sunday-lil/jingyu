@@ -1,0 +1,40 @@
+{% extends "admin/_base.html" %}
+{% block title %}运行日志 · 静屿后台{% endblock %}
+
+{% block content %}
+<header class="admin-page-head">
+  <div>
+    <h1 class="admin-page-title">运行日志</h1>
+    <div class="admin-page-sub">路径：<code>{{ log_path }}</code></div>
+  </div>
+  <div class="admin-page-actions">
+    <select class="form-input admin-select" data-level>
+      <option value="all">全部</option>
+      <option value="INFO">INFO</option>
+      <option value="WARNING">WARNING</option>
+      <option value="ERROR">ERROR</option>
+      <option value="DEBUG">DEBUG</option>
+    </select>
+    <input type="number" class="form-input admin-select" data-lines value="200" min="20" max="2000" title="显示行数">
+    <label class="admin-checkbox">
+      <input type="checkbox" data-auto> 自动刷新（3s）
+    </label>
+    <button class="btn btn--primary btn--sm" data-action="refresh">🔄 刷新</button>
+    <button class="btn btn--ghost btn--sm" data-action="download">⬇ 下载</button>
+  </div>
+</header>
+
+<section class="admin-panel">
+  <div class="admin-panel__head">
+    <h2 class="admin-panel__title">tail -f</h2>
+    <div class="admin-panel__sub" data-meta>—</div>
+  </div>
+  <div class="admin-panel__body" style="padding:0;">
+    <pre class="admin-log" data-log>加载中…</pre>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/admin_logs.js"></script>
+{% endblock %}

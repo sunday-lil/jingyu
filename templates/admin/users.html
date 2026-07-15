@@ -1,0 +1,73 @@
+{% extends "admin/_base.html" %}
+{% block title %}用户管理 · 静屿后台{% endblock %}
+
+{% block content %}
+<header class="admin-page-head">
+  <div>
+    <h1 class="admin-page-title">用 户</h1>
+    <div class="admin-page-sub">查看、检索、重置密码、删除账号</div>
+  </div>
+  <div class="admin-page-actions">
+    <button class="btn btn--primary btn--sm" data-action="open-create-user">+ 代建用户</button>
+  </div>
+</header>
+
+<section class="admin-panel">
+  <div class="admin-panel__head admin-toolbar">
+    <input type="search" class="form-input admin-search" data-search placeholder="按昵称搜索…">
+    <label class="admin-checkbox">
+      <input type="checkbox" data-admin-only> 仅管理员
+    </label>
+    <span class="admin-toolbar__count" data-count>共 {{ total }} 人</span>
+  </div>
+  <div class="admin-panel__body" style="padding:0;">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th style="width:60px;">ID</th>
+          <th>昵称</th>
+          <th style="width:80px;">角色</th>
+          <th style="width:90px;">能量</th>
+          <th style="width:80px;">日记</th>
+          <th style="width:80px;">心情</th>
+          <th style="width:160px;">注册时间</th>
+          <th style="width:220px;">操作</th>
+        </tr>
+      </thead>
+      <tbody data-tbody>
+        {% for u in items %}
+        <tr data-row data-user-id="{{ u.id }}" data-nickname="{{ u.nickname }}">
+          <td><code>#{{ u.id }}</code></td>
+          <td>
+            <a href="{{ admin_path_prefix }}/users/{{ u.id }}" class="admin-table__name">{{ u.nickname }}</a>
+          </td>
+          <td>
+            {% if u.is_admin %}<span class="admin-tag admin-tag--admin">管理员</span>{% else %}<span class="admin-tag">用户</span>{% endif %}
+          </td>
+          <td>{{ u.total_energy }}</td>
+          <td>{{ u.diary_count }} <span style="color:var(--color-text-muted);font-size:12px;">(公{{ u.public_diary_count }})</span></td>
+          <td>{{ u.mood_count }}</td>
+          <td><span class="admin-time" data-iso="{{ u.created_at.isoformat() if u.created_at else '' }}"></span></td>
+          <td>
+            <a class="btn btn--ghost btn--sm" href="{{ admin_path_prefix }}/users/{{ u.id }}">查看</a>
+            <button class="btn btn--ghost btn--sm" data-action="reset-password" data-user-id="{{ u.id }}" data-nickname="{{ u.nickname }}">重置密码</button>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not items %}
+        <tr><td colspan="8" class="admin-empty">暂无用户</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  <div class="admin-panel__foot admin-pager">
+    <button class="btn btn--ghost btn--sm" data-pager="prev">← 上一页</button>
+    <span data-pager-info>第 1 页</span>
+    <button class="btn btn--ghost btn--sm" data-pager="next">下一页 →</button>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/admin_users.js"></script>
+{% endblock %}

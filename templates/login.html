@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}入境 · 静屿{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card fade-in">
+    <h1 class="auth-card__title">入 境</h1>
+    <div class="auth-card__verse">「归来仍是你」</div>
+    <form class="auth-form" data-action="login">
+      <div class="form-field">
+        <label class="form-label" for="nickname">昵称</label>
+        <input type="text" name="nickname" id="nickname" class="form-input" required minlength="2" maxlength="20" autocomplete="username">
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="password">密码</label>
+        <input type="password" name="password" id="password" class="form-input" required minlength="6" autocomplete="current-password">
+      </div>
+      <div class="form-error" style="min-height:20px;margin-bottom:12px;"></div>
+      <button type="submit" class="btn btn--primary btn--block btn--lg">入 境</button>
+    </form>
+    <div class="auth-card__footer">
+      还没有来过？ <a href="/register">启程 →</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/auth.js"></script>
+{% endblock %}

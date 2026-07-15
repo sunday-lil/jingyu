@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{% block title %}静屿 · 后台{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/07-admin.css">
+  {% block extra_css %}{% endblock %}
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗝️</text></svg>">
+</head>
+<body class="admin-body">
+  <div class="admin-shell">
+    {% if current_user and current_user.is_admin %}
+    <aside class="admin-side">
+      <div class="admin-side__brand">
+        <span class="admin-side__logo">🗝️</span>
+        <div>
+          <div class="admin-side__title">静屿 · 后台</div>
+          <div class="admin-side__sub">Inner Garden</div>
+        </div>
+      </div>
+
+      <nav class="admin-side__nav">
+        <a href="{{ admin_path_prefix }}/" class="admin-side__link {% if request.url.path == admin_path_prefix + '/' %}is-active{% endif %}">
+          <span>📊</span> 概览
+        </a>
+        <a href="{{ admin_path_prefix }}/users" class="admin-side__link {% if '/users' in request.url.path %}is-active{% endif %}">
+          <span>👥</span> 用户
+        </a>
+        <a href="{{ admin_path_prefix }}/logs" class="admin-side__link {% if request.url.path.endswith('/logs') %}is-active{% endif %}">
+          <span>📜</span> 日志
+        </a>
+        <a href="{{ admin_path_prefix }}/system" class="admin-side__link {% if request.url.path.endswith('/system') %}is-active{% endif %}">
+          <span>🔧</span> 系统
+        </a>
+      </nav>
+
+      <div class="admin-side__foot">
+        <div class="admin-side__user">
+          <div class="admin-side__user-avatar">{{ current_user.nickname[0] }}</div>
+          <div>
+            <div class="admin-side__user-name">{{ current_user.nickname }}</div>
+            <div class="admin-side__user-role">管理员</div>
+          </div>
+        </div>
+        <a href="/" class="admin-side__link admin-side__link--soft">
+          <span>🏡</span> 回到前台
+        </a>
+        <form id="admin-logout-form" action="/api/auth/logout" method="post" style="margin:0;">
+          <button type="submit" class="admin-side__link admin-side__link--soft" style="width:100%;border:none;background:transparent;text-align:left;cursor:pointer;">
+            <span>🚪</span> 离开
+          </button>
+        </form>
+      </div>
+    </aside>
+    {% endif %}
+
+    <main class="admin-main {% if not current_user or not current_user.is_admin %}admin-main--solo{% endif %}">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/static/js/app.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

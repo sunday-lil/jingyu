@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}兑换 · 静屿{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <h1 class="page-header__title">小 礼 物</h1>
+  <p class="page-header__subtitle">用攒下的能量，给自己一点小欢喜</p>
+</div>
+
+<div class="card fade-in" style="text-align:center;margin-bottom:24px;">
+  <span style="color:var(--color-text-secondary);">我的能量：</span>
+  <strong style="color:var(--color-accent);font-size:24px;font-family:var(--font-serif);" data-energy-display>{{ current_user.total_energy if current_user else 0 }}</strong>
+  <span style="color:var(--color-text-muted);font-size:13px;margin-left:8px;">🍃</span>
+</div>
+
+{% for type_name, type_label in [("flower", "🌸 花种"), ("costume", "🎎 装扮"), ("badge", "🏅 徽章")] %}
+  {% if items_by_type.get(type_name) %}
+  <h2 style="font-family:var(--font-serif);font-weight:400;margin:32px 0 16px;color:var(--color-text-secondary);">{{ type_label }}</h2>
+  <div class="grid grid--3">
+    {% for it in items_by_type[type_name] %}
+    <div class="shop-item fade-in">
+      <div class="shop-item__image">{{ it.image }}</div>
+      <div class="shop-item__name">{{ it.name }}</div>
+      <div class="shop-item__desc">{{ it.description }}</div>
+      {% if it.cost > 0 %}
+        <div class="shop-item__cost">🍃 {{ it.cost }} 能量</div>
+        <button class="btn btn--soft btn--sm" data-exchange="{{ it.id }}">兑 换</button>
+      {% else %}
+        <div class="shop-item__cost" style="color:var(--color-text-muted);">自动获得</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/shop.js"></script>
+{% endblock %}

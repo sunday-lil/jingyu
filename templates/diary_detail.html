@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}一只瓶子 · 静屿{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;margin:0 auto;">
+  <div style="margin-bottom:16px;">
+    <a href="/my-bottles" class="btn btn--ghost btn--sm">← 回到我的瓶子</a>
+  </div>
+
+  <input type="hidden" id="encryption-salt" value="{{ encryption_salt }}">
+  <input type="hidden" id="user-nickname" value="{{ current_user.nickname }}">
+
+  <div class="page-header" style="text-align:left;margin:24px 0;">
+    <div style="display:flex;align-items:center;gap:12px;color:var(--color-text-muted);font-size:14px;margin-bottom:8px;">
+      <span>📅</span>
+      <span>{{ diary.created_at.strftime('%Y年%m月%d日 · %H:%M') }}</span>
+      {% if diary.mood_type and mood_info.get(diary.mood_type) %}
+        <span class="badge" style="background:{{ mood_info[diary.mood_type].color }}40;">
+          {{ mood_info[diary.mood_type].emoji }} {{ mood_info[diary.mood_type].label }}
+        </span>
+      {% endif %}
+      {% if diary.is_public %}<span class="badge">🌊 公开</span>{% endif %}
+    </div>
+  </div>
+
+  <div class="paper" style="min-height:240px;">
+    <div class="paper__fold paper__fold--tl"></div>
+    <div class="paper__fold paper__fold--br"></div>
+    <div id="encrypted-state" style="text-align:center;padding:48px 0;">
+      <div style="font-size:48px;margin-bottom:12px;">🔐</div>
+      <p style="color:var(--color-text-secondary);margin-bottom:16px;">这段记忆被妥善收好着</p>
+      <button class="btn btn--primary" id="unlock-btn">展开</button>
+    </div>
+    <div id="diary-content" class="paper__textarea" data-encrypted="{{ diary.content_encrypted }}" style="display:none;white-space:pre-wrap;"></div>
+  </div>
+
+  <!-- 收到的鼓励 -->
+  <div style="margin-top:32px;">
+    <h3 style="font-family:var(--font-serif);font-weight:400;margin-bottom:16px;">收到的拥抱 ({{ encouragements|length }})</h3>
+    {% if encouragements %}
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for e in encouragements %}
+      <div class="card" style="padding:16px;">
+        <div style="color:var(--color-text-primary);margin-bottom:4px;">{{ e.content }}</div>
+        <div style="font-size:12px;color:var(--color-text-muted);">来自一个陌生人的善意 · {{ e.created_at.strftime('%m-%d %H:%M') }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:var(--color-text-muted);text-align:center;padding:24px;">还没有人路过 — 别急，海很宽</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/diary_detail.js"></script>
+{% endblock %}

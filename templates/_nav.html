@@ -1,0 +1,34 @@
+<nav class="nav">
+  <div class="container nav__inner">
+    <a href="/" class="nav__brand">
+      <span class="nav__brand-logo">静</span>
+      <span>静屿</span>
+    </a>
+
+    <div class="nav__links">
+      <a href="/" class="nav__link {% if request.url.path == '/' %}is-active{% endif %}">静屿</a>
+      <a href="/music/gong" class="nav__link">五音</a>
+      {% if current_user %}
+      <a href="/diary" class="nav__link">漂流瓶</a>
+      <a href="/mood" class="nav__link">手帐</a>
+      <a href="/garden" class="nav__link">花园</a>
+      <a href="/shop" class="nav__link">兑换</a>
+      {% endif %}
+    </div>
+
+    <div class="nav__user">
+      {% if current_user %}
+        <span class="nav__energy" title="我的能量">
+          🍃 <span data-energy-display>{{ current_user.total_energy }}</span>
+        </span>
+        <span class="nav__nickname">🪶 {{ current_user.nickname }}</span>
+        <form action="/api/auth/logout" method="post" style="display:inline;" onsubmit="event.preventDefault(); fetch('/api/auth/logout',{method:'POST'}).then(()=>location.href='/');">
+          <button type="submit" class="btn btn--ghost btn--sm">离开</button>
+        </form>
+      {% else %}
+        <a href="/login" class="btn btn--ghost btn--sm">入境</a>
+        <a href="/register" class="btn btn--primary btn--sm">启程</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>

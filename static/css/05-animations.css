@@ -1,0 +1,287 @@
+/* ============================================================
+   动效：漂流瓶投掷、心情弹跳、花朵生长、漂浮水波
+   ============================================================ */
+
+/* ── 漂流瓶投掷水花动效（核心） ── */
+.bottle-stage {
+  position: relative;
+  width: 200px;
+  height: 280px;
+  margin: var(--space-7) auto;
+  perspective: 800px;
+}
+
+.bottle {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  font-size: 64px;
+  filter: drop-shadow(0 8px 16px rgba(74, 68, 56, 0.2));
+  transition: all 1.8s cubic-bezier(0.55, 0.06, 0.68, 0.19);
+  z-index: 5;
+  transform-origin: 50% 80%;
+}
+
+.bottle.is-throwing {
+  animation: bottle-throw 1.8s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards;
+}
+
+@keyframes bottle-throw {
+  0%   { transform: translateX(-50%) translateY(0) rotate(0deg) scale(1); }
+  20%  { transform: translateX(-50%) translateY(-80px) rotate(20deg) scale(1.1); }
+  55%  { transform: translateX(-30%) translateY(40px) rotate(80deg) scale(0.9); }
+  80%  {
+    transform: translateX(0%) translateY(120px) rotate(120deg) scale(0.6);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(20%) translateY(240px) rotate(180deg) scale(0.3);
+    opacity: 0;
+  }
+}
+
+.splash {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 60px;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.splash.is-active {
+  animation: splash 1.2s ease-out 1.0s forwards;
+}
+
+@keyframes splash {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.5); }
+  20%  { opacity: 1; transform: translateX(-50%) scale(1.2); }
+  100% { opacity: 0; transform: translateX(-50%) scale(1.6); }
+}
+
+.splash__drop {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #B5D4E0 0%, #6B9AB0 80%);
+  box-shadow: 0 0 8px rgba(107, 154, 176, 0.4);
+}
+
+.splash__drop:nth-child(1) { left: 30%; top: 0; animation: drop-fly-1 1.2s ease-out forwards; }
+.splash__drop:nth-child(2) { left: 50%; top: -10px; animation: drop-fly-2 1.2s ease-out forwards; }
+.splash__drop:nth-child(3) { left: 70%; top: 0; animation: drop-fly-3 1.2s ease-out forwards; }
+.splash__drop:nth-child(4) { left: 20%; top: 10px; animation: drop-fly-4 1.2s ease-out forwards; }
+.splash__drop:nth-child(5) { left: 80%; top: 10px; animation: drop-fly-5 1.2s ease-out forwards; }
+.splash__drop:nth-child(6) { left: 45%; top: -15px; animation: drop-fly-6 1.2s ease-out forwards; }
+.splash__drop:nth-child(7) { left: 55%; top: -15px; animation: drop-fly-7 1.2s ease-out forwards; }
+
+@keyframes drop-fly-1 { 0% { transform: translate(0,0) scale(0); } 30% { transform: translate(-30px,-40px) scale(1); } 100% { transform: translate(-50px,20px) scale(0.3); opacity: 0; } }
+@keyframes drop-fly-2 { 0% { transform: translate(0,0) scale(0); } 30% { transform: translate(0,-50px) scale(1.2); } 100% { transform: translate(0,30px) scale(0.3); opacity: 0; } }
+@keyframes drop-fly-3 { 0% { transform: translate(0,0) scale(0); } 30% { transform: translate(30px,-40px) scale(1); } 100% { transform: translate(50px,20px) scale(0.3); opacity: 0; } }
+@keyframes drop-fly-4 { 0% { transform: translate(0,0) scale(0); } 30% { transform: translate(-50px,-30px) scale(0.8); } 100% { transform: translate(-80px,10px) scale(0.3); opacity: 0; } }
+@keyframes drop-fly-5 { 0% { transform: translate(0,0) scale(0); } 30% { transform: translate(50px,-30px) scale(0.8); } 100% { transform: translate(80px,10px) scale(0.3); opacity: 0; } }
+@keyframes drop-fly-6 { 0% { transform: translate(0,0) scale(0); } 30% { transform: translate(-15px,-55px) scale(1); } 100% { transform: translate(-25px,15px) scale(0.3); opacity: 0; } }
+@keyframes drop-fly-7 { 0% { transform: translate(0,0) scale(0); } 30% { transform: translate(15px,-55px) scale(1); } 100% { transform: translate(25px,15px) scale(0.3); opacity: 0; } }
+
+.water-surface {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 280px;
+  height: 4px;
+  background: linear-gradient(90deg, transparent 0%, #6B9AB0 50%, transparent 100%);
+  border-radius: 50%;
+  opacity: 0.3;
+}
+
+.water-surface.is-active {
+  animation: water-ripple 2s ease-out 0.8s;
+}
+
+@keyframes water-ripple {
+  0%   { width: 0; opacity: 0; }
+  30%  { width: 280px; opacity: 0.6; }
+  100% { width: 320px; opacity: 0; }
+}
+
+/* ── 皱巴巴的纸 ── */
+.paper {
+  position: relative;
+  background: #FAF6EC;
+  padding: var(--space-6);
+  border-radius: 4px;
+  box-shadow:
+    0 1px 3px rgba(74, 68, 56, 0.08),
+    0 12px 32px rgba(74, 68, 56, 0.1);
+  margin: var(--space-5) 0;
+  min-height: 320px;
+  background-image:
+    linear-gradient(180deg, transparent 0%, rgba(232, 213, 168, 0.06) 100%),
+    radial-gradient(circle at 20% 30%, rgba(232, 213, 168, 0.15) 0%, transparent 30%),
+    radial-gradient(circle at 80% 70%, rgba(232, 213, 168, 0.12) 0%, transparent 30%);
+  transform: rotate(-0.5deg);
+  transition: transform var(--transition-base);
+}
+
+.paper::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  background-image:
+    linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.02) 100%);
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+.paper__fold {
+  position: absolute;
+  background: linear-gradient(135deg, transparent 0%, rgba(0, 0, 0, 0.04) 100%);
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+}
+.paper__fold--tl { top: 0; left: 0; }
+.paper__fold--br { bottom: 0; right: 0; transform: rotate(180deg); }
+
+.paper__textarea {
+  width: 100%;
+  min-height: 280px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-serif);
+  font-size: var(--font-size-md);
+  line-height: 2;
+  color: var(--color-text-primary);
+  resize: vertical;
+}
+
+/* ── 心情选中弹跳 ── */
+.mood-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
+}
+
+.mood-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-2);
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-bouncy);
+  user-select: none;
+}
+
+.mood-item__emoji {
+  font-size: 36px;
+  line-height: 1;
+  transition: transform var(--transition-bouncy);
+}
+
+.mood-item:hover {
+  background: rgba(168, 197, 160, 0.08);
+  transform: translateY(-2px);
+}
+
+.mood-item.is-selected {
+  background: var(--mood-color, rgba(168, 197, 160, 0.15));
+  border-color: var(--mood-color, var(--color-accent));
+  animation: mood-bounce 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mood-item.is-selected .mood-item__emoji {
+  animation: mood-emoji-bounce 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes mood-bounce {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes mood-emoji-bounce {
+  0%   { transform: scale(1) rotate(0); }
+  30%  { transform: scale(1.3) rotate(-8deg); }
+  60%  { transform: scale(0.95) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* ── 花朵生长 ── */
+@keyframes flower-grow {
+  0%   { transform: scale(0) translateY(20px); opacity: 0; }
+  60%  { transform: scale(1.1) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.flower {
+  display: inline-block;
+  font-size: 48px;
+  animation: flower-grow 800ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+/* ── 漂浮的水波（背景）── */
+@keyframes drift {
+  0%   { transform: translate(0, 0); }
+  50%  { transform: translate(20px, -20px); }
+  100% { transform: translate(0, 0); }
+}
+
+.bg-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: -1;
+  animation: drift 20s ease-in-out infinite;
+}
+
+.bg-orb--1 { width: 320px; height: 320px; top: 10%; left: 5%; background: var(--color-jue); animation-delay: 0s; }
+.bg-orb--2 { width: 280px; height: 280px; top: 50%; right: 8%; background: var(--color-zhi); animation-delay: -5s; }
+.bg-orb--3 { width: 240px; height: 240px; bottom: 5%; left: 30%; background: var(--color-yu); animation-delay: -10s; }
+
+/* ── 能量飞升动效 ── */
+.energy-float {
+  position: fixed;
+  pointer-events: none;
+  font-size: 20px;
+  color: var(--color-accent);
+  z-index: 9999;
+  animation: energy-rise 1.6s ease-out forwards;
+}
+
+@keyframes energy-rise {
+  0%   { transform: translateY(0) scale(0.8); opacity: 0; }
+  20%  { transform: translateY(-20px) scale(1.2); opacity: 1; }
+  100% { transform: translateY(-120px) scale(0.8); opacity: 0; }
+}
+
+/* ── 通用页面渐入 ── */
+.fade-in {
+  animation: fade-up 600ms ease-out backwards;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in:nth-child(1) { animation-delay: 0ms; }
+.fade-in:nth-child(2) { animation-delay: 80ms; }
+.fade-in:nth-child(3) { animation-delay: 160ms; }
+.fade-in:nth-child(4) { animation-delay: 240ms; }
+.fade-in:nth-child(5) { animation-delay: 320ms; }
+.fade-in:nth-child(6) { animation-delay: 400ms; }

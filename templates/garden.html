@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}精神花园 · 静屿{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <h1 class="page-header__title">精神花园</h1>
+  <p class="page-header__subtitle">听曲、写日记、打卡，都会长出花来</p>
+</div>
+
+<div class="card fade-in" style="text-align:center;background:linear-gradient(135deg, rgba(168,197,160,0.15), rgba(232,213,168,0.15));">
+  <div style="font-size:14px;color:var(--color-text-secondary);">当前能量</div>
+  <div style="font-family:var(--font-serif);font-size:48px;color:var(--color-accent);font-weight:500;margin:8px 0;">
+    🍃 <span data-energy-display>{{ current_user.total_energy }}</span>
+  </div>
+  <a href="/shop" class="btn btn--primary">去兑换</a>
+</div>
+
+{% if items %}
+<h2 style="font-family:var(--font-serif);font-weight:400;margin:32px 0 16px;color:var(--color-text-secondary);">已种下的</h2>
+<div class="grid grid--3">
+  {% for it in items %}
+  <div class="card fade-in" style="text-align:center;">
+    <div class="flower" style="animation-delay:{{ loop.index0 * 80 }}ms;">{{ it.image }}</div>
+    <div class="shop-item__name" style="margin-top:12px;">{{ it.name }}</div>
+    {% if it.description %}
+    <div class="shop-item__desc">{{ it.description }}</div>
+    {% endif %}
+    <div style="font-size:12px;color:var(--color-text-muted);margin-top:8px;">
+      {{ it.obtained_at[:10] if it.obtained_at else '' }}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card fade-in" style="text-align:center;padding:64px 24px;">
+  <div style="font-size:64px;margin-bottom:16px;">🌱</div>
+  <h3 style="font-family:var(--font-serif);font-weight:400;margin-bottom:8px;">花园还空着</h3>
+  <p style="color:var(--color-text-secondary);margin-bottom:24px;">听完一首曲子，就能攒到第一颗露水</p>
+  <a href="/music/gong" class="btn btn--primary">去听曲</a>
+</div>
+{% endif %}
+{% endblock %}

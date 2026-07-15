@@ -1,0 +1,90 @@
+{% extends "admin/_base.html" %}
+{% block title %}概览 · 静屿后台{% endblock %}
+
+{% block content %}
+<header class="admin-page-head">
+  <div>
+    <h1 class="admin-page-title">概 览</h1>
+    <div class="admin-page-sub">一眼看清「人在哪里、动在哪里」</div>
+  </div>
+  <div class="admin-page-actions">
+    <button class="btn btn--soft btn--sm" data-action="refresh-stats">🔄 刷新</button>
+  </div>
+</header>
+
+<section class="admin-stats-grid">
+  <a class="admin-stat-card" href="{{ admin_path_prefix }}/users">
+    <div class="admin-stat-card__icon" style="background:rgba(168,197,160,0.18);">👥</div>
+    <div class="admin-stat-card__body">
+      <div class="admin-stat-card__value" data-stat="total_users">{{ stats.total_users }}</div>
+      <div class="admin-stat-card__label">总用户</div>
+    </div>
+  </a>
+  <div class="admin-stat-card">
+    <div class="admin-stat-card__icon" style="background:rgba(232,181,168,0.18);">🗝️</div>
+    <div class="admin-stat-card__body">
+      <div class="admin-stat-card__value" data-stat="total_admins">{{ stats.total_admins }}</div>
+      <div class="admin-stat-card__label">管理员</div>
+    </div>
+  </div>
+  <a class="admin-stat-card" href="{{ admin_path_prefix }}/users">
+    <div class="admin-stat-card__icon" style="background:rgba(168,213,186,0.20);">🍾</div>
+    <div class="admin-stat-card__body">
+      <div class="admin-stat-card__value" data-stat="total_diaries">{{ stats.total_diaries }}</div>
+      <div class="admin-stat-card__label">漂流瓶（公开 {{ stats.total_public_diaries }}）</div>
+    </div>
+  </a>
+  <div class="admin-stat-card">
+    <div class="admin-stat-card__icon" style="background:rgba(168,184,197,0.20);">📓</div>
+    <div class="admin-stat-card__body">
+      <div class="admin-stat-card__value" data-stat="total_mood_checkins">{{ stats.total_mood_checkins }}</div>
+      <div class="admin-stat-card__label">心情打卡</div>
+    </div>
+  </div>
+  <div class="admin-stat-card">
+    <div class="admin-stat-card__icon" style="background:rgba(246,178,107,0.20);">🍃</div>
+    <div class="admin-stat-card__body">
+      <div class="admin-stat-card__value" data-stat="total_energy_records">{{ stats.total_energy_records }}</div>
+      <div class="admin-stat-card__label">能量流水</div>
+    </div>
+  </a>
+  <div class="admin-stat-card">
+    <div class="admin-stat-card__icon" style="background:rgba(168,197,160,0.18);">🌸</div>
+    <div class="admin-stat-card__body">
+      <div class="admin-stat-card__value" data-stat="total_garden_items">{{ stats.total_garden_items }}</div>
+      <div class="admin-stat-card__label">花园物件</div>
+    </div>
+  </div>
+</section>
+
+<section class="admin-panel">
+  <div class="admin-panel__head">
+    <h2 class="admin-panel__title">最近活动</h2>
+    <div class="admin-panel__sub">登录后自动加载（最多 8 条）</div>
+  </div>
+  <div class="admin-panel__body admin-two-col">
+    <div>
+      <h3 class="admin-mini-title">📝 新漂流瓶</h3>
+      <ul class="admin-activity-list" data-list="diaries">
+        <li class="admin-activity-empty">加载中…</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="admin-mini-title">😊 新心情</h3>
+      <ul class="admin-activity-list" data-list="moods">
+        <li class="admin-activity-empty">加载中…</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="admin-mini-title">🪶 新用户</h3>
+      <ul class="admin-activity-list" data-list="users">
+        <li class="admin-activity-empty">加载中…</li>
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/admin_dashboard.js"></script>
+{% endblock %}

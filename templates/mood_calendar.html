@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}情绪日历 · 静屿{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <h1 class="page-header__title">情绪日历</h1>
+  <p class="page-header__subtitle">把日子染成颜色</p>
+</div>
+
+<!-- 当前连胜 -->
+<div class="card fade-in" style="text-align:center;margin-bottom:24px;background:linear-gradient(135deg, rgba(168,197,160,0.15), rgba(232,213,168,0.15));">
+  <div style="font-size:32px;margin-bottom:8px;">✨</div>
+  <div id="streak" style="font-family:var(--font-serif);font-size:20px;color:var(--color-text-primary);">连续 0 天</div>
+  <p style="color:var(--color-text-muted);font-size:13px;margin-top:4px;">每天都来记一笔，集满 7 天有奖励 ☀️</p>
+</div>
+
+<!-- 日历 -->
+<div class="card fade-in">
+  <div class="calendar-nav">
+    <button class="btn btn--ghost btn--sm" id="prev-month">← 上月</button>
+    <div class="calendar-nav__title" id="month-title"></div>
+    <button class="btn btn--ghost btn--sm" id="next-month">下月 →</button>
+  </div>
+  <div class="calendar" id="calendar"></div>
+</div>
+
+<!-- 30 天趋势 -->
+<div class="card fade-in" style="margin-top:24px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <h3 style="font-family:var(--font-serif);font-weight:400;">近 30 天</h3>
+    <a href="/mood" class="btn btn--ghost btn--sm">记今天</a>
+  </div>
+  <div class="trend-chart" id="trend-chart"></div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--color-text-muted);">
+    {% for key, info in mood_info.items() %}
+    <span style="display:inline-flex;align-items:center;gap:4px;">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:{{ info.color }};"></span>
+      {{ info.label }}
+    </span>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/mood_calendar.js"></script>
+{% endblock %}

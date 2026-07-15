@@ -1,0 +1,13 @@
+/* ============================================================
+   静屿 — CSS 入口
+   严格按 7 模块加载顺序：变量 → 重置 → 布局 → 组件 → 页面 → 动效 → 音乐
+   ============================================================ */
+
+@import url("00-variables.css");
+@import url("01-reset.css");
+@import url("02-layout.css");
+@import url("03-components.css");
+@import url("04-pages.css");
+@import url("05-animations.css");
+@import url("06-music.css");
+@import url("07-admin.css");

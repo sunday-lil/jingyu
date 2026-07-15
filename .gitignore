@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+
+# 环境
+.env
+
+# 数据
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# 日志
+*.log
+logs/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 静态资源中转
+static/uploads/

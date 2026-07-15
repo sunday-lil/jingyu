@@ -1,0 +1,31 @@
+{% extends "admin/_base.html" %}
+{% block title %}后台登录 · 静屿{% endblock %}
+
+{% block content %}
+<div class="admin-login">
+  <div class="admin-login__card fade-in">
+    <div class="admin-login__icon">🗝️</div>
+    <h1 class="admin-login__title">静 屿 · 后 台</h1>
+    <div class="admin-login__verse">「持钥匙者，方入此门」</div>
+    <form class="admin-login__form" data-action="admin-login">
+      <div class="form-field">
+        <label class="form-label" for="admin-nickname">管理员昵称</label>
+        <input type="text" name="nickname" id="admin-nickname" class="form-input" required minlength="2" maxlength="20" autocomplete="username" placeholder="admin">
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="admin-password">密码</label>
+        <input type="password" name="password" id="admin-password" class="form-input" required minlength="6" autocomplete="current-password">
+      </div>
+      <div class="form-error" data-error style="min-height:20px;margin-bottom:12px;"></div>
+      <button type="submit" class="btn btn--primary btn--block btn--lg">入 内 院</button>
+    </form>
+    <div class="admin-login__footer">
+      <a href="/">回到前台 →</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/admin_login.js"></script>
+{% endblock %}

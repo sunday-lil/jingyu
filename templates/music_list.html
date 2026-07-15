@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ yin_info.name }}音 · 静屿{% endblock %}
+
+{% block content %}
+<div class="music-detail" style="--detail-color: {{ yin_info.color }};">
+  <div class="music-detail__bg"></div>
+
+  <div class="music-detail__header fade-in">
+    <div class="music-detail__yin">{{ yin_info.name }}</div>
+    <div class="music-detail__name">{{ yin_info.element }}音 · 入{{ yin_info.organ }}</div>
+    <div class="music-detail__scene">{{ yin_info.description }}</div>
+  </div>
+
+  <div class="music-detail__list" id="song-list">
+    {% for m in musics %}
+    <div class="song-item fade-in"
+         data-id="{{ m.id }}"
+         data-audio="{{ m.audio_url }}"
+         data-title="{{ m.title }}">
+      <div class="song-item__cover">🎵</div>
+      <div class="song-item__info">
+        <div class="song-item__title">{{ m.title }}</div>
+        <div class="song-item__tags">
+          {% for t in m.tags %}<span class="tag">{{ t }}</span>{% endfor %}
+        </div>
+      </div>
+      <div class="song-item__duration">{{ '%d:%02d' % (m.duration // 60, m.duration % 60) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- 底部播放器 -->
+<div class="player">
+  <div class="player__title">选一首曲子开始</div>
+  <div class="player__progress">
+    <span class="player__time-current">00:00</span>
+    <div class="player__bar">
+      <div class="player__bar-fill"></div>
+    </div>
+    <span class="player__time-total">00:00</span>
+  </div>
+  <div class="player__controls">
+    <button class="player__btn player__btn--prev" title="上一首">⏮</button>
+    <button class="player__btn player__btn--play" title="播放/暂停">▶</button>
+    <button class="player__btn player__btn--next" title="下一首">⏭</button>
+    <div class="player__volume">
+      🔊
+      <div class="player__volume-bar">
+        <div class="player__volume-fill"></div>
+      </div>
+    </div>
+  </div>
+  <audio id="audio-player" preload="metadata"></audio>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/music.js"></script>
+{% endblock %}

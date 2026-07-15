@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="静屿 — 治愈系身心疗愈平台。古琴五音、漂流瓶日记、心情手帐、精神花园。">
+  <meta name="theme-color" content="#F9F6F0">
+  <title>{% block title %}静屿 — 治愈系身心疗愈{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  {% block extra_css %}{% endblock %}
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+</head>
+<body>
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+  <div class="bg-orb bg-orb--3"></div>
+
+  {% include "_nav.html" %}
+
+  <main class="main">
+    <div class="container {% if request.url.path in ['/login', '/register'] or '/diary' in request.url.path and not '/my-bottles' in request.url.path %}container--narrow{% endif %}">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  {% include "_toast.html" %}
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__verse">"山中何事？松花酿酒，春水煎茶。"</div>
+      <div>静屿 · 非商业 · 纯治愈 · 强隐私</div>
+    </div>
+  </footer>
+
+  <!-- 移动端底部 Tab -->
+  {% if current_user %}
+  <nav class="tabbar">
+    <a href="/" class="tabbar__item {% if request.url.path == '/' %}is-active{% endif %}">
+      <span class="tabbar__icon">🏡</span>
+      <span>静屿</span>
+    </a>
+    <a href="/music/gong" class="tabbar__item">
+      <span class="tabbar__icon">🎵</span>
+      <span>五音</span>
+    </a>
+    <a href="/diary" class="tabbar__item">
+      <span class="tabbar__icon">🍾</span>
+      <span>瓶子</span>
+    </a>
+    <a href="/mood" class="tabbar__item">
+      <span class="tabbar__icon">🌱</span>
+      <span>手帐</span>
+    </a>
+    <a href="/garden" class="tabbar__item">
+      <span class="tabbar__icon">🌸</span>
+      <span>花园</span>
+    </a>
+  </nav>
+  {% endif %}
+
+  <script src="/static/js/app.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

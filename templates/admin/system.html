@@ -1,0 +1,65 @@
+{% extends "admin/_base.html" %}
+{% block title %}系统维护 · 静屿后台{% endblock %}
+
+{% block content %}
+<header class="admin-page-head">
+  <div>
+    <h1 class="admin-page-title">系统维护</h1>
+    <div class="admin-page-sub">清理缓存、查看磁盘占用、修复小问题</div>
+  </div>
+</header>
+
+<section class="admin-stat-grid-2">
+  <div class="admin-info-card">
+    <div class="admin-info-card__head">Python / 平台</div>
+    <div class="admin-info-card__row"><span>Python 版本</span><b><code data-info="python_version">—</code></b></div>
+    <div class="admin-info-card__row"><span>运行平台</span><b><code data-info="platform">—</code></b></div>
+    <div class="admin-info-card__row"><span>项目目录</span><b><code data-info="base_dir" style="word-break:break-all;">—</code></b></div>
+  </div>
+  <div class="admin-info-card">
+    <div class="admin-info-card__head">磁盘占用</div>
+    <div class="admin-info-card__row"><span>数据库</span><b><code data-info="db_path">—</code> · <span data-info="db_size">—</span></b></div>
+    <div class="admin-info-card__row"><span>运行日志</span><b><code data-info="log_path">—</code> · <span data-info="log_size">—</span></b></div>
+    <div class="admin-info-card__row"><span>pycache 目录数</span><b><span data-info="pycache_dirs">—</span> 个</b></div>
+    <div class="admin-info-card__row"><span>pycache 体积</span><b><span data-info="pycache_size">—</span></b></div>
+  </div>
+</section>
+
+<section class="admin-panel">
+  <div class="admin-panel__head">
+    <h2 class="admin-panel__title">一键清 pycache</h2>
+    <div class="admin-panel__sub">清理 <code>__pycache__/</code> 目录和散落的 <code>.pyc</code> / <code>.pyo</code> 文件。运行中已加载的模块不受影响。</div>
+  </div>
+  <div class="admin-panel__body">
+    <div class="admin-action-row">
+      <label class="admin-checkbox">
+        <input type="checkbox" data-include-venv> 包含 venv 内的缓存（一般不用）
+      </label>
+      <button class="btn btn--primary" data-action="clear-pycaches">🧹 开始清理</button>
+    </div>
+    <div class="admin-action-result" data-pycaches-result>
+      <div class="admin-action-result__empty">尚未执行</div>
+    </div>
+  </div>
+</section>
+
+<section class="admin-panel">
+  <div class="admin-panel__head">
+    <h2 class="admin-panel__title">⚠️ 危险操作</h2>
+    <div class="admin-panel__sub">这些操作不可逆，请三思</div>
+  </div>
+  <div class="admin-panel__body">
+    <div class="admin-action-row">
+      <div>
+        <div class="admin-action-row__title">重置数据库</div>
+        <div class="admin-action-row__sub">删除 <code>data/healing.db</code> 并重建。需要重启服务生效。⚠️ 所有用户数据丢失。</div>
+      </div>
+      <button class="btn btn--ghost" disabled title="请用 python start.py --init-db" style="cursor:not-allowed;">需要 CLI</button>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/admin_system.js"></script>
+{% endblock %}

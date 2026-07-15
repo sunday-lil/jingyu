@@ -1,0 +1,140 @@
+{% extends "admin/_base.html" %}
+{% block title %}{{ target.nickname }} · 用户详情 · 静屿后台{% endblock %}
+
+{% block content %}
+<header class="admin-page-head">
+  <div>
+    <a class="admin-back" href="{{ admin_path_prefix }}/users">← 返回用户列表</a>
+    <h1 class="admin-page-title">
+      {{ target.nickname }}
+      {% if target.is_admin %}<span class="admin-tag admin-tag--admin" style="font-size:13px;vertical-align:middle;margin-left:8px;">管理员</span>{% endif %}
+    </h1>
+    <div class="admin-page-sub">
+      ID #{{ target.id }} · 注册于 <span data-iso="{{ target.created_at.isoformat() if target.created_at else '' }}"></span>
+    </div>
+  </div>
+  <div class="admin-page-actions">
+    <button class="btn btn--ghost btn--sm" data-action="reset-password" data-user-id="{{ target.id }}" data-nickname="{{ target.nickname }}">🔑 重置密码</button>
+    {% if target.id != current_user.id %}
+    <button class="btn btn--ghost btn--sm" data-action="toggle-admin" data-user-id="{{ target.id }}" data-nickname="{{ target.nickname }}" data-current="{{ '1' if target.is_admin else '0' }}">
+      {{ '降为用户' if target.is_admin else '升为管理员' }}
+    </button>
+    <button class="btn btn--ghost btn--sm" style="color:var(--color-danger);" data-action="delete-user" data-user-id="{{ target.id }}" data-nickname="{{ target.nickname }}">🗑 删除</button>
+    {% endif %}
+  </div>
+</header>
+
+<section class="admin-stat-grid-2">
+  <div class="admin-info-card">
+    <div class="admin-info-card__head">基本信息</div>
+    <div class="admin-info-card__row"><span>昵称</span><b>{{ target.nickname }}</b></div>
+    <div class="admin-info-card__row"><span>用户 ID</span><b><code>#{{ target.id }}</code></b></div>
+    <div class="admin-info-card__row"><span>角色</span><b>{{ '管理员' if target.is_admin else '普通用户' }}</b></div>
+    <div class="admin-info-card__row"><span>注册时间</span><b><span data-iso="{{ target.created_at.isoformat() if target.created_at else '' }}"></span></b></div>
+    <div class="admin-info-card__row"><span>当前能量</span><b>{{ target.total_energy }} 🍃</b></div>
+  </div>
+  <div class="admin-info-card">
+    <div class="admin-info-card__head">安全信息</div>
+    <div class="admin-info-card__row"><span>密码哈希预览</span><b><code>{{ ph_preview }}</code></b></div>
+    <div class="admin-info-card__row"><span>加密盐预览</span><b><code>{{ target.encryption_salt[:8] }}...{{ target.encryption_salt[-4:] }}</code></b></div>
+    <div class="admin-info-card__row" style="color:var(--color-text-muted);font-size:13px;">
+      <span>⚠️ 端到端加密</span>
+      <b>密文内容不可读</b>
+    </div>
+  </div>
+</section>
+
+<section class="admin-stat-grid-2">
+  <div class="admin-info-card">
+    <div class="admin-info-card__head">数量统计</div>
+    <div class="admin-info-card__row"><span>漂流瓶（公开）</span><b>{{ stats.diary_count }} <span style="color:var(--color-text-muted);">(公开 {{ stats.public_diary_count }})</span></b></div>
+    <div class="admin-info-card__row"><span>心情打卡</span><b>{{ stats.mood_count }}</b></div>
+    <div class="admin-info-card__row"><span>能量入 / 出</span><b>{{ stats.energy_in }} / {{ stats.energy_out }}</b></div>
+    <div class="admin-info-card__row"><span>花园物件</span><b>{{ stats.garden_count }}</b></div>
+  </div>
+  <div class="admin-info-card">
+    <div class="admin-info-card__head">能量调整</div>
+    <form data-action="adjust-energy" class="admin-adjust-form">
+      <div class="admin-adjust-form__row">
+        <label><input type="radio" name="op" value="+" checked> 加</label>
+        <label><input type="radio" name="op" value="-"> 减</label>
+        <input type="number" name="amount" min="1" max="9999" value="5" class="form-input" style="width:100px;" required>
+        <span>说明（可选）</span>
+        <input type="text" name="note" maxlength="200" class="form-input" placeholder="如：周年奖励">
+        <button class="btn btn--primary btn--sm" type="submit">应用</button>
+      </div>
+    </form>
+    <div class="admin-info-card__row" style="margin-top:8px;">
+      <span>当前总额</span><b data-energy>{{ target.total_energy }} 🍃</b>
+    </div>
+  </div>
+</section>
+
+<section class="admin-panel">
+  <div class="admin-panel__head"><h2 class="admin-panel__title">最近漂流瓶</h2></div>
+  <div class="admin-panel__body" style="padding:0;">
+    <table class="admin-table admin-table--compact">
+      <thead><tr><th>ID</th><th>时间</th><th>公开</th><th>心情</th></tr></thead>
+      <tbody>
+        {% for d in recent_diaries %}
+        <tr>
+          <td><code>#{{ d.id }}</code></td>
+          <td><span data-iso="{{ d.created_at.isoformat() if d.created_at else '' }}"></span></td>
+          <td>{{ '🌐 是' if d.is_public else '🔒 否' }}</td>
+          <td>{{ d.mood_type or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="admin-empty">暂无</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="admin-panel">
+  <div class="admin-panel__head"><h2 class="admin-panel__title">最近心情</h2></div>
+  <div class="admin-panel__body" style="padding:0;">
+    <table class="admin-table admin-table--compact">
+      <thead><tr><th>日期</th><th>心情</th><th>备注</th></tr></thead>
+      <tbody>
+        {% for m in recent_moods %}
+        <tr>
+          <td>{{ m.check_date.isoformat() if m.check_date else '—' }}</td>
+          <td><code>{{ m.mood_emoji }}</code></td>
+          <td>{{ m.note or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="admin-empty">暂无</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="admin-panel">
+  <div class="admin-panel__head"><h2 class="admin-panel__title">最近能量流水</h2></div>
+  <div class="admin-panel__body" style="padding:0;">
+    <table class="admin-table admin-table--compact">
+      <thead><tr><th>时间</th><th>来源</th><th style="text-align:right;">变动</th><th>说明</th></tr></thead>
+      <tbody>
+        {% for e in recent_energy %}
+        <tr>
+          <td><span data-iso="{{ e.created_at.isoformat() if e.created_at else '' }}"></span></td>
+          <td><code>{{ e.source }}</code></td>
+          <td style="text-align:right;font-weight:600;color:{% if e.amount > 0 %}var(--color-success){% else %}var(--color-danger){% endif %};">
+            {{ '%+d' % e.amount }}
+          </td>
+          <td>{{ e.note or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="admin-empty">暂无</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/admin_user_detail.js"></script>
+{% endblock %}

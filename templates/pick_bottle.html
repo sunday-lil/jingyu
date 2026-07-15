@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}拾一个瓶子 · 静屿{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <h1 class="page-header__title">海面上漂着什么</h1>
+  <p class="page-header__subtitle">拾起一只陌生人留下的瓶子</p>
+</div>
+
+<input type="hidden" id="user-salt" value="{{ current_user.encryption_salt }}">
+<script type="application/json" id="mood-info">
+  {{ mood_info | tojson }}
+</script>
+
+<div id="pick-empty" class="card fade-in" style="text-align:center;padding:64px 24px;display:none;">
+  <div style="font-size:64px;margin-bottom:16px;">🌫️</div>
+  <h3 style="font-family:var(--font-serif);font-weight:400;margin-bottom:8px;">海面很静</h3>
+  <p style="color:var(--color-text-secondary);">暂时还没有瓶子漂到这里 — 不如先写一只？</p>
+  <a href="/diary" class="btn btn--primary" style="margin-top:16px;">写一封</a>
+</div>
+
+<div id="pick-result" style="display:none;max-width:640px;margin:0 auto;">
+  <div class="paper" style="min-height:240px;">
+    <div class="paper__fold paper__fold--tl"></div>
+    <div class="paper__fold paper__fold--br"></div>
+    <div id="bottle-mood" style="font-size:14px;color:var(--color-text-muted);margin-bottom:12px;"></div>
+    <div id="bottle-content" class="paper__textarea" data-mood-info="" style="display:block;white-space:pre-wrap;min-height:200px;"></div>
+    <div id="bottle-date" style="font-size:12px;color:var(--color-text-muted);text-align:right;margin-top:16px;"></div>
+  </div>
+
+  <div style="margin-top:24px;">
+    <h3 style="font-family:var(--font-serif);font-weight:400;margin-bottom:12px;">留下一句</h3>
+    <textarea id="encourage-input" class="form-textarea" placeholder="一句就好 — 写你想对他/她说的…"></textarea>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+      <button id="encourage-btn" class="btn btn--soft">悄悄送达</button>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center;margin-top:48px;">
+  <button id="pick-btn" class="btn btn--primary btn--lg">拾一个瓶子</button>
+  <p style="margin-top:12px;font-size:13px;color:var(--color-text-muted);">阅后即焚 · 不会留下记录</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 注入 mood_info 给 JS
+document.getElementById('bottle-content').dataset.moodInfo =
+  document.getElementById('mood-info').textContent;
+</script>
+<script defer src="/static/js/pages/pick.js"></script>
+{% endblock %}

@@ -1,0 +1,11 @@
+fastapi>=0.110.0,<0.112.0
+uvicorn[standard]>=0.27.1,<0.29.0
+jinja2>=3.1.3,<4.0.0
+python-multipart>=0.0.9,<0.0.10
+sqlalchemy>=2.0.27,<3.0.0
+pydantic>=2.6.1,<3.0.0          # 关键：允许 2.x 任意版本
+pydantic-settings>=2.2.1,<3.0.0
+itsdangerous>=2.1.2,<3.0.0
+passlib[bcrypt]>=1.7.4,<2.0.0
+python-jose[cryptography]>=3.3.0,<4.0.0
+aiofiles>=23.2.1,<24.0.0

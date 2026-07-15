@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}我的瓶子 · 静屿{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <h1 class="page-header__title">我的瓶子</h1>
+  <p class="page-header__subtitle">每只瓶子里，都封存了一段曾经</p>
+</div>
+
+<input type="hidden" id="encryption-salt" value="{{ encryption_salt }}">
+<input type="hidden" id="user-nickname" value="{{ current_user.nickname }}">
+
+{% if diaries %}
+<div class="timeline" id="bottles-list">
+  {% for d in diaries %}
+  <div class="timeline-item fade-in"
+       data-id="{{ d.id }}"
+       data-encrypted="{{ d.content_encrypted }}"
+       data-mood="{{ d.mood_type or '' }}">
+    <div class="timeline-item__date">
+      <span>📅</span>
+      <span>{{ d.created_at.strftime('%Y年%m月%d日 · %H:%M') }}</span>
+      {% if d.mood_type and mood_info.get(d.mood_type) %}
+        <span class="timeline-item__mood">{{ mood_info[d.mood_type].emoji }}</span>
+      {% endif %}
+      {% if d.is_public %}<span class="badge">🌊 公开</span>{% endif %}
+      {% if d.encouragement_count %}<span class="badge">💌 {{ d.encouragement_count }}</span>{% endif %}
+    </div>
+    <div class="timeline-item__preview">
+      🔒 这是加密内容 · 点击查看
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card fade-in" style="text-align:center;padding:64px 24px;">
+  <div style="font-size:64px;margin-bottom:16px;">🍾</div>
+  <h3 style="font-family:var(--font-serif);font-weight:400;margin-bottom:8px;">海上还没有你的瓶子</h3>
+  <p style="color:var(--color-text-secondary);margin-bottom:24px;">写第一封吧，扔进海里</p>
+  <a href="/diary" class="btn btn--primary">写一封</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/my_bottles.js"></script>
+{% endblock %}
