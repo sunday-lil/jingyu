@@ -211,7 +211,7 @@ style.css                 ← 前台入口
   @import 02-layout.css     ← 容器 / 导航 / 网格
   @import 03-components.css ← 按钮 / 卡片 / Toast / 表单
   @import 04-pages.css      ← 页面专属样式
-  @import 05-animations.css ← 动效（漂流瓶 / 心情弹跳 / 花朵生长）
+  @import 05-animations.css ← 动效（漂流瓶 / 心情弹跳 / 花朵生长 / §2 交互增强：滚动渐显 reveal / 卡片光泽 sheen / 涟漪 ripple / 计数 countup / 花瓣 petal / 频谱 eq-bars / 页面过渡 / 标题流光）
   @import 06-music.css      ← 沉浸式播放器
   @import 07-admin.css      ← 【后台专属】暗色侧栏 / 表格 / 模态
 ```
@@ -228,14 +228,27 @@ style.css                 ← 前台入口
 `window.QI` 全局（[static/js/app.js](../../static/js/app.js)）暴露：
 - `QI.toast(msg, type)` — 治愈系 Toast
 - `QI.confirmThen(msg, fn)` — 二次确认（柔和版）
-- `QI.fetch(url, opts)` — fetch 包装，自动带 cookie
+- `QI.fetchJSON(url, opts)` — fetch 包装，自动带 cookie
+- `QI.floatEnergy(text, fromEl)` — 能量飞升动效
+- 交互增强（参考 Netflix / Spotify，适配治愈系，全部遵守 `prefers-reduced-motion`）：
+  - `QI.initAll()` — `DOMContentLoaded` 自动初始化以下全部效果（app.js 末尾自动调用）
+  - `QI.initReveal()` — `.reveal` 元素进入视口加 `.is-visible`（IntersectionObserver）
+  - `QI.initRipple()` — `.btn` 点击涟漪（事件委托，动态按钮也生效）
+  - `QI.initCountUp()` — `[data-countup]` 进入视口从 0 缓动到目标值
+  - `QI.initPetals()` — 含 `.hero` 的页面在 `.petal-layer` 生成环境花瓣
+  - `QI.initPageTransition()` — `<main class="page-transition">` 进入淡入
+  - `QI.countUp(el, target, opts)` — 立即数字缓动
+  - `QI.confetti(fromEl, opts)` — 花瓣撒落（兑换 / 打卡成功反馈）
+  - `QI.prefersReducedMotion()` — 无障碍检测
 
 页面 JS（[static/js/pages/](../../static/js/pages/)）只做：
 1. 监听 DOM 事件
-2. 调 `QI.fetch('/api/...')`
+2. 调 `QI.fetchJSON('/api/...')`
 3. 更新 DOM
 
 **不**引入任何框架（React/Vue/Tailwind），**不**打包，**不**用 npm。
+
+> **`.reveal` 使用约定**：只加在**容器**（如 `.yin-grid / .module-row / .music-detail__list`）上，**不要**直接加在 `.yin-card / .module-card / .song-item / .card` 等带 hover transform 的卡片上 —— `.reveal.is-visible` 的 `transform` 会覆盖 hover 的 transform（同特异性，后定义胜出）。容器级揭示是 Netflix 行卡片的惯用语言，也避免冲突。
 
 ---
 

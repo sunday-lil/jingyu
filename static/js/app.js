@@ -88,6 +88,172 @@
       setTimeout(() => el.remove(), 1600);
     },
 
+    // ── 是否偏好减少动效（无障碍）──
+    prefersReducedMotion() {
+      return window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    },
+
+    // ── 滚动渐显：给 .reveal 元素在进入视口时加 .is-visible ──
+    initReveal() {
+      const els = document.querySelectorAll(".reveal");
+      if (!els.length) return;
+      if (this.prefersReducedMotion() || !("IntersectionObserver" in window)) {
+        els.forEach((el) => el.classList.add("is-visible"));
+        return;
+      }
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((en) => {
+            if (en.isIntersecting) {
+              en.target.classList.add("is-visible");
+              io.unobserve(en.target);
+            }
+          });
+        },
+        { rootMargin: "0px 0px -8% 0px", threshold: 0.08 }
+      );
+      els.forEach((el) => io.observe(el));
+    },
+
+    // ── 按钮涟漪：事件委托 .btn 的点击，插入 .ripple-ink（支持动态插入的按钮）──
+    initRipple() {
+      if (this._rippleBound) return;
+      this._rippleBound = true;
+      document.addEventListener("click", (e) => {
+        const btn = e.target.closest && e.target.closest(".btn");
+        if (!btn) return;
+        if (this.prefersReducedMotion()) return;
+        if (btn.disabled) return;
+        const rect = btn.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const ink = document.createElement("span");
+        ink.className = "ripple-ink";
+        ink.style.width = ink.style.height = `${size}px`;
+        ink.style.left = `${e.clientX - rect.left}px`;
+        ink.style.top = `${e.clientY - rect.top}px`;
+        btn.appendChild(ink);
+        setTimeout(() => ink.remove(), 620);
+      });
+    },
+
+    // ── 数字计数：[data-countup] 元素在进入视口时从 0 缓动到目标值 ──
+    initCountUp() {
+      const els = document.querySelectorAll("[data-countup]");
+      if (!els.length) return;
+      const run = (el) => {
+        const target = parseFloat(el.dataset.countup);
+        if (isNaN(target)) return;
+        this.countUp(el, target);
+      };
+      if (this.prefersReducedMotion() || !("IntersectionObserver" in window)) {
+        els.forEach((el) => { el.textContent = el.dataset.countup; });
+        return;
+      }
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((en) => {
+            if (en.isIntersecting) {
+              run(en.target);
+              io.unobserve(en.target);
+            }
+          });
+        },
+        { threshold: 0.4 }
+      );
+      els.forEach((el) => io.observe(el));
+    },
+
+    // ── 数字缓动到目标（立即执行）──
+    countUp(el, target, opts = {}) {
+      if (!el) return;
+      const duration = opts.duration || 1200;
+      const decimals = opts.decimals || 0;
+      const start = performance.now();
+      const from = 0;
+      const ease = (t) => 1 - Math.pow(1 - t, 3); // easeOutCubic
+      const tick = (now) => {
+        const p = Math.min(1, (now - start) / duration);
+        const v = from + (target - from) * ease(p);
+        el.textContent = v.toFixed(decimals);
+        if (p < 1) requestAnimationFrame(tick);
+        else el.textContent = target.toFixed(decimals);
+      };
+      requestAnimationFrame(tick);
+    },
+
+    // ── 环境花瓣：在 .petal-layer 内周期性生成 .petal ──
+    initPetals() {
+      const layer = document.querySelector(".petal-layer");
+      if (!layer) return;
+      if (this.prefersReducedMotion()) return;
+      // 仅在含 .hero 的页面（首页）生成，避免打扰写作 / 打卡等专注页
+      if (!document.querySelector(".hero")) return;
+      const glyphs = ["🌸", "🍂", "🌿", "🌼"];
+      const MAX = 8;
+      let alive = 0;
+      const spawn = () => {
+        if (alive >= MAX) return;
+        const p = document.createElement("span");
+        p.className = "petal";
+        p.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+        const dur = 9000 + Math.random() * 6000;
+        const drift = (Math.random() * 160 - 80).toFixed(0) + "px";
+        p.style.left = `${Math.random() * 100}%`;
+        p.style.animationDuration = `${dur}ms`;
+        p.style.setProperty("--drift", drift);
+        p.style.fontSize = `${14 + Math.random() * 10}px`;
+        layer.appendChild(p);
+        alive++;
+        setTimeout(() => { p.remove(); alive--; }, dur);
+      };
+      // 初始散落几片
+      for (let i = 0; i < 3; i++) setTimeout(spawn, i * 800);
+      setInterval(spawn, 2400);
+    },
+
+    // ── 花瓣撒落（成功反馈，可由页面 JS 调用）──
+    confetti(fromEl, opts = {}) {
+      if (!fromEl || this.prefersReducedMotion()) return;
+      const rect = fromEl.getBoundingClientRect();
+      const cx0 = rect.left + rect.width / 2;
+      const cy0 = rect.top + rect.height / 2;
+      const glyphs = opts.glyphs || ["🌸", "🌿", "🌼", "✨"];
+      const count = opts.count || 12;
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement("span");
+        p.className = "confetti-petal";
+        p.textContent = glyphs[i % glyphs.length];
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+        const dist = 60 + Math.random() * 70;
+        p.style.left = `${cx0}px`;
+        p.style.top = `${cy0}px`;
+        p.style.setProperty("--cx", `${(Math.cos(angle) * dist).toFixed(0)}px`);
+        p.style.setProperty("--cy", `${(Math.sin(angle) * dist - 40).toFixed(0)}px`);
+        p.style.setProperty("--cr", `${(Math.random() * 720 - 360).toFixed(0)}deg`);
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 1300);
+      }
+    },
+
+    // ── 页面进入过渡：<main> 加 .is-ready ──
+    initPageTransition() {
+      const main = document.querySelector(".page-transition");
+      if (!main) return;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => main.classList.add("is-ready"));
+      });
+    },
+
+    // ── 一次性自动初始化所有增强效果（DOMContentLoaded 时调用）──
+    initAll() {
+      this.initPageTransition();
+      this.initReveal();
+      this.initRipple();
+      this.initCountUp();
+      this.initPetals();
+    },
+
     // ── HTML escape ──
     _escape(s) {
       return String(s).replace(/[&<>"']/g, (c) => ({
@@ -175,4 +341,13 @@
   };
 
   window.QI = QI;
+
+  // ── 自动初始化全局增强效果（页面进入过渡 / 滚动渐显 / 按钮涟漪 / 数字计数 / 环境花瓣）──
+  // app.js 在 base.html 末尾以非 defer 方式加载，此时 DOM 已解析完成；
+  // 但仍兼容 readyState=loading 的极端情况。
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => QI.initAll());
+  } else {
+    QI.initAll();
+  }
 })();

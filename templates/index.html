@@ -5,7 +5,7 @@
 {% block content %}
 <section class="hero fade-in">
   <div class="hero__verse">「 心安即是归处 」</div>
-  <h1 class="hero__title">静 屿</h1>
+  <h1 class="hero__title title-shimmer">静 屿</h1>
   <p class="hero__subtitle">
     一片由古琴声、漂流瓶与心情手帐汇成的浅滩。<br>
     让焦虑有处安放，让温柔有迹可循。
@@ -23,12 +23,12 @@
 
 <!-- 五音入口 -->
 <section style="margin-top:64px;">
-  <div class="page-header">
+  <div class="page-header reveal">
     <h2 class="page-header__title">五音疗愈</h2>
     <p class="page-header__subtitle">宫商角徵羽 · 对应五脏六腑</p>
   </div>
 
-  <div class="yin-grid">
+  <div class="yin-grid reveal">
     {% set yin_keys = ['gong', 'shang', 'jue', 'zhi', 'yu'] %}
     {% for key in yin_keys %}
       {% set y = yin_info[key] %}
@@ -68,12 +68,12 @@
 
 <!-- 其他模块入口 -->
 <section style="margin-top:48px;">
-  <div class="page-header">
+  <div class="page-header reveal">
     <h2 class="page-header__title">慢慢来</h2>
     <p class="page-header__subtitle">挑一个最贴近你此刻的入口</p>
   </div>
 
-  <div class="module-row">
+  <div class="module-row reveal">
     <a href="/diary" class="module-card fade-in">
       <div class="module-card__icon" style="background:linear-gradient(135deg, #A8C5A0, #A8B8C5);">🍾</div>
       <h3 class="module-card__title">漂流瓶 · 日记</h3>

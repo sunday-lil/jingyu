@@ -132,10 +132,10 @@ webwrold/
 │   │   ├── 02-layout.css         #   .container / .nav / .grid
 │   │   ├── 03-components.css     #   .btn / .card / .toast / .form
 │   │   ├── 04-pages.css          #   首页 / 列表页 / 详情页
-│   │   ├── 05-animations.css     #   漂流瓶动效 / 心情弹跳 / 花朵生长
+│   │   ├── 05-animations.css     #   漂流瓶动效 / 心情弹跳 / 花朵生长 / 滚动渐显 / 涟漪 / 花瓣 / 频谱
 │   │   └── 06-music.css          #   沉浸式播放器
 │   ├── js/
-│   │   ├── app.js                #   window.QI 全局（fetch / toast / confirmThen）
+│   │   ├── app.js                #   window.QI 全局（fetch / toast / confirmThen / reveal / ripple / countUp / confetti）
 │   │   └── pages/                #   每个页面一个
 │   ├── audio/                    #   占位音频（5 个 mp3，每音一个）
 │   └── images/                   #   占位封面（5 音各 1 张 SVG）
@@ -210,6 +210,15 @@ webwrold/
 - **导航**：统一用 `_nav.html` 的 `render_nav(current_user)` 宏。传 `current_user`（dict-like 或 ORM 对象）。
 - **Toast**：基模板已经 `{% include "_toast.html" %}`，JS 里直接 `QI.toast('已收好', 'success')`。
 - **动效**：漂流瓶投掷用 `static/css/05-animations.css` 的 `@keyframes bottle-throw`，触发后 1.8s 完成。
+- **交互增强（参考 Netflix / Spotify 动效语言，适配治愈系）**：`app.js` 在 `DOMContentLoaded` 自动初始化（`QI.initAll()`），全部遵守 `prefers-reduced-motion`：
+  - 滚动渐显 `.reveal`（IntersectionObserver；给容器加，不要给有 hover transform 的卡片加，避免覆盖 hover）
+  - 按钮涟漪 `.btn`（事件委托，动态插入的按钮也生效）
+  - 数字计数 `[data-countup]`（进入视口时从 0 缓动到目标值）
+  - 卡片光泽扫过（`.module-card / .shop-item / .song-item` 的 `::after` sheen，悬浮触发）
+  - 首页环境花瓣 `.petal-layer`（仅含 `.hero` 的页面生成）
+  - 播放器音频频谱 `.eq-bars`（播放时 `.is-active`，由 `music.js` 切换）
+  - 成功反馈 `QI.confetti(fromEl, opts)`（兑换 / 打卡成功撒花瓣）
+  - 页面进入过渡 `<main class="page-transition">`、标题流光 `.title-shimmer`
 
 ### 3.6 5 音定义（[app/utils/constants.py](file:///c:/Users/Administrator/Desktop/webwrold/app/utils/constants.py)）
 

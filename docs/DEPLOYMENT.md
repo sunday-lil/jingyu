@@ -223,6 +223,10 @@ server {
         proxy_set_header Host $host;
         expires 7d;
         add_header Cache-Control "public, immutable";
+        # ⚠️ 改动 CSS / JS 后（如 05-animations.css、app.js），由于 expires 7d + immutable，
+        # 老用户浏览器会一直用旧缓存。建议发版后：
+        #   1) 改 style.css / base.html 里的查询串版本号（如 ?v=20260715），或
+        #   2) 临时 `sudo nginx -s reload` + 让用户硬刷新（Ctrl+Shift+R）一次。
     }
 
     # API + 页面

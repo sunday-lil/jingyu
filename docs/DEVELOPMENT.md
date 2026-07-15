@@ -167,6 +167,23 @@ class Xxx(Base):
 2. 触发元素加 `class="your-anim"`
 3. JS 端用 `element.classList.add('your-anim')` + 监听 `animationend`
 
+#### 2.6.1 复用现成交互增强（推荐先看，避免重复造轮子）
+[static/js/app.js](../../static/js/app.js) 在 `DOMContentLoaded` 自动 `QI.initAll()`，已提供：
+
+| 想要的效果 | 怎么用 |
+|---|---|
+| 滚动渐显 | 给**容器**加 `class="reveal"`（可叠加 `reveal--d1`…`reveal--d6` 错峰）|
+| 数字从 0 计数 | 给元素加 `class="countup" data-countup="目标值"` |
+| 按钮涟漪 | 自动生效，任何 `.btn` 都有，无需加东西 |
+| 卡片光泽扫过 | 自动生效在 `.module-card / .shop-item / .song-item`（hover 触发）|
+| 成功撒花瓣 | JS 里调 `QI.confetti(fromEl, { glyphs: ["🌸","🌿"] })` |
+| 首页环境花瓣 | 自动生效（页面含 `.hero` 时）|
+
+**铁律**：
+- `.reveal` **只加在容器上**，不要加在 `.yin-card / .module-card / .song-item / .card` 等带 `:hover { transform }` 的卡片上 —— `.reveal.is-visible` 的 transform 会覆盖 hover transform（同特异性 0,2,0，后定义胜出）。详见 [ARCHITECTURE §5.3](../ARCHITECTURE.md)。
+- 所有动效已内置 `prefers-reduced-motion` 降级，新增 `@keyframes` 时**必须**也加一段 `@media (prefers-reduced-motion: reduce)` 关闭它（无障碍）。
+- 涟漪用事件委托，**动态插入**的 `.btn` 也自动生效，无需手动 `initRipple()`。
+
 ---
 
 ## 3. 9 个真实踩过的坑

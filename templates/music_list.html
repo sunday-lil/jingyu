@@ -11,7 +11,7 @@
     <div class="music-detail__scene">{{ yin_info.description }}</div>
   </div>
 
-  <div class="music-detail__list" id="song-list">
+  <div class="music-detail__list reveal" id="song-list">
     {% for m in musics %}
     <div class="song-item fade-in"
          data-id="{{ m.id }}"
@@ -32,7 +32,12 @@
 
 <!-- 底部播放器 -->
 <div class="player">
-  <div class="player__title">选一首曲子开始</div>
+  <div class="player__title">
+    <span class="eq-bars" aria-hidden="true">
+      <span class="eq-bars__bar"></span><span class="eq-bars__bar"></span><span class="eq-bars__bar"></span><span class="eq-bars__bar"></span><span class="eq-bars__bar"></span>
+    </span>
+    <span class="player__title-text">选一首曲子开始</span>
+  </div>
   <div class="player__progress">
     <span class="player__time-current">00:00</span>
     <div class="player__bar">

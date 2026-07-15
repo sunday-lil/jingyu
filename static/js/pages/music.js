@@ -9,7 +9,8 @@
   if (!audio) return;
 
   const list = document.querySelectorAll(".song-item");
-  const titleEl = document.querySelector(".player__title");
+  const titleEl = document.querySelector(".player__title-text");
+  const eqEl = document.querySelector(".eq-bars");
   const playBtn = document.querySelector(".player__btn--play");
   const prevBtn = document.querySelector(".player__btn--prev");
   const nextBtn = document.querySelector(".player__btn--next");
@@ -34,6 +35,12 @@
     list.forEach((el, i) => el.classList.toggle("is-playing", i === idx));
   }
 
+  // 同步音频频谱可视化：播放中亮起，暂停/停止时收起
+  function syncEq() {
+    if (!eqEl) return;
+    eqEl.classList.toggle("is-active", !audio.paused && currentIdx !== -1);
+  }
+
   function playIndex(idx) {
     if (idx < 0 || idx >= list.length) return;
     currentIdx = idx;
@@ -50,6 +57,7 @@
     titleEl.textContent = title;
     setActiveItem(idx);
     playBtn.textContent = "⏸";
+    syncEq();
 
     // 重置上报
     reported = new Set();
@@ -67,6 +75,7 @@
       audio.pause();
       playBtn.textContent = "▶";
     }
+    syncEq();
   }
 
   // 列表点击
@@ -141,6 +150,7 @@
     } else {
       playBtn.textContent = "▶";
       setActiveItem(-1);
+      syncEq();
     }
   });
 

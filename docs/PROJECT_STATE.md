@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-15（会话 3 — 首发到 GitHub https://github.com/sunday-lil/jingyu）
+**最后更新**：2026-07-15（会话 4 — 前端交互增强：滚动渐显 / 涟漪 / 计数 / 花瓣 / 频谱）
 
 ---
 
@@ -24,6 +24,17 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-15（会话 4）— 前端交互增强（Netflix / Spotify 风格动效）
+- [x] 扩展 [static/css/05-animations.css](../../static/css/05-animations.css) §2：滚动渐显 `.reveal`、卡片光泽扫过 sheen、按钮涟漪 `.ripple-ink`、数字计数 `.countup`、环境花瓣 `.petal`、音频频谱 `.eq-bars`、页面过渡 `.page-transition`、标题流光 `.title-shimmer`、成功花瓣 `.confetti-petal`；全部遵守 `prefers-reduced-motion`
+- [x] 扩展 [static/js/app.js](../../static/js/app.js)：新增 `QI.initReveal / initRipple / initCountUp / initPetals / initPageTransition / initAll / countUp / confetti / prefersReducedMotion`；`DOMContentLoaded` 自动初始化（涟漪用事件委托，支持动态按钮）
+- [x] 改 [templates/base.html](../../templates/base.html)：加 `.petal-layer` 花瓣层 + `<main class="page-transition">`
+- [x] 改 [templates/index.html](../../templates/index.html)：标题 `title-shimmer`、五音 / 模块区容器 `reveal`（容器级揭示，避免与卡片 hover transform 冲突）
+- [x] 改 [templates/shop.html](../../templates/shop.html)：能量数字 `data-countup` 计数
+- [x] 改 [templates/music_list.html](../../templates/music_list.html) + [static/js/pages/music.js](../../static/js/pages/music.js)：播放器内嵌 `.eq-bars` 频谱（播放/暂停切换 `.is-active`）、列表容器 `reveal`
+- [x] 改 [static/js/pages/shop.js](../../static/js/pages/shop.js) + [static/js/pages/mood.js](../../static/js/pages/mood.js)：成功时 `QI.confetti()` 撒花瓣
+- [x] 文档同步（铁律）：README §2 目录树 + §3.5、PROJECT_STATE §2（本条）、ARCHITECTURE §5.2/§5.3、DEVELOPMENT §2.6、HANDOFF §2、DEPLOYMENT §2.6 缓存提示
+- [x] 设计原则：**不引入框架**（纯原生 CSS + JS）；**治愈系调性**（米白 / 淡青 / 藕粉，光泽透明度 0.35，非 Netflix 暗黑商业风）；`.reveal` 只加在容器上，不覆盖卡片 hover
 
 ### 2026-07-15（会话 3）— 首发到 GitHub
 - [x] 写 [push-to-github.ps1](../../push-to-github.ps1) — 一键「重置 + 推」脚本

@@ -138,11 +138,11 @@ webwrold/
 │   │   ├── 02-layout.css
 │   │   ├── 03-components.css
 │   │   ├── 04-pages.css
-│   │   ├── 05-animations.css ← 漂流瓶动效 / 心情弹跳 / 花朵生长
+│   │   ├── 05-animations.css ← 漂流瓶动效 / 心情弹跳 / 花朵生长 / §2 交互增强（reveal / ripple / countup / petals / eq-bars / page-transition / title-shimmer / confetti）
 │   │   ├── 06-music.css
 │   │   └── 07-admin.css      ← 后台专属（暗色侧栏 + 表格 + 模态）
 │   ├── js/
-│   │   ├── app.js            ← window.QI 全局（fetch / toast / confirmThen）
+│   │   ├── app.js            ← window.QI 全局（fetch / toast / confirmThen / reveal / ripple / countUp / confetti / petals / pageTransition）
 │   │   └── pages/            ← 一页一个 JS
 │   │       ├── auth.js / music.js / diary.js / diary_detail.js
 │   │       ├── my_bottles.js / pick.js

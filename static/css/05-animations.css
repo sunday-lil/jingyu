@@ -285,3 +285,277 @@
 .fade-in:nth-child(4) { animation-delay: 240ms; }
 .fade-in:nth-child(5) { animation-delay: 320ms; }
 .fade-in:nth-child(6) { animation-delay: 400ms; }
+
+/* ============================================================
+   §2  交互增强（参考 Netflix / Spotify 的动效语言，适配治愈系调性）
+   - 滚动渐显 reveal
+   - 卡片悬浮展开（lift + 光泽扫过 + 内容上浮）
+   - 按钮涟漪 ripple
+   - 数字计数 countup
+   - 环境花瓣 petal
+   - 音频频谱 eq-bars
+   - 页面切换过渡 page-transition
+   - 标题流光 title-shimmer
+   所有动效遵守 prefers-reduced-motion，无障碍优先。
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal--d1, .reveal--d2, .reveal--d3, .reveal--d4, .reveal--d5, .reveal--d6 {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .petal-layer { display: none !important; }
+  .eq-bars__bar { animation: none !important; }
+  .title-shimmer { animation: none !important; }
+}
+
+/* ── 滚动渐显 reveal ──
+   JS（QI.initReveal）用 IntersectionObserver 在进入视口时加 .is-visible */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* 错峰延迟（同行内卡片依次浮现）*/
+.reveal--d1 { transition-delay: 60ms; }
+.reveal--d2 { transition-delay: 120ms; }
+.reveal--d3 { transition-delay: 180ms; }
+.reveal--d4 { transition-delay: 240ms; }
+.reveal--d5 { transition-delay: 300ms; }
+.reveal--d6 { transition-delay: 360ms; }
+
+/* ── 卡片悬浮展开（Netflix 行卡片语言，柔化处理）──
+   作用在 .module-card / .shop-item / .song-item 上
+   （.yin-card 已有装饰性 ::after 渐变层，不覆盖以免破坏现有视觉）
+   依赖各组件原有 transition，这里只叠加视觉效果 */
+.module-card,
+.shop-item,
+.song-item {
+  position: relative;
+  overflow: hidden;
+}
+
+/* 光泽扫过（sheen），悬浮时触发 */
+.module-card::after,
+.shop-item::after,
+.song-item::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  pointer-events: none;
+  opacity: 0;
+  transition: left 700ms ease, opacity 400ms ease;
+  z-index: 3;
+}
+
+.module-card:hover::after,
+.shop-item:hover::after,
+.song-item:hover::after {
+  left: 130%;
+  opacity: 1;
+}
+
+/* 模块卡图标在悬浮时轻微弹跳 */
+.module-card:hover .module-card__icon {
+  animation: icon-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes icon-pop {
+  0%   { transform: scale(1) rotate(0); }
+  40%  { transform: scale(1.12) rotate(-6deg); }
+  70%  { transform: scale(0.96) rotate(3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* 商店物品图标在悬浮时摇晃（像拿起小礼物）*/
+.shop-item:hover .shop-item__image {
+  animation: gift-wiggle 700ms ease;
+}
+
+@keyframes gift-wiggle {
+  0%, 100% { transform: rotate(0); }
+  25%      { transform: rotate(-8deg); }
+  50%      { transform: rotate(6deg); }
+  75%      { transform: rotate(-4deg); }
+}
+
+/* ── 按钮涟漪 ripple ──
+   JS（QI.initRipple）在点击时插入 <span class="ripple-ink"> */
+.btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-ink {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.45);
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple-spread 600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  z-index: 1;
+}
+
+.btn--ghost .ripple-ink,
+.btn--soft .ripple-ink {
+  background: rgba(168, 197, 160, 0.35);
+}
+
+@keyframes ripple-spread {
+  to { transform: translate(-50%, -50%) scale(2.4); opacity: 0; }
+}
+
+/* ── 数字计数 countup ──
+   JS（QI.initCountUp）读取 data-countup 目标值，从 0 缓动到目标
+   元素本身不带动画，纯 JS 操作 textContent */
+.countup {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 环境花瓣 petal ──
+   .petal-layer 由 base.html 提供，JS（QI.initPetals）在其中生成 .petal */
+.petal-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;           /* 与 .bg-orb 同层，DOM 顺序在后 → 位于其上；内容(non-positioned block)绘制于其上 */
+  overflow: hidden;
+}
+
+.petal {
+  position: absolute;
+  top: -40px;
+  font-size: 18px;
+  opacity: 0;
+  user-select: none;
+  animation: petal-fall linear forwards;
+  filter: drop-shadow(0 2px 4px rgba(232, 184, 168, 0.15));
+}
+
+@keyframes petal-fall {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% { opacity: 0.7; }
+  90% { opacity: 0.5; }
+  100% {
+    transform: translateY(105vh) translateX(var(--drift, 40px)) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+/* ── 音频频谱 eq-bars（播放器装饰性可视化）──
+   放在 .player 内，JS（music.js）在播放/暂停时切换 .is-active */
+.eq-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+  margin-right: var(--space-2);
+  vertical-align: middle;
+}
+
+.eq-bars__bar {
+  width: 3px;
+  height: 30%;
+  background: var(--color-accent);
+  border-radius: 2px;
+  opacity: 0.5;
+  transform-origin: bottom;
+}
+
+.eq-bars.is-active .eq-bars__bar {
+  opacity: 1;
+  animation: eq-bounce 900ms ease-in-out infinite;
+}
+
+.eq-bars.is-active .eq-bars__bar:nth-child(1) { animation-delay: 0ms; }
+.eq-bars.is-active .eq-bars__bar:nth-child(2) { animation-delay: 150ms; }
+.eq-bars.is-active .eq-bars__bar:nth-child(3) { animation-delay: 300ms; }
+.eq-bars.is-active .eq-bars__bar:nth-child(4) { animation-delay: 450ms; }
+.eq-bars.is-active .eq-bars__bar:nth-child(5) { animation-delay: 600ms; }
+
+@keyframes eq-bounce {
+  0%, 100% { height: 25%; }
+  50%      { height: 100%; }
+}
+
+/* ── 页面切换过渡 page-transition ──
+   base.html 给 <main> 加 .page-transition；JS 在首次加载后加 .is-ready
+   实现极轻量的进入淡入，避免 SSR 跳变 */
+.page-transition {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 420ms ease-out,
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.page-transition.is-ready {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── 标题流光 title-shimmer ──
+   作用在 .hero__title，文字渐变流光，治愈系不刺眼 */
+.title-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--color-text-primary) 0%,
+    var(--color-text-primary) 35%,
+    var(--color-accent) 50%,
+    var(--color-text-primary) 65%,
+    var(--color-text-primary) 100%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: title-pan 6s ease-in-out infinite;
+}
+
+@keyframes title-pan {
+  0%, 100% { background-position: 150% 0; }
+  50%      { background-position: -50% 0; }
+}
+
+/* ── 心情打卡成功 · 花瓣撒落 confetti ──
+   JS（QI.confetti）在指定元素附近生成 .confetti-petal */
+.confetti-petal {
+  position: fixed;
+  pointer-events: none;
+  font-size: 18px;
+  z-index: 9999;
+  animation: confetti-burst 1200ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes confetti-burst {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(0.6);
+    opacity: 0;
+  }
+  20% { opacity: 1; }
+  100% {
+    transform: translate(var(--cx, 0), var(--cy, -80px)) rotate(var(--cr, 360deg)) scale(1);
+    opacity: 0;
+  }
+}

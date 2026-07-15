@@ -17,10 +17,11 @@
   <div class="bg-orb bg-orb--1"></div>
   <div class="bg-orb bg-orb--2"></div>
   <div class="bg-orb bg-orb--3"></div>
+  <div class="petal-layer" aria-hidden="true"></div>
 
   {% include "_nav.html" %}
 
-  <main class="main">
+  <main class="main page-transition">
     <div class="container {% if request.url.path in ['/login', '/register'] or '/diary' in request.url.path and not '/my-bottles' in request.url.path %}container--narrow{% endif %}">
       {% block content %}{% endblock %}
     </div>

@@ -27,6 +27,7 @@
           newBtn.disabled = true;
           newBtn.textContent = "已收好";
           btn.replaceWith(newBtn);
+          QI.confetti(newBtn, { glyphs: ["🌸", "🎁", "🌿", "✨"] });
 
           // 更新能量显示
           document.querySelectorAll("[data-energy-display]").forEach((el) => {

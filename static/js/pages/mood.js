@@ -41,6 +41,7 @@
       });
       QI.toast("+1 养分 🌱", "success");
       QI.floatEnergy("+1 养分", saveBtn);
+      QI.confetti(saveBtn, { glyphs: ["🌱", "🌿", "🌸", "✨"] });
       // 更新能量显示
       document.querySelectorAll("[data-energy-display]").forEach((el) => {
         const m = (el.textContent || "0");

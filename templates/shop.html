@@ -9,7 +9,7 @@
 
 <div class="card fade-in" style="text-align:center;margin-bottom:24px;">
   <span style="color:var(--color-text-secondary);">我的能量：</span>
-  <strong style="color:var(--color-accent);font-size:24px;font-family:var(--font-serif);" data-energy-display>{{ current_user.total_energy if current_user else 0 }}</strong>
+  <strong class="countup" style="color:var(--color-accent);font-size:24px;font-family:var(--font-serif);" data-energy-display data-countup="{{ current_user.total_energy if current_user else 0 }}">{{ current_user.total_energy if current_user else 0 }}</strong>
   <span style="color:var(--color-text-muted);font-size:13px;margin-left:8px;">🍃</span>
 </div>
 
