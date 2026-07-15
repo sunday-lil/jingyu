@@ -569,15 +569,16 @@ assert r.status_code in (200, 201)
 ### 12.3 同步时序
 
 ```
-改代码 → 改对应文档 → 跑验证（curl 冒烟 / 端到端） → git add . → 一次 commit
-                                          ↑                            │
-                                          └────── 验证发现还得改 ←──────┘
-                                                                         │
-                                          验证通过 ←─── 文档跟着改好 ←──┘
+改代码 → 改对应文档 → 跑验证（curl 冒烟 / 端到端） → git add . → git commit → git push
+                                          ↑                            │            │
+                                          └────── 验证发现还得改 ←──────┘            │
+                                                                                    ↓
+                                          验证通过 ←─── 文档跟着改好 ←──── 远端接收 ←┘
 ```
 
-> ❌ 反例：commit `feat(xxx): ...` 一小时后才想起来 README 没改 → 单独再发一个 `docs(readme): ...` commit
-> ✅ 正例：feat commit **里面** README 同步改好 → diff 里能一眼看到「代码 + 文档」是同一件事
+> ❌ 反例 A：commit `feat(xxx): ...` 一小时后才想起来 README 没改 → 单独再发一个 `docs(readme): ...` commit
+> ❌ 反例 B：本地 commit 完不 push，留到明天 / 下周 / 「攒一波一起推」→ 仓库永远落后本地
+> ✅ 正例：feat commit **里面** README 同步改好 → 紧接着 `git push origin main` → 远端 / 本地**完全一致**
 
 ### 12.4 文档 ≠ 摆设 — 验收清单
 
@@ -597,6 +598,130 @@ assert r.status_code in (200, 201)
 1. commit message 里**必须**明确写 `WIP: docs pending`
 2. **当天**至少把对应的「改了」表里那一行填上
 3. 下一条 commit 之前必须把文档补完
+
+### 12.6 自动推送铁律（commit 完必须立即 push）
+
+> 🔒 跟 §12.1 同一优先级。
+
+**铁律**：`git commit` 完之后**立刻** `git push origin main`，**不允许**：
+- ❌ 「先 commit 完，一会儿一起推」→ 仓库永远落后本地
+- ❌ 「明天再推」→ 第二天忘了 → 本地数据丢失 / 换电脑没同步
+- ❌ 「攒一周的 commit 一起推」→ 出错时回滚困难
+- ❌ 「push 前再 review 一下」→ 没问题立即推，「review 完忘了」也算违反
+
+**正确做法**：
+```bash
+git add -A
+git commit -m "fix(auth): add is_admin field to AuthOut schema"
+git push origin main           # ← 必须紧跟 commit
+```
+
+**push 失败的应急**：
+- 网络问题：retry 一次；再失败 → 截图报错，留 `WIP: push pending` 标记
+- 远端冲突：`git pull --rebase` → 解决 → `git push`（**不要** `git push --force`，除非你 100% 确定）
+- 权限问题：检查 `gh auth status`，重新 `gh auth login`
+
+**特殊场景**（可以延迟 push）：
+- 多文件多模块大改（> 5 个文件）：允许攒一个原子 commit 一起推
+- 写到一半想先备份：可以 `git stash` + 暂存，但 stash 完**也必须**当天处理掉
+
+### 12.7 Commit 标题 / 脚本标题规范（Conventional Commits）
+
+> 无论代码 commit 还是脚本（如 `push-to-github.ps1`）里的进度输出，**统一**用 Conventional Commits 风格。
+
+#### 12.7.1 Commit message 格式
+
+```
+<type>(<scope>): <subject>           ← 第一行，subject ≤ 50 字符
+
+<body>                               ← 可选，72 字符 / 行，列改动点
+- bullet 1
+- bullet 2
+
+<footer>                             ← 可选
+BREAKING CHANGE: ...
+Refs: HANDOFF §6.11
+```
+
+#### 12.7.2 Type 清单（必用）
+
+| type | 含义 | 例子 |
+|---|---|---|
+| `feat` | 新功能 | `feat(admin): add user detail page` |
+| `fix` | 修 Bug | `fix(auth): add is_admin field to AuthOut` |
+| `refactor` | 重构（无功能变化） | `refactor(energy): extract constants` |
+| `docs` | 仅文档 | `docs(readme): add GitHub badges` |
+| `style` | 格式（空格/引号/CSS 微调） | `style(admin): rename card icons` |
+| `test` | 测试 | `test(schemas): add Out field check` |
+| `chore` | 杂事（依赖 / 配置） | `chore: bump FastAPI to 0.116` |
+| `perf` | 性能 | `perf(music): lazy-load tracks` |
+| `revert` | 回滚 | `revert: feat(admin): add user detail` |
+
+#### 12.7.3 Scope 清单（项目模块名）
+
+```
+auth, diary, mood, music, energy, garden, admin, templates, static,
+docs, deps, config, start, deploy, healing (通用), scripts
+```
+
+无明确 scope → 省略括号（`chore: bump version` 而不是 `chore(): ...`）
+
+#### 12.7.4 标题规则
+
+- ✅ 用动词原形开头：`add` / `fix` / `remove` / `bump` / `refactor`
+- ✅ 全部小写（专有名词除外：`FastAPI` / `Jinja2` / `SQLite`）
+- ✅ 句尾**不加**句号
+- ✅ 50 字符以内，超了就换 scope 或简化
+- ❌ 不要：`feat: 修改了一些东西` / `fix: 修复 bug` / `update code`
+
+#### 12.7.5 完整 commit 示例
+
+```bash
+# 修 Bug
+git commit -m "fix(auth): add is_admin field to AuthOut schema
+
+Pydantic response_model silently filters out undeclared fields,
+so frontend always gets data.is_admin === undefined and the
+'no admin permission' branch always triggers.
+
+Refs: HANDOFF §6.11, DEVELOPMENT §3.10"
+
+# 新功能
+git commit -m "feat(admin): add user detail page with energy audit
+
+- show diary/mood/energy/garden counts
+- show recent 10 entries of each
+- allow admin to adjust energy (logged in EnergyRecord.source='admin_adjust')
+- allow admin to reset user password (bcrypt rehash)
+
+Refs: HANDOFF §5.6, ARCHITECTURE §6.5"
+
+# 仅文档
+git commit -m "docs(github): add repo URL + fix topics loop
+
+- HANDOFF.md: GitHub URL in top note + §1
+- PROJECT_STATE.md: add session 3 changelog
+- README.md: add 4 badges
+- push-to-github.ps1: topics now loops (--add-topic accepts 1 arg)"
+
+# 杂事
+git commit -m "chore(deps): bump bcrypt to 4.2"
+```
+
+#### 12.7.6 脚本/工具里的进度标题
+
+`push-to-github.ps1` 这种工具脚本里，**每一步的输出标题也要遵守 type(scope) 风格**：
+
+```powershell
+Write-Host "[1/6] chore(git): removing broken .git ..." -ForegroundColor Yellow
+Write-Host "[2/6] chore(git): git init -b main ..."       -ForegroundColor Yellow
+Write-Host "[3/6] feat(git): staging files ..."          -ForegroundColor Yellow
+Write-Host "[4/6] feat(git): committing ..."              -ForegroundColor Yellow
+Write-Host "[5/6] feat(github): creating repo + push ..." -ForegroundColor Yellow
+Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yellow
+```
+
+> 这样跑完脚本，看到日志就能**复述出**「这次提交是 chore(git) + feat(github)」，自动同步到 commit 历史。
 
 ---
 

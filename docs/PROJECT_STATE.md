@@ -285,6 +285,19 @@ curl -b c.txt http://127.0.0.1:5000/api/admin/stats     # 200 + {"is_admin":true
 
 文档 ≠ 摆设。改完代码随手更新，让下一个 AI / 开发者接手时一眼能懂。**不更新 = 给后人埋雷。**
 
+### 8.6 改完自动 push（不延迟）
+- 跟 §8.1 同优先级
+- `git commit` 完**立即** `git push origin main`
+- 不允许「先 commit 一会儿一起推」/「明天推」/「攒一周」
+- 详细规则见 [HANDOFF §12.6](../../HANDOFF.md)
+
+### 8.7 Commit 标题 / 脚本进度用 Conventional Commits
+- 格式：`<type>(<scope>): <subject>`（subject ≤ 50 字符）
+- 9 个 type：`feat` / `fix` / `refactor` / `docs` / `style` / `test` / `chore` / `perf` / `revert`
+- 项目 scope：`auth` / `diary` / `mood` / `music` / `energy` / `garden` / `admin` / `templates` / `static` / `docs` / `deps` / `scripts` …
+- 脚本（如 `push-to-github.ps1`）的进度输出**也**用 `type(scope)` 标题 → 跑完日志 = commit 历史
+- 详细规则见 [HANDOFF §12.7](../../HANDOFF.md)
+
 ---
 
 ## 9. 联系 / 决策

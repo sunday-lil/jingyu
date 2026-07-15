@@ -70,6 +70,18 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1
 **正模式**：
 - ✅ `feat(xxx): 新功能 + 同步 README / HANDOFF / PROJECT_STATE`
 
+#### 1.8.1 改完自动 push（不延迟）
+- `git commit` 完**立即** `git push origin main`
+- 不允许「先 commit 一会儿一起推」/「明天推」/「攒一周推一次」
+- 完整规则：[HANDOFF §12.6](../../HANDOFF.md)
+
+#### 1.8.2 Commit 标题 / 脚本进度用 Conventional Commits
+- 格式：`<type>(<scope>): <subject>`（subject ≤ 50 字符）
+- type 9 个：`feat` / `fix` / `refactor` / `docs` / `style` / `test` / `chore` / `perf` / `revert`
+- 项目 scope：`auth` / `diary` / `mood` / `music` / `energy` / `garden` / `admin` / `templates` / `static` / `docs` / `deps` / `scripts` …
+- 脚本（`push-to-github.ps1`）的进度输出**也**用 `type(scope)` 标题
+- 完整规则 + 示例：[HANDOFF §12.7](../../HANDOFF.md)
+
 ---
 
 ## 2. 常见改动流程

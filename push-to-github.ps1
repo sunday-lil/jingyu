@@ -36,7 +36,7 @@ Write-Host "  Jingyu -> GitHub one-shot reset+push" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "[1/6] Removing broken .git ..." -ForegroundColor Yellow
+Write-Host "[1/6] chore(git): removing broken .git ..." -ForegroundColor Yellow
 if (Test-Path .git) {
     Remove-Item .git -Recurse -Force
     Write-Host "      OK" -ForegroundColor Green
@@ -44,16 +44,16 @@ if (Test-Path .git) {
     Write-Host "      No .git found, skip" -ForegroundColor DarkYellow
 }
 
-Write-Host "[2/6] git init -b main ..." -ForegroundColor Yellow
+Write-Host "[2/6] chore(git): git init -b main ..." -ForegroundColor Yellow
 git init -b main | Out-Null
 Write-Host "      OK" -ForegroundColor Green
 
-Write-Host "[3/6] git add -A ..." -ForegroundColor Yellow
+Write-Host "[3/6] feat(git): staging files ..." -ForegroundColor Yellow
 git add -A
 $fileCount = (git ls-files | Measure-Object).Count
 Write-Host ("      OK  ({0} files staged)" -f $fileCount) -ForegroundColor Green
 
-Write-Host "[4/6] git commit ..." -ForegroundColor Yellow
+Write-Host "[4/6] feat(git): committing ..." -ForegroundColor Yellow
 git -c user.name="sunday-lil" `
     -c user.email="sunday-lil@users.noreply.github.com" `
     commit -m "Initial commit: Jingyu (Jing-Yu) - healing platform v1
@@ -69,7 +69,7 @@ Tech: FastAPI 0.115+, SQLAlchemy 2.0, Jinja2, bcrypt, Fernet
       (AES-128-CBC + HMAC), PBKDF2, itsdangerous, uvicorn" | Out-Null
 Write-Host "      OK" -ForegroundColor Green
 
-Write-Host "[5/6] gh repo create $RepoName (public) + push ..." -ForegroundColor Yellow
+Write-Host "[5/6] feat(github): creating repo + push ..." -ForegroundColor Yellow
 & $GhExe repo create $RepoName `
     --public `
     --source=. `
@@ -78,7 +78,7 @@ Write-Host "[5/6] gh repo create $RepoName (public) + push ..." -ForegroundColor
     --description $RepoDesc
 Write-Host "      OK" -ForegroundColor Green
 
-Write-Host "[6/6] Set topics (loop, --add-topic accepts only 1 arg) ..." -ForegroundColor Yellow
+Write-Host "[6/6] feat(github): setting topics (loop) ..." -ForegroundColor Yellow
 foreach ($t in $Topics) {
     & $GhExe repo edit $RepoName --add-topic $t | Out-Null
     Write-Host ("      + " + $t) -ForegroundColor DarkGray
