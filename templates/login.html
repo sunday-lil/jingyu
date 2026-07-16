@@ -13,7 +13,10 @@
       </div>
       <div class="form-field">
         <label class="form-label" for="password">密码</label>
-        <input type="password" name="password" id="password" class="form-input" required minlength="6" autocomplete="current-password">
+        <div class="password-input-wrap">
+          <input type="password" name="password" id="password" class="form-input" required minlength="6" autocomplete="current-password">
+          <button type="button" class="password-toggle" data-target="password" aria-label="显示或隐藏密码">👁</button>
+        </div>
       </div>
       <div class="form-error" style="min-height:20px;margin-bottom:12px;"></div>
       <button type="submit" class="btn btn--primary btn--block btn--lg">入 境</button>

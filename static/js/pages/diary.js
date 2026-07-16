@@ -10,7 +10,6 @@
   const counter = document.getElementById("char-counter");
   const throwBtn = document.getElementById("throw-bottle");
   const isPublicEl = document.getElementById("is-public");
-  const moodItems = document.querySelectorAll(".mood-item");
   const bottle = document.querySelector(".bottle");
   const splash = document.querySelector(".splash");
   const water = document.querySelector(".water-surface");
@@ -22,7 +21,6 @@
 
   if (!editor || !throwBtn) return;
 
-  let selectedMood = null;
   const maxLen = 5000;
 
   // 字符计数
@@ -30,15 +28,6 @@
     const len = editor.value.length;
     counter.textContent = `${len} / ${maxLen}`;
     counter.style.color = len > maxLen * 0.9 ? "var(--color-warn)" : "var(--color-text-muted)";
-  });
-
-  // 心情选择
-  moodItems.forEach((el) => {
-    el.addEventListener("click", () => {
-      moodItems.forEach((m) => m.classList.remove("is-selected"));
-      el.classList.add("is-selected");
-      selectedMood = el.dataset.mood;
-    });
   });
 
   // 投瓶
@@ -93,7 +82,7 @@
         method: "POST",
         body: {
           content_encrypted: encrypted,
-          mood_type: selectedMood,
+          mood_type: null,
           is_public: isPublicEl.checked,
         },
       });
@@ -135,7 +124,10 @@
         <div class="modal" role="dialog">
           <h3 style="font-family:var(--font-serif);font-weight:400;margin-bottom:8px;letter-spacing:0.05em;">确认是你的</h3>
           <p style="color:var(--color-text-secondary);font-size:14px;margin-bottom:16px;">请输入密码以加密这封日记。<br>密码不会发送到服务器。</p>
-          <input type="password" class="form-input" id="pwd-input" placeholder="密码" autofocus>
+          <div class="password-input-wrap">
+            <input type="password" class="form-input" id="pwd-input" placeholder="密码" autofocus>
+            <button type="button" class="password-toggle" data-target="pwd-input" aria-label="显示或隐藏密码">👁</button>
+          </div>
           <div id="pwd-error" class="form-error" style="min-height:18px;"></div>
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
             <button class="btn btn--ghost" data-act="cancel">回 去</button>

@@ -426,11 +426,10 @@
   font-weight: 500;
 }
 
+/* 已打卡格子：emoji 替代数字，居中放大（.calendar__day 已是 flex 居中） */
 .calendar__day .mood-emoji {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  font-size: 14px;
+  font-size: 22px;
+  line-height: 1;
 }
 
 .calendar-nav {

@@ -14,7 +14,10 @@
       </div>
       <div class="form-field">
         <label class="form-label" for="password">设一个密码</label>
-        <input type="password" name="password" id="password" class="form-input" required minlength="6" autocomplete="new-password">
+        <div class="password-input-wrap">
+          <input type="password" name="password" id="password" class="form-input" required minlength="6" autocomplete="new-password">
+          <button type="button" class="password-toggle" data-target="password" aria-label="显示或隐藏密码">👁</button>
+        </div>
         <div class="form-hint">至少 6 位。<strong>请记住</strong>，它将用来加密你的日记。</div>
       </div>
       <div class="form-error" style="min-height:20px;margin-bottom:12px;"></div>

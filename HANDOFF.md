@@ -119,7 +119,7 @@ webwrold/
 │   ├── index.html / login.html / register.html
 │   ├── music_list.html
 │   ├── diary_write.html / my_bottles.html / diary_detail.html / pick_bottle.html
-│   ├── mood_calendar.html      ← 情绪日历（今日打卡 + 月历 + 30 天趋势，2026-07-16 合并原 /mood 打卡页）
+│   ├── mood_calendar.html      ← 情绪日历（今日打卡仅选表情 + 月历 + 30 天趋势；2026-07-16 会话 6 合并原 /mood 打卡页 / 会话 7 删文本输入、emoji 替代数字）
 │   ├── garden.html / shop.html
 │   └── admin/                ← 秘密后台模板（继承 admin/_base.html）
 │       ├── _base.html        ← 暗色侧栏 + 金边 logo
@@ -142,11 +142,11 @@ webwrold/
 │   │   ├── 06-music.css
 │   │   └── 07-admin.css      ← 后台专属（暗色侧栏 + 表格 + 模态）
 │   ├── js/
-│   │   ├── app.js            ← window.QI 全局（fetch / toast / confirmThen / reveal / ripple / countUp / confetti / petals / pageTransition）
+│   │   ├── app.js            ← window.QI 全局（fetch / toast / confirmThen / reveal / ripple / countUp / confetti / petals / pageTransition / passwordToggle）
 │   │   └── pages/            ← 一页一个 JS
 │   │       ├── auth.js / music.js / diary.js / diary_detail.js
 │   │       ├── my_bottles.js / pick.js
-│   │       ├── mood_calendar.js ← 情绪日历（含今日打卡逻辑，2026-07-16 合并原 mood.js）
+│   │       ├── mood_calendar.js ← 情绪日历（含今日打卡逻辑；2026-07-16 会话 6 合并原 mood.js / 会话 7 删文本输入、note 提交 null、emoji 替代数字）
 │   │       ├── shop.js
 │   │       ├── admin_login.js / admin_dashboard.js
 │   │       ├── admin_users.js / admin_user_detail.js
@@ -181,10 +181,14 @@ webwrold/
 - 「我的瓶子」时间线：日期 + 心情表情 + 前 20 字预览
 - 「拾取陌生人漂流瓶」：随机抽 `is_public=True` 的日记，给前 20 字 + 一条匿名鼓励
 
-### Phase 4 — 心情手帐 + 精神花园
+### Phase 4 — 情绪日历 + 精神花园
 - 6 种心情表情（开心/平静/疲惫/焦虑/生气/悲伤）
 - 月份日历 + 30 天趋势折线图
 - 每天限 1 次，可覆盖
+- **模块职责分离**（2026-07-16 会话 7 起）：
+  - 情绪日历**只选表情**，文本输入已删除；日历格子用 emoji 替代数字直观反映当日心情
+  - 日记编辑页**不再选心情**，心情选择与日记编写完全分离；日记正文可自由粘贴任何 emoji
+  - 历史数据零迁移：`MoodCheckin.note` 本就 `nullable=True` 且 DB 查无历史数据；`Diary.mood_type` 字段保留（向后兼容历史数据，新日记为 null）
 - 能量获取：听歌 +1 露水 / 日记 +2 阳光 / 打卡 +1 养分 / 7 连胜 +5 阳光
 - 商店兑换虚拟花 / 装扮 / 徽章（**严禁**用"购买""充值"等商业词）
 

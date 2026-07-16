@@ -187,6 +187,7 @@ webwrold/
 ### 3.3 鉴权与会话
 
 - **密码哈希**：`bcrypt`（直接使用，passlib 与新版 bcrypt 4.x 不兼容），注册时 `hash_password(pw)`，登录时 `verify_password(pw, hash)`。密码超 72 字节自动截断。
+- **密码输入可见性切换**：登录 / 注册 / 日记解锁 modal 的密码框统一用 `.password-input-wrap` + `.password-toggle` 👁 按钮，点击切换明文/掩码；`app.js initPasswordToggle()` 用 document-level 事件委托，动态生成的 modal 也生效（2026-07-16 会话 7 加）。
 - **会话**：用 `itsdangerous.URLSafeTimedSerializer` 签名 session_id，存在 cookie 里，HttpOnly + SameSite=Lax。
 - **日记加密**：用户注册时生成随机 `encryption_salt` 存入 User 表。每次写日记时用 `PBKDF2HMAC(pw + salt)` 派生 Fernet 密钥，**密钥不存数据库**，只存在用户登录后的 session 上下文里。退出登录即丢失。
 - **隐私边界**：管理员视图只能看到 `Diary.content_encrypted`（密文），没有任何方式读取明文。
@@ -212,6 +213,7 @@ webwrold/
 - **交互增强（参考 Netflix / Spotify 动效语言，适配治愈系）**：`app.js` 在 `DOMContentLoaded` 自动初始化（`QI.initAll()`），全部遵守 `prefers-reduced-motion`：
   - 滚动渐显 `.reveal`（IntersectionObserver；给容器加，不要给有 hover transform 的卡片加，避免覆盖 hover）
   - 按钮涟漪 `.btn`（事件委托，动态插入的按钮也生效）
+  - 密码可见性切换 `.password-toggle`（事件委托，动态生成的日记解锁 modal 也生效；👁 ↔ 🙈 切换图标 + aria-label）
   - 数字计数 `[data-countup]`（进入视口时从 0 缓动到目标值）
   - 卡片光泽扫过（`.module-card / .shop-item / .song-item` 的 `::after` sheen，悬浮触发）
   - 首页环境花瓣 `.petal-layer`（仅含 `.hero` 的页面生成）

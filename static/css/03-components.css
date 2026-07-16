@@ -152,6 +152,48 @@
   margin-top: var(--space-1);
 }
 
+/* ── 密码可见性切换 ── */
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrap .form-input {
+  padding-right: 44px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.password-toggle:hover {
+  background: rgba(168, 197, 160, 0.15);
+  color: var(--color-text-secondary);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 /* ── 徽章 / 标签 ── */
 .badge {
   display: inline-flex;

@@ -137,6 +137,29 @@
       });
     },
 
+    // ── 密码可见性切换：事件委托 .password-toggle 的点击（支持动态生成的 modal）──
+    initPasswordToggle() {
+      if (this._pwdToggleBound) return;
+      this._pwdToggleBound = true;
+      document.addEventListener("click", (e) => {
+        const btn = e.target.closest && e.target.closest(".password-toggle");
+        if (!btn) return;
+        const wrap = btn.parentElement;
+        if (!wrap || !wrap.classList.contains("password-input-wrap")) return;
+        const input = wrap.querySelector("input");
+        if (!input) return;
+        if (input.type === "password") {
+          input.type = "text";
+          btn.textContent = "🙈";
+          btn.setAttribute("aria-label", "隐藏密码");
+        } else {
+          input.type = "password";
+          btn.textContent = "👁";
+          btn.setAttribute("aria-label", "显示密码");
+        }
+      });
+    },
+
     // ── 数字计数：[data-countup] 元素在进入视口时从 0 缓动到目标值 ──
     initCountUp() {
       const els = document.querySelectorAll("[data-countup]");
@@ -250,6 +273,7 @@
       this.initPageTransition();
       this.initReveal();
       this.initRipple();
+      this.initPasswordToggle();
       this.initCountUp();
       this.initPetals();
     },

@@ -178,7 +178,7 @@ base.html                    ← 全局前台骨架（head + nav + Toast + main 
   ├── my_bottles.html
   ├── diary_detail.html
   ├── pick_bottle.html
-  ├── mood_calendar.html      ← 情绪日历（今日打卡 + 月历 + 30 天趋势；2026-07-16 合并原 /mood 打卡页，/mood 302 兼容重定向到此）
+  ├── mood_calendar.html      ← 情绪日历（今日打卡仅选表情 + 月历 + 30 天趋势；2026-07-16 会话 6 合并原 /mood 打卡页 / 会话 7 删文本输入、日历 emoji 替代数字）
   ├── garden.html
   └── shop.html
 
@@ -226,6 +226,7 @@ style.css                 ← 前台入口
 - 视口高度一律用 `100dvh`（带 `100vh` 兜底，写在下一行覆盖）—— iOS Safari 的 `100vh` 含地址栏，会遮挡底部内容、滚动时跳变
 - body 已加 `isolation: isolate` 建立根 stacking context —— 让 `.bg-orb / .petal-layer` 等负 z-index 的 `position: fixed` 层在 iOS 上绘制顺序稳定（落在背景之上、内容之下）
 - sticky / fixed 底部元素（如 `.player`、`.tabbar`）所在的页面，容器底部 `padding` 必须 ≥ 该元素高度 + `bottom offset + env(safe-area-inset-bottom)`，否则最后一项内容被盖住点不到
+- **顶部导航避让刘海/灵动岛**（2026-07-16 会话 7 加）：`.nav` 加 `padding-top: env(safe-area-inset-top)`；移动端 `@media (max-width: 720px)` nav 高度压到 52px、隐藏 `.nav__nickname`、加大「离开」按钮点击区域，解决苹果用户反馈「导航栏占太大屏幕」
 
 ### 5.3 JS 模式
 
@@ -238,6 +239,7 @@ style.css                 ← 前台入口
   - `QI.initAll()` — `DOMContentLoaded` 自动初始化以下全部效果（app.js 末尾自动调用）
   - `QI.initReveal()` — `.reveal` 元素进入视口加 `.is-visible`（IntersectionObserver）
   - `QI.initRipple()` — `.btn` 点击涟漪（事件委托，动态按钮也生效）
+  - `QI.initPasswordToggle()` — `.password-toggle` 👁/🙈 切换密码明文/掩码（事件委托，动态生成的日记解锁 modal 也生效，2026-07-16 会话 7 加）
   - `QI.initCountUp()` — `[data-countup]` 进入视口从 0 缓动到目标值
   - `QI.initPetals()` — 含 `.hero` 的页面在 `.petal-layer` 生成环境花瓣
   - `QI.initPageTransition()` — `<main class="page-transition">` 进入淡入
@@ -389,6 +391,7 @@ def clear_pycaches(...):
 ### 7.1 密码
 - bcrypt(rounds=12) + 72 字节截断
 - 注册时存 `password_hash`，登录时 verify
+- **密码输入可见性切换**（2026-07-16 会话 7 加）：登录 / 注册 / 日记解锁 modal 的密码框统一用 `.password-input-wrap` + `.password-toggle` 👁 按钮，`app.js initPasswordToggle()` 用 document-level 事件委托切换明文/掩码（👁 ↔ 🙈），动态生成的 modal 也生效
 
 ### 7.2 会话
 - `itsdangerous.URLSafeTimedSerializer` 签名

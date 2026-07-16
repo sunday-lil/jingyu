@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-16（会话 6 — 心情模块重构：合并「今日手帐」与「情绪日历」）
+**最后更新**：2026-07-16（会话 7 — 5 项 UX 优化：密码可见性切换 / iOS 导航栏 / 模块职责分离 / 日历 emoji）
 
 ---
 
@@ -24,6 +24,30 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-16（会话 7）— 5 项 UX 优化（密码切换 / iOS 导航栏 / 模块职责分离 / 日历 emoji / 日记去心情）
+- [x] 起因：甲方提 5 项需求 — ① 密码可见性切换 ② 苹果设备导航栏过大 ③ 情绪日历文本输入整合到日记 ④ 日历日期数字替换为情绪 emoji ⑤ 日记编辑页移除心情选择
+- [x] **需求 1：密码可见性切换**
+  - [static/css/03-components.css](../../static/css/03-components.css)：新增 `.password-input-wrap` + `.password-toggle` 样式（绝对定位眼睛按钮、tap-highlight 透明、focus-visible 描边）
+  - [templates/login.html](../../templates/login.html) + [templates/register.html](../../templates/register.html)：密码 input 包裹 `.password-input-wrap`，加 `<button class="password-toggle" data-target="password">👁</button>`
+  - [static/js/pages/diary.js](../../static/js/pages/diary.js)：`askPassword` 动态 modal 的 input 同样包裹 + toggle 按钮
+  - [static/js/app.js](../../static/js/app.js)：新增 `initPasswordToggle()`（document-level 事件委托，支持动态生成的 modal），在 `initAll()` 调用；👁 ↔ 🙈 切换图标 + aria-label
+- [x] **需求 2：iOS 导航栏优化 + 退出按钮可见性**
+  - [static/css/02-layout.css](../../static/css/02-layout.css)：`.nav` 加 `padding-top: env(safe-area-inset-top)` 避让 iOS 刘海/灵动岛；移动端 `@media (max-width: 720px)` nav 高度 56px→52px、隐藏 `.nav__nickname`、加大离开按钮点击区域
+  - [templates/_nav.html](../../templates/_nav.html)：L13 `/mood` → `/mood-calendar`，"手帐" → "日历"（修会话 6 遗漏未改的桌面 nav 链接）
+  - [templates/base.html](../../templates/base.html) + [templates/index.html](../../templates/index.html)：meta description / hero subtitle 文案 "心情手帐" → "情绪日历"
+- [x] **需求 3：情绪日历删文本输入区**
+  - [templates/mood_calendar.html](../../templates/mood_calendar.html)：删除 textarea #mood-note + form-hint 整段；文案改为 "选一个表情，记录今天的心情"
+  - [static/js/pages/mood_calendar.js](../../static/js/pages/mood_calendar.js)：删除 noteEl 取值，提交 `note: null`；文件头注释更新 "2026-07-16 移除文本输入，甲方要求文字内容统一进日记模块"
+  - **数据迁移零改动**：DB 查询确认 `MoodCheckin.note` 历史数据 `with_note: 0`（本就 nullable=True，无历史数据需要迁移）
+- [x] **需求 4：日历日期数字替换为情绪 emoji**
+  - [static/js/pages/mood_calendar.js](../../static/js/pages/mood_calendar.js) `renderCalendar`：`isChecked` 时 content 只生成 `<span class="mood-emoji">${emoji}</span>`，否则显示数字；title 显示日期
+  - [static/css/04-pages.css](../../static/css/04-pages.css)：`.calendar__day .mood-emoji` 从 absolute 右上角 14px 改为居中 22px（emoji 替代数字，利用 `.calendar__day` 已有的 flex 居中）
+- [x] **需求 5：日记编辑页删心情选择模块**
+  - [templates/diary_write.html](../../templates/diary_write.html)：删除整个心情选择模块（page-header + mood-grid）；placeholder 加 "也可以贴任何 emoji 🌸" 暗示
+  - [static/js/pages/diary.js](../../static/js/pages/diary.js)：删除 `selectedMood` + moodItems click listener，提交 `mood_type: null`；**`Diary.mood_type` 字段保留**（向后兼容历史数据，新日记为 null）
+- [x] 文档同步（铁律）：PROJECT_STATE §1/§2（本条）、README §3.3/§3.5、HANDOFF §2/§4、ARCHITECTURE §5.1/§7.1、DEVELOPMENT §3.13
+- [x] 验证：python start.py restart → PID 17532；curl `/login` 200、`/register` 200、`/mood-calendar` 302→`/login`、`/diary/write` 302→`/login`、`/` 200；HTML 含 `password-toggle` / `password-input-wrap`；mood_calendar.html 不含 `mood-note`；diary_write.html 不含 `mood-grid`
 
 ### 2026-07-16（会话 6）— 心情模块重构：合并「今日手帐」与「情绪日历」
 - [x] 起因：甲方反馈「今日手帐」与「漂流瓶」「选心情」功能重合，要求合并每日手帐与日历为「情绪日历」，不强制每天写文字（只选表情也行），漂流瓶与情绪日历分开

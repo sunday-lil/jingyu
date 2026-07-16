@@ -502,6 +502,63 @@ curl / > tmp.html && grep "不勉强每天\|/mood-calendar" tmp.html → 命中
 
 ---
 
+### 3.13 模块职责分离 + 密码可见性切换 + iOS 导航栏避让
+
+**场景**（2026-07-16 会话 7 甲方 5 项需求）：
+1. 登录/注册/日记解锁 modal 密码框要带"睁眼/闭眼"切换
+2. 苹果用户反馈导航栏占据过大屏幕空间
+3. 情绪日历的文本输入要整合到日记模块，日历只记表情
+4. 日历日期数字要被当日心情 emoji 替代显示
+5. 日记编辑页不再选心情，心情选择与日记编写完全分离
+
+**决策 1：密码切换用事件委托，复用三处**
+- 不在 login.html / register.html / diary.js 三处各写一份 toggle 逻辑
+- 统一 `.password-input-wrap`（包裹 input + 按钮）+ `.password-toggle`（👁 按钮）的 DOM 结构
+- `app.js initPasswordToggle()` 在 document 上监听 click，`e.target.closest(".password-toggle")` 命中即切换 `input.type` + 按钮图标（👁 ↔ 🙈）+ aria-label
+- 用 `this._pwdToggleBound = true` 防重复绑定（与 `initRipple` 同模式）
+- **关键**：diary.js 的 `askPassword` modal 是动态生成的，事件委托天然支持，不需要 modal 生成后再 attach listener
+
+**决策 2：iOS 导航栏避让**
+- `.nav` 加 `padding-top: env(safe-area-inset-top)`（iOS 自动注入刘海/灵动岛高度）
+- 移动端 `@media (max-width: 720px)`：nav 高度 56px→52px、隐藏 `.nav__nickname`、加大「离开」按钮点击区域
+- **铁律**：会话 5 已确立 `env(safe-area-inset-bottom)` 避让底部 home indicator；本次补 `env(safe-area-inset-top)` 避让顶部刘海，两个方向都要顾
+
+**决策 3：模块职责分离 = 删 UI，不删字段**
+- 情绪日历删 textarea `#mood-note`，提交 `note: null`
+- 日记编辑页删 mood-grid，提交 `mood_type: null`
+- **`MoodCheckin.note` 和 `Diary.mood_type` 字段都保留**（nullable=True），向后兼容历史数据
+- **数据迁移零改动**：DB 查询确认 `MoodCheckin.note` 历史数据 `with_note: 0`；`Diary.mood_type` 历史数据保留显示（「我的瓶子」时间线仍显示历史日记的心情表情）
+- **铁律**：删 UI 功能 ≠ 删 DB 字段。先查历史数据是否需要迁移，能不删字段就不删（保留向后兼容，新数据写 null）
+
+**决策 4：日历 emoji 替代数字**
+- `renderCalendar` 里 `isChecked` 时 content 只生成 `<span class="mood-emoji">${emoji}</span>`，否则显示数字
+- CSS `.calendar__day .mood-emoji` 从 absolute 右上角 14px 改为居中 22px
+- 利用 `.calendar__day` 已有的 `display: flex; align-items: center; justify-content: center`，emoji span 直接居中放大，不需要新写定位
+- title 属性显示日期字符串，鼠标 hover 可看完整日期
+
+**决策 5：日记正文自由贴 emoji**
+- 删心情选择模块后，textarea placeholder 加 "也可以贴任何 emoji 🌸" 暗示
+- 不做 emoji picker（甲方要求"自由粘贴或插入任意 emoji"，picker 反而限制选择范围）
+- 用户可用系统输入法自带的 emoji 面板（Win+. / Mac Ctrl+Cmd+Space）
+
+**验证矩阵**（curl.exe）：
+```
+curl /login            → 200，HTML 含 password-toggle / password-input-wrap
+curl /register         → 200，HTML 含 password-toggle / password-input-wrap
+curl /mood-calendar    → 302 Location: /login?next=/mood-calendar（未登录）
+curl /diary/write      → 302 Location: /login?next=/diary/write（未登录）
+curl /                 → 200，HTML 不含"心情手帐"，含"情绪日历"
+```
+
+**铁律汇总**：
+- 密码切换/按钮涟漪/事件委托类增强，统一用 document-level 委托 + `_xxxBound = true` 防重复绑定，动态生成的 modal 天然支持
+- iOS safe-area 两个方向都要顾：底部 `env(safe-area-inset-bottom)` + 顶部 `env(safe-area-inset-top)`
+- 删 UI 功能 ≠ 删 DB 字段：先查历史数据，nullable 字段保留向后兼容，新数据写 null
+- 日历 emoji 替代数字：复用已有 flex 居中，不新写定位
+- 「自由贴 emoji」需求不做 picker，让用户用系统输入法
+
+---
+
 ## 4. 性能 & 安全 checklist
 
 ### 4.1 改完代码后跑

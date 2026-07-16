@@ -7,11 +7,11 @@
   <p class="page-header__subtitle">把日子染成颜色</p>
 </div>
 
-<!-- 今日心情（合并自原 /mood 打卡页，甲方 2026-07-15 要求合并） -->
+<!-- 今日心情（甲方 2026-07-16 要求：只选表情，文字内容统一进日记模块） -->
 <div class="card fade-in" style="margin-bottom:24px;background:linear-gradient(135deg, rgba(168,197,160,0.12), rgba(232,184,168,0.12));">
   <div style="text-align:center;margin-bottom:12px;">
     <div style="font-family:var(--font-serif);font-size:18px;color:var(--color-text-primary);">{{ today.strftime('%m 月 %d 日') }} · 今日心情</div>
-    <p style="color:var(--color-text-muted);font-size:13px;margin-top:4px;">只选一个表情也行，文字想什么时候写就什么时候写</p>
+    <p style="color:var(--color-text-muted);font-size:13px;margin-top:4px;">选一个表情，记录今天的心情</p>
   </div>
 
   {% if today_record %}
@@ -28,14 +28,7 @@
     {% endfor %}
   </div>
 
-  <div class="form-field" style="margin-top:16px;">
-    <textarea class="form-textarea" id="mood-note" maxlength="200"
-              placeholder="想写就写一句，不写也没关系"
-              style="min-height:64px;">{{ today_record.note if today_record else '' }}</textarea>
-    <div class="form-hint">最多 200 字 · 仅你自己可见</div>
-  </div>
-
-  <div style="text-align:center;margin-top:12px;">
+  <div style="text-align:center;margin-top:16px;">
     <button id="save-mood" class="btn btn--primary">{{ '改 一 下' if today_record else '收 好' }}</button>
   </div>
 </div>

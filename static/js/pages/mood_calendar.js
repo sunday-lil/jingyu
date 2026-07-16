@@ -1,6 +1,7 @@
 /* ============================================================
    静屿 — 情绪日历 + 今日打卡 + 30 天趋势
-   （2026-07-15 合并原 /mood 打卡页，甲方要求「每日手帐与日历合一」）
+   （2026-07-15 合并原 /mood 打卡页；2026-07-16 移除文本输入，
+    甲方要求文字内容统一进日记模块，情绪日历只记表情）
    ============================================================ */
 
 (function () {
@@ -14,10 +15,9 @@
   const streakEl = document.getElementById("streak");
   if (!calendarEl || !trendEl) return;
 
-  // ── 今日打卡（合并自 mood.js） ──
+  // ── 今日打卡（仅选表情，文字内容进日记模块） ──
   const moodItems = document.querySelectorAll(".mood-item");
   const saveBtn = document.getElementById("save-mood");
-  const noteEl = document.getElementById("mood-note");
   let selectedMood = null;
 
   if (moodItems.length && saveBtn) {
@@ -45,7 +45,7 @@
           method: "POST",
           body: {
             mood_emoji: selectedMood,
-            note: noteEl.value.trim() || null,
+            note: null,
           },
         });
         QI.toast("+1 养分 🌱", "success");
@@ -129,7 +129,8 @@
 
       const bgColor = isChecked ? moodColor(record.mood_emoji) : null;
       const emoji = isChecked ? moodEmoji(record.mood_emoji) : null;
-      const title = record?.note ? ` title="${QI._escape ? QI._escape(record.note) : record.note}"` : "";
+      // 需求 4：已打卡格子用 emoji 替代数字；tooltip 显示日期
+      const title = ` title="${dateStr}"`;
 
       const classes = [
         "calendar__day",
@@ -139,9 +140,10 @@
       ].filter(Boolean).join(" ");
 
       const style = bgColor ? ` style="background:${bgColor}"` : "";
-      const emojiHtml = emoji ? `<span class="mood-emoji">${emoji}</span>` : "";
+      // isChecked 时只显示 emoji（替代数字），否则显示数字
+      const content = (isChecked && emoji) ? `<span class="mood-emoji">${emoji}</span>` : `${d}`;
 
-      html += `<div class="${classes}"${style}${title}>${d}${emojiHtml}</div>`;
+      html += `<div class="${classes}"${style}${title}>${content}</div>`;
     }
     calendarEl.innerHTML = html;
   }
