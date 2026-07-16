@@ -47,25 +47,6 @@
   </div>
 </section>
 
-{% if current_user %}
-<!-- 今日手帐条 -->
-<section class="today-strip fade-in">
-  <div>
-    <div class="today-strip__date">{{ today_checkin.check_date.strftime('%Y年%m月%d日') if today_checkin else '' }} · 今日手帐</div>
-    <div class="today-strip__mood">
-      {% if today_checkin %}
-        <span class="today-strip__mood-emoji">{{ mood_info[today_checkin.mood_emoji].emoji }}</span>
-        <span>{{ mood_info[today_checkin.mood_emoji].label }}</span>
-        {% if today_checkin.note %}<span style="color:var(--color-text-muted);font-size:14px;">— {{ today_checkin.note }}</span>{% endif %}
-      {% else %}
-        <span style="color:var(--color-text-muted);">今天还没有记录</span>
-      {% endif %}
-    </div>
-  </div>
-  <a href="/mood" class="btn btn--soft">{{ '改一下' if today_checkin else '记一笔' }}</a>
-</section>
-{% endif %}
-
 <!-- 其他模块入口 -->
 <section style="margin-top:48px;">
   <div class="page-header reveal">
@@ -86,16 +67,10 @@
       <p class="module-card__desc">海面上偶尔漂来陌生人的心事。<br>看一看，留一句拥抱。</p>
     </a>
 
-    <a href="/mood" class="module-card fade-in">
-      <div class="module-card__icon" style="background:linear-gradient(135deg, #FFD56B, #F6B26B);">🌱</div>
-      <h3 class="module-card__title">今日手帐</h3>
-      <p class="module-card__desc">选一个表情，写一句备注。<br>让心情有处可栖。</p>
-    </a>
-
     <a href="/mood-calendar" class="module-card fade-in">
-      <div class="module-card__icon" style="background:linear-gradient(135deg, #A8D5BA, #A8B8C5);">📅</div>
+      <div class="module-card__icon" style="background:linear-gradient(135deg, #FFD56B, #A8D5BA);">📅</div>
       <h3 class="module-card__title">情绪日历</h3>
-      <p class="module-card__desc">把日子染成颜色。<br>看着它们，慢慢读懂自己。</p>
+      <p class="module-card__desc">记今日心情，把日子染成颜色。<br>不勉强每天，想记就记。</p>
     </a>
 
     <a href="/garden" class="module-card fade-in">

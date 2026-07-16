@@ -51,9 +51,9 @@
       <span class="tabbar__icon">🍾</span>
       <span>瓶子</span>
     </a>
-    <a href="/mood" class="tabbar__item">
-      <span class="tabbar__icon">🌱</span>
-      <span>手帐</span>
+    <a href="/mood-calendar" class="tabbar__item {% if request.url.path == '/mood-calendar' %}is-active{% endif %}">
+      <span class="tabbar__icon">📅</span>
+      <span>日历</span>
     </a>
     <a href="/garden" class="tabbar__item">
       <span class="tabbar__icon">🌸</span>

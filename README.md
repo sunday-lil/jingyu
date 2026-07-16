@@ -15,7 +15,7 @@
 
 ## 0. 一句话速览
 
-**FastAPI + SQLite + Jinja2 + 原生 JS** 的中文治愈系 Web 应用。完整 4 阶段功能：古琴五音疗愈、漂流瓶日记、心情手帐、精神花园。约 2 000 行 Python + 1 500 行 CSS + 600 行 JS。无商业元素、无广告、无内购。
+**FastAPI + SQLite + Jinja2 + 原生 JS** 的中文治愈系 Web 应用。完整 4 阶段功能：古琴五音疗愈、漂流瓶日记、情绪日历、精神花园。约 2 000 行 Python + 1 500 行 CSS + 600 行 JS。无商业元素、无广告、无内购。
 
 **强隐私承诺**：用户日记内容使用对称加密存储，密钥与用户密码派生。即便数据库泄露也无法直接读取明文（端到端加密）。
 
@@ -112,15 +112,14 @@ webwrold/
 │   ├── base.html                 #   全局骨架（导航 + Toast + 页脚）
 │   ├── _nav.html                 #   导航宏
 │   ├── _toast.html               #   全局 Toast 提示
-│   ├── index.html                #   首页（5 音入口 + 漂流瓶入口 + 今日手帐）
+│   ├── index.html                #   首页（5 音入口 + 漂流瓶入口 + 情绪日历入口）
 │   ├── login.html / register.html
 │   ├── music_list.html           #   单音曲目列表 + 沉浸式播放器
 │   ├── diary_write.html          #   漂流瓶写作页（含投瓶动效）
 │   ├── my_bottles.html           #   我的瓶子时间线
 │   ├── diary_detail.html         #   单个瓶子详情
 │   ├── pick_bottle.html          #   拾取陌生人漂流瓶
-│   ├── mood_checkin.html         #   今日心情手帐
-│   ├── mood_calendar.html        #   情绪日历 + 30 天趋势图
+│   ├── mood_calendar.html        #   情绪日历（今日打卡 + 月历 + 30 天趋势）
 │   ├── garden.html               #   精神花园（已种植物 + 装扮）
 │   └── shop.html                 #   兑换商店（花种 / 装扮 / 徽章）
 │
@@ -299,7 +298,8 @@ curl -I http://127.0.0.1:5000/docs                # 200 (FastAPI 自动)
 
 # 3. 需要登录的页面（未登录时 302 → /login）
 curl -I http://127.0.0.1:5000/diary               # 302
-curl -I http://127.0.0.1:5000/mood                # 302
+curl -I http://127.0.0.1:5000/mood-calendar       # 302
+curl -I http://127.0.0.1:5000/mood                # 302（旧链接兼容，重定向到 /mood-calendar）
 
 # 4. 公开音乐页
 curl -I http://127.0.0.1:5000/music/gong          # 200

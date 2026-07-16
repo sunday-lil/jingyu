@@ -178,8 +178,7 @@ base.html                    ← 全局前台骨架（head + nav + Toast + main 
   ├── my_bottles.html
   ├── diary_detail.html
   ├── pick_bottle.html
-  ├── mood_checkin.html
-  ├── mood_calendar.html
+  ├── mood_calendar.html      ← 情绪日历（今日打卡 + 月历 + 30 天趋势；2026-07-16 合并原 /mood 打卡页，/mood 302 兼容重定向到此）
   ├── garden.html
   └── shop.html
 
@@ -441,7 +440,7 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 ## 8. 性能
 
 ### 8.1 首屏 < 3s
-- 11 个 HTML 页面共享 base.html，浏览器缓存 CSS/JS
+- 10 个 HTML 页面共享 base.html，浏览器缓存 CSS/JS（2026-07-16 合并 /mood 打卡页后由 11 减为 10）
 - 静态资源 gzip（生产 Nginx 开）
 - 古琴音频用 `preload="metadata"`，不预加载整个文件
 

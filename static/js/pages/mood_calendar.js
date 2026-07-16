@@ -1,5 +1,6 @@
 /* ============================================================
-   静屿 — 情绪日历 + 30 天趋势
+   静屿 — 情绪日历 + 今日打卡 + 30 天趋势
+   （2026-07-15 合并原 /mood 打卡页，甲方要求「每日手帐与日历合一」）
    ============================================================ */
 
 (function () {
@@ -13,6 +14,61 @@
   const streakEl = document.getElementById("streak");
   if (!calendarEl || !trendEl) return;
 
+  // ── 今日打卡（合并自 mood.js） ──
+  const moodItems = document.querySelectorAll(".mood-item");
+  const saveBtn = document.getElementById("save-mood");
+  const noteEl = document.getElementById("mood-note");
+  let selectedMood = null;
+
+  if (moodItems.length && saveBtn) {
+    moodItems.forEach((el) => {
+      el.addEventListener("click", () => {
+        moodItems.forEach((m) => m.classList.remove("is-selected"));
+        el.classList.add("is-selected");
+        selectedMood = el.dataset.mood;
+      });
+    });
+    // 预选已存在的今日记录
+    const initial = document.querySelector(".mood-item.is-selected");
+    if (initial) selectedMood = initial.dataset.mood;
+
+    saveBtn.addEventListener("click", async () => {
+      if (!selectedMood) {
+        QI.toast("先选一个心情吧", "warn");
+        return;
+      }
+      saveBtn.disabled = true;
+      const origText = saveBtn.textContent;
+      saveBtn.textContent = "收 好…";
+      try {
+        await QI.fetchJSON("/api/mood/checkin", {
+          method: "POST",
+          body: {
+            mood_emoji: selectedMood,
+            note: noteEl.value.trim() || null,
+          },
+        });
+        QI.toast("+1 养分 🌱", "success");
+        QI.floatEnergy("+1 养分", saveBtn);
+        QI.confetti(saveBtn, { glyphs: ["🌱", "🌿", "🌸", "✨"] });
+        // 更新能量显示
+        document.querySelectorAll("[data-energy-display]").forEach((el) => {
+          const m = (el.textContent || "0");
+          el.textContent = String(parseInt(m) + 1);
+        });
+        saveBtn.textContent = "✓ 已收好";
+        // 刷新日历今日格子 + 趋势 + 连胜
+        loadCalendar();
+        loadTrend();
+      } catch (e) {
+        QI.toast(e.message, "error");
+        saveBtn.disabled = false;
+        saveBtn.textContent = origText;
+      }
+    });
+  }
+
+  // ── 日历 + 趋势 ──
   let viewYear, viewMonth;
   const today = new Date();
   viewYear = today.getFullYear();
@@ -91,7 +147,6 @@
   }
 
   function renderTrend(items) {
-    const moodOrder = ["ecstatic", "happy", "calm", "tired", "anxious", "angry", "sad"];
     const moodToHeight = {
       ecstatic: 100, happy: 90, calm: 70,
       tired: 50, anxious: 40, angry: 30, sad: 20,

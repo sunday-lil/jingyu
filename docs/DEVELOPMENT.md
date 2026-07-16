@@ -458,6 +458,50 @@ body {
 
 ---
 
+### 3.12 页面合并 / 路由兼容重定向（以情绪日历合并今日手帐为例）
+
+**场景**（2026-07-16 甲方反馈）：
+- 「今日手帐」（每日选表情 + 写一句备注）与「漂流瓶」「选心情」功能重合
+- 要求合并「每日手帐」+「日历」为「情绪日历」，不强制每天写文字（只选表情也行）
+- 漂流瓶与情绪日历分开
+
+**合并决策**：
+1. **目标页选定**：把「今日打卡」UI 并入 `mood_calendar.html` 顶部，下方保留月历 + 趋势 + 连胜
+2. **旧路由保留为 302 重定向**：`/mood` → `/mood-calendar`，兼容 tabbar / 书签 / 历史入口（不要直接删路由，老用户书签会 404）
+3. **数据层零改动优先**：先查 `MoodCheckin.note` 是否本就 `nullable=True`——是的，那「只选表情不写文字」技术上一直支持，本次只调 UI 文案 + 文案提示，不动 model / schema / API
+4. **JS 合并而非新写**：把 `mood.js` 的打卡逻辑（moodItems 选择 + saveBtn 保存 + confetti 反馈）整体并入 `mood_calendar.js`，保存成功后调用目标页已有的 `loadCalendar()` + `loadTrend()` 同步刷新今日格子、趋势、连胜
+5. **删除孤立文件**：合并完确认无其他引用后，删除 `mood_checkin.html` + `mood.js`（用 `grep -r "mood_checkin.html\|js/pages/mood\.js"` 全仓搜，只有自身和文档引用）
+
+**代码片段**（[app/routers/pages.py](../../app/routers/pages.py) 路由兼容层）：
+```python
+@router.get("/mood", response_class=HTMLResponse)
+def mood_checkin_redirect():
+    """今日手帐已合并进情绪日历（甲方 2026-07-16 要求「每日手帐与日历合一」）。
+
+    旧链接 /mood（含 tabbar、书签、历史入口）302 重定向到 /mood-calendar，
+    未登录由 /mood-calendar 路由自行跳 /login。
+    """
+    return RedirectResponse("/mood-calendar", status_code=302)
+```
+
+**验证矩阵**（curl.exe，PowerShell 下 `curl` 是 `Invoke-WebRequest` 别名）：
+```
+curl /mood                → 302 Location: /mood-calendar       （旧链接兼容）
+curl /mood-calendar       → 302 Location: /login?next=/mood-calendar  （未登录）
+curl /                    → 200                                  （首页）
+curl /static/js/pages/mood.js → 404                              （已删除）
+curl / > tmp.html && grep "今日手帐\|today-strip" tmp.html  → 无命中
+curl / > tmp.html && grep "不勉强每天\|/mood-calendar" tmp.html → 命中
+```
+
+**铁律**：
+- 路由合并 = 旧路由 302 重定向 + 新路由承载功能 + 删除孤立模板/JS + 文档目录树同步
+- 「不强制写文字」类需求先查 schema 是否 nullable，能不改数据层就不改数据层
+- 合并 JS 时复用目标页已有的刷新函数（`loadCalendar()` / `loadTrend()`），不要在两个地方各写一份渲染逻辑
+- tabbar 链接更新时顺手加 `is-active` 判断，否则当前页 tab 不高亮
+
+---
+
 ## 4. 性能 & 安全 checklist
 
 ### 4.1 改完代码后跑

@@ -38,15 +38,8 @@ templates = Jinja2Templates(directory=str(settings.templates_dir))
 def index(
     request: Request,
     user: Optional[User] = Depends(get_current_user_optional),
-    db: Session = Depends(get_db),
 ):
-    today_checkin = None
-    if user:
-        today_checkin = (
-            db.query(MoodCheckin)
-            .filter(MoodCheckin.user_id == user.id, MoodCheckin.check_date == date.today())
-            .first()
-        )
+    # 今日手帐条已移除（甲方 2026-07-15 要求合并进情绪日历），首页不再查 today_checkin
     return templates.TemplateResponse(
         request,
         "index.html",
@@ -54,7 +47,6 @@ def index(
             "current_user": user,
             "yin_info": YIN_INFO,
             "mood_info": MOOD_INFO,
-            "today_checkin": today_checkin,
         },
     )
 
@@ -249,44 +241,37 @@ def pick_page(
 # ─────────────────────────────────────────────────────────────
 
 @router.get("/mood", response_class=HTMLResponse)
-def mood_checkin(
-    request: Request,
-    user: Optional[User] = Depends(get_current_user_optional),
-    db: Session = Depends(get_db),
-):
-    if user is None:
-        return RedirectResponse("/login?next=/mood", status_code=302)
-    today = date.today()
-    record = (
-        db.query(MoodCheckin)
-        .filter(MoodCheckin.user_id == user.id, MoodCheckin.check_date == today)
-        .first()
-    )
-    return templates.TemplateResponse(
-        request,
-        "mood_checkin.html",
-        {
-            "current_user": user,
-            "mood_info": MOOD_INFO,
-            "today": today,
-            "today_record": record,
-        },
-    )
+def mood_checkin_redirect():
+    """今日手帐已合并进情绪日历（甲方 2026-07-15 要求「每日手帐与日历合一」）。
+
+    旧链接 /mood（含 tabbar、书签、历史入口）302 重定向到 /mood-calendar，
+    未登录由 /mood-calendar 路由自行跳 /login。
+    """
+    return RedirectResponse("/mood-calendar", status_code=302)
 
 
 @router.get("/mood-calendar", response_class=HTMLResponse)
 def mood_calendar(
     request: Request,
     user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
 ):
     if user is None:
         return RedirectResponse("/login?next=/mood-calendar", status_code=302)
+    today = date.today()
+    today_record = (
+        db.query(MoodCheckin)
+        .filter(MoodCheckin.user_id == user.id, MoodCheckin.check_date == today)
+        .first()
+    )
     return templates.TemplateResponse(
         request,
         "mood_calendar.html",
         {
             "current_user": user,
             "mood_info": MOOD_INFO,
+            "today": today,
+            "today_record": today_record,
         },
     )
 

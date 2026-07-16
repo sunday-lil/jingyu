@@ -119,7 +119,7 @@ webwrold/
 │   ├── index.html / login.html / register.html
 │   ├── music_list.html
 │   ├── diary_write.html / my_bottles.html / diary_detail.html / pick_bottle.html
-│   ├── mood_checkin.html / mood_calendar.html
+│   ├── mood_calendar.html      ← 情绪日历（今日打卡 + 月历 + 30 天趋势，2026-07-16 合并原 /mood 打卡页）
 │   ├── garden.html / shop.html
 │   └── admin/                ← 秘密后台模板（继承 admin/_base.html）
 │       ├── _base.html        ← 暗色侧栏 + 金边 logo
@@ -146,7 +146,7 @@ webwrold/
 │   │   └── pages/            ← 一页一个 JS
 │   │       ├── auth.js / music.js / diary.js / diary_detail.js
 │   │       ├── my_bottles.js / pick.js
-│   │       ├── mood.js / mood_calendar.js
+│   │       ├── mood_calendar.js ← 情绪日历（含今日打卡逻辑，2026-07-16 合并原 mood.js）
 │   │       ├── shop.js
 │   │       ├── admin_login.js / admin_dashboard.js
 │   │       ├── admin_users.js / admin_user_detail.js

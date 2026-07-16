@@ -7,11 +7,44 @@
   <p class="page-header__subtitle">把日子染成颜色</p>
 </div>
 
+<!-- 今日心情（合并自原 /mood 打卡页，甲方 2026-07-15 要求合并） -->
+<div class="card fade-in" style="margin-bottom:24px;background:linear-gradient(135deg, rgba(168,197,160,0.12), rgba(232,184,168,0.12));">
+  <div style="text-align:center;margin-bottom:12px;">
+    <div style="font-family:var(--font-serif);font-size:18px;color:var(--color-text-primary);">{{ today.strftime('%m 月 %d 日') }} · 今日心情</div>
+    <p style="color:var(--color-text-muted);font-size:13px;margin-top:4px;">只选一个表情也行，文字想什么时候写就什么时候写</p>
+  </div>
+
+  {% if today_record %}
+  <p style="text-align:center;color:var(--color-text-secondary);font-size:13px;margin-bottom:8px;">今天已记一笔，再选一次会覆盖</p>
+  {% endif %}
+
+  <div class="mood-grid">
+    {% for key, info in mood_info.items() %}
+    <div class="mood-item {% if today_record and today_record.mood_emoji == key %}is-selected{% endif %}"
+         data-mood="{{ key }}" style="--mood-color: {{ info.color }}40;">
+      <div class="mood-item__emoji">{{ info.emoji }}</div>
+      <div style="font-size:12px;color:var(--color-text-secondary);">{{ info.label }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="form-field" style="margin-top:16px;">
+    <textarea class="form-textarea" id="mood-note" maxlength="200"
+              placeholder="想写就写一句，不写也没关系"
+              style="min-height:64px;">{{ today_record.note if today_record else '' }}</textarea>
+    <div class="form-hint">最多 200 字 · 仅你自己可见</div>
+  </div>
+
+  <div style="text-align:center;margin-top:12px;">
+    <button id="save-mood" class="btn btn--primary">{{ '改 一 下' if today_record else '收 好' }}</button>
+  </div>
+</div>
+
 <!-- 当前连胜 -->
 <div class="card fade-in" style="text-align:center;margin-bottom:24px;background:linear-gradient(135deg, rgba(168,197,160,0.15), rgba(232,213,168,0.15));">
   <div style="font-size:32px;margin-bottom:8px;">✨</div>
   <div id="streak" style="font-family:var(--font-serif);font-size:20px;color:var(--color-text-primary);">连续 0 天</div>
-  <p style="color:var(--color-text-muted);font-size:13px;margin-top:4px;">每天都来记一笔，集满 7 天有奖励 ☀️</p>
+  <p style="color:var(--color-text-muted);font-size:13px;margin-top:4px;">连续记满 7 天有奖励，不勉强每天都来 ☀️</p>
 </div>
 
 <!-- 日历 -->
@@ -28,7 +61,6 @@
 <div class="card fade-in" style="margin-top:24px;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
     <h3 style="font-family:var(--font-serif);font-weight:400;">近 30 天</h3>
-    <a href="/mood" class="btn btn--ghost btn--sm">记今天</a>
   </div>
   <div class="trend-chart" id="trend-chart"></div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--color-text-muted);">

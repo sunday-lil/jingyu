@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-15（会话 4 — 前端交互增强：滚动渐显 / 涟漪 / 计数 / 花瓣 / 频谱）
+**最后更新**：2026-07-16（会话 6 — 心情模块重构：合并「今日手帐」与「情绪日历」）
 
 ---
 
@@ -12,7 +12,7 @@
 | 维度 | 状态 | 备注 |
 |---|---|---|
 | **可运行** | ✅ | `python start.py` 即可起，端口 5000 |
-| **5 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 心情手帐 / 精神花园 / **秘密后台** |
+| **5 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
 | **秘密后台** | ✅ | `/admin` 入口，6 个页面 + `/api/admin/*` |
 | **种子数据** | ✅ | 5 音 × 3-4 首 = 16 首古琴曲 + 11 件商店物品 + 首个管理员 |
@@ -24,6 +24,21 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-16（会话 6）— 心情模块重构：合并「今日手帐」与「情绪日历」
+- [x] 起因：甲方反馈「今日手帐」与「漂流瓶」「选心情」功能重合，要求合并每日手帐与日历为「情绪日历」，不强制每天写文字（只选表情也行），漂流瓶与情绪日历分开
+- [x] 改 [templates/mood_calendar.html](../../templates/mood_calendar.html)：顶部新增「今日心情」卡片（表情网格 + 可选备注 textarea + 收好按钮），文案「只选一个表情也行，文字想什么时候写就什么时候写」；连胜卡文案改为「连续记满 7 天有奖励，不勉强每天都来 ☀️」；删除趋势卡里的「记今天」按钮
+- [x] 改 [static/js/pages/mood_calendar.js](../../static/js/pages/mood_calendar.js)：合并原 `mood.js` 的打卡逻辑（moodItems 选择 + saveBtn 保存 + confetti/floatEnergy 反馈），保存成功后调用 `loadCalendar()` + `loadTrend()` 刷新今日格子、趋势、连胜
+- [x] 改 [app/routers/pages.py](../../app/routers/pages.py)：
+  - `/mood` 路由改为 302 重定向到 `/mood-calendar`（兼容旧链接 / tabbar / 书签），未登录由 `/mood-calendar` 路由自行跳 `/login`
+  - `/mood-calendar` 路由加 `db: Session = Depends(get_db)`，查 `today_record`，传 `today` + `today_record` 给模板
+  - `/` index 路由：删除 `db` 参数和 `today_checkin` 查询（today-strip 已删，首页不再需要）
+- [x] 改 [templates/index.html](../../templates/index.html)：删除首页 `{% if current_user %}<!-- 今日手帐条 -->{% endif %}` today-strip section；删除「今日手帐」module-card；更新「情绪日历」module-card 文案为「记今日心情，把日子染成颜色。不勉强每天，想记就记。」，图标渐变改为黄绿（#FFD56B → #A8D5BA）；漂流瓶相关卡保留不动，与情绪日历分开
+- [x] 改 [templates/base.html](../../templates/base.html) tabbar：`/mood` → `/mood-calendar`，图标 🌱 → 📅，文案「手帐」→「日历」，加 `is-active` 判断
+- [x] 删除 [templates/mood_checkin.html](../../templates/mood_checkin.html) + [static/js/pages/mood.js](../../static/js/pages/mood.js)（不再使用，逻辑已合并进 mood_calendar.* ）
+- [x] 数据层零改动：`MoodCheckin.note` 字段本就 `nullable=True`，「只选表情不写文字」技术上一直支持，本次只调 UI 文案；`/api/mood/checkin` API 不变
+- [x] 文档同步（铁律）：README §0/§2/§8、HANDOFF §2、PROJECT_STATE §1/§2（本条）、ARCHITECTURE §5.1/§8.1、DEVELOPMENT §3.12
+- [x] 验证：python start.py restart → PID 18116；curl `/mood` 302 → `/mood-calendar`；`/mood-calendar` 302 → `/login?next=/mood-calendar`；`/` 200；`/static/js/pages/mood.js` 404；首页 HTML 不含「今日手帐」/「today-strip」，含「不勉强每天」/「/mood-calendar」
 
 ### 2026-07-15（会话 5）— iOS Safari 遮挡 / 沉浸感修复
 - [x] 起因：苹果用户反馈 UI 界面有遮挡、影响沉浸感
