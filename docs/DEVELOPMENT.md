@@ -421,6 +421,43 @@ class AuthOut(BaseModel):
 
 ---
 
+### 3.11 iOS Safari 视口遮挡 / 负 z-index 层绘制错乱
+
+**症状**（2026-07-15 苹果用户反馈）：
+- 页面底部内容被地址栏挡住，滚动时地址栏收起会跳变，破坏沉浸感
+- 音乐页最后一首歌被 sticky 播放器盖住，点不到
+- 首页飘落花瓣 `.petal-layer` 偶尔盖在内容之上（或被 body 背景盖住看不见）
+
+**根因 3 连**：
+1. **`100vh` 含地址栏**：iOS Safari 的 `100vh` = 最大视口高度（地址栏隐藏时），地址栏显示时实际可视 < 100vh，底部内容被吃掉
+2. **sticky player 遮挡列表**：`.player { position: sticky; bottom: ... }` 浮在底部，但 `.music-detail` 的 `padding-bottom` 不够，最后一项滚不到 player 上方
+3. **负 z-index fixed 层绘制顺序不稳**：body 不是 stacking context 时，`.bg-orb / .petal-layer`（`position: fixed; z-index: -1`）在 iOS Safari 上的绘制顺序不可预测，可能盖内容或被背景吃掉
+
+**修复**（[static/css/01-reset.css](../../static/css/01-reset.css) + [02-layout.css](../../static/css/02-layout.css) + [06-music.css](../../static/css/06-music.css)）：
+```css
+/* 1. body：dvh 兜底 + 建立 stacking context */
+body {
+  min-height: 100vh;
+  min-height: 100dvh;     /* iOS 动态视口，覆盖上一行 */
+  isolation: isolate;     /* 根 stacking context，负 z-index 层归位 */
+}
+/* 2. .main / .music-detail 同样 dvh 兜底 */
+/* 3. sticky player 所在容器底部留足避让空间 */
+.music-detail {
+  padding-bottom: calc(200px + env(safe-area-inset-bottom));        /* 桌面 */
+}
+@media (max-width: 720px) {
+  .music-detail { padding-bottom: calc(240px + env(safe-area-inset-bottom)); } /* 移动含 tabbar offset */
+}
+```
+
+**铁律**：
+- 任何 `min-height: 100vh` 都紧跟一行 `100dvh` 兜底（iOS 15.4+ 支持，老浏览器自动忽略第二行）
+- 任何 `position: sticky/fixed` 的底部元素，其所在容器底部 `padding` ≥ 元素高度 + bottom offset + safe-area
+- 全局负 z-index 的 `position: fixed` 装饰层，靠 body `isolation: isolate` 兜底，不要在每层上单独 hack z-index
+
+---
+
 ## 4. 性能 & 安全 checklist
 
 ### 4.1 改完代码后跑

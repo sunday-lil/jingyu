@@ -25,6 +25,16 @@
 
 ## 2. 最近改动（按时间倒序）
 
+### 2026-07-15（会话 5）— iOS Safari 遮挡 / 沉浸感修复
+- [x] 起因：苹果用户反馈 UI 界面有遮挡、影响沉浸感
+- [x] 修 [static/css/01-reset.css](../../static/css/01-reset.css) body：加 `min-height: 100dvh`（`100vh` 兜底）修复 iOS 地址栏遮挡底部；加 `isolation: isolate` 建立根 stacking context，让 `.bg-orb / .petal-layer` 等负 z-index fixed 层在 iOS 上稳稳落在背景之上、内容之下
+- [x] 修 [static/css/02-layout.css](../../static/css/02-layout.css) `.main`：`min-height: calc(100dvh - 64px)` 兜底
+- [x] 修 [static/css/06-music.css](../../static/css/06-music.css)：
+  - `.music-detail` `min-height` 用 `100dvh` 兜底
+  - `.music-detail` 底部 `padding` 改 `calc(200px + env(safe-area-inset-bottom))`（桌面）/ 移动端 `calc(240px + env(safe-area-inset-bottom))`，避让 sticky 播放器，修复「最后一首歌被 player 盖住点不到」
+- [x] 文档同步（铁律）：PROJECT_STATE §2（本条）、ARCHITECTURE §5.2 iOS 兼容约定、DEVELOPMENT §3.11 iOS 踩坑
+- [x] 验证：python start.py restart → PID 12024；curl `/` 200、`/music/gong` 200、三个 CSS 200
+
 ### 2026-07-15（会话 4）— 前端交互增强（Netflix / Spotify 风格动效）
 - [x] 扩展 [static/css/05-animations.css](../../static/css/05-animations.css) §2：滚动渐显 `.reveal`、卡片光泽扫过 sheen、按钮涟漪 `.ripple-ink`、数字计数 `.countup`、环境花瓣 `.petal`、音频频谱 `.eq-bars`、页面过渡 `.page-transition`、标题流光 `.title-shimmer`、成功花瓣 `.confetti-petal`；全部遵守 `prefers-reduced-motion`
 - [x] 扩展 [static/js/app.js](../../static/js/app.js)：新增 `QI.initReveal / initRipple / initCountUp / initPetals / initPageTransition / initAll / countUp / confetti / prefersReducedMotion`；`DOMContentLoaded` 自动初始化（涟漪用事件委托，支持动态按钮）

@@ -29,6 +29,8 @@ body {
     radial-gradient(at 50% 90%, rgba(227, 240, 234, 0.10) 0px, transparent 50%);
   background-attachment: fixed;
   min-height: 100vh;
+  min-height: 100dvh;        /* iOS Safari: dvh 随地址栏收放动态变化，避免底部内容被地址栏遮挡 */
+  isolation: isolate;        /* 建立根 stacking context，让 .bg-orb / .petal-layer 等负 z-index 层稳稳落在背景之上、内容之下（修复 iOS Safari 绘制顺序不稳） */
   overflow-x: hidden;
 }
 

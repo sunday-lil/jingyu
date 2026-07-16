@@ -5,7 +5,9 @@
 .music-detail {
   position: relative;
   min-height: calc(100vh - 64px);
-  padding: var(--space-7) 0 var(--space-8);
+  min-height: calc(100dvh - 64px);   /* iOS Safari 动态视口 */
+  /* 底部留足空间避让 sticky 播放器（player 高约 180px + bottom offset），否则最后一首歌被盖住点不到 */
+  padding: var(--space-7) 0 calc(200px + env(safe-area-inset-bottom));
   overflow: hidden;
 }
 
@@ -260,7 +262,8 @@
 }
 
 @media (max-width: 720px) {
-  .music-detail { padding: var(--space-5) 0 var(--space-7); }
+  /* 移动端 player 的 bottom 含 64px tabbar offset，列表底部需更多避让空间，否则最后一首歌被 player 盖住 */
+  .music-detail { padding: var(--space-5) 0 calc(240px + env(safe-area-inset-bottom)); }
   .music-detail__yin { font-size: 56px; }
   .player {
     bottom: calc(64px + env(safe-area-inset-bottom));

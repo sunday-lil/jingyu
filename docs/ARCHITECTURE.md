@@ -223,6 +223,11 @@ style.css                 ← 前台入口
 - 浏览器只缓存变化的文件
 - **07-admin.css 独立** —— 后台样式变了不影响前台；不加载 `style.css` 不会拖累后台首屏
 
+**iOS Safari 兼容约定**（2026-07-15 会话 5 踩坑，详见 [DEVELOPMENT §3.11](DEVELOPMENT.md)）：
+- 视口高度一律用 `100dvh`（带 `100vh` 兜底，写在下一行覆盖）—— iOS Safari 的 `100vh` 含地址栏，会遮挡底部内容、滚动时跳变
+- body 已加 `isolation: isolate` 建立根 stacking context —— 让 `.bg-orb / .petal-layer` 等负 z-index 的 `position: fixed` 层在 iOS 上绘制顺序稳定（落在背景之上、内容之下）
+- sticky / fixed 底部元素（如 `.player`、`.tabbar`）所在的页面，容器底部 `padding` 必须 ≥ 该元素高度 + `bottom offset + env(safe-area-inset-bottom)`，否则最后一项内容被盖住点不到
+
 ### 5.3 JS 模式
 
 `window.QI` 全局（[static/js/app.js](../../static/js/app.js)）暴露：

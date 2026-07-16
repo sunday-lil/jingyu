@@ -156,6 +156,7 @@
 .main {
   padding: var(--space-7) 0;
   min-height: calc(100vh - 64px);
+  min-height: calc(100dvh - 64px);   /* iOS Safari 动态视口，避免地址栏遮挡底部 */
 }
 
 @media (max-width: 720px) {
