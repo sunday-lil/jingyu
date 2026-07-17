@@ -45,6 +45,25 @@
       </a>
     {% endfor %}
   </div>
+
+  {% if current_user %}
+  <!-- AI 帮我选音：描述此刻状态，AI 推荐五音之一 -->
+  <div class="card fade-in reveal" style="margin-top:32px;padding:24px;background:linear-gradient(135deg, rgba(184,197,232,0.10), rgba(168,213,186,0.10));border:1px dashed var(--color-border);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="font-size:20px;">🎶</span>
+      <h3 style="font-family:var(--font-serif);font-weight:400;letter-spacing:0.05em;margin:0;">AI 帮我选音</h3>
+    </div>
+    <p style="color:var(--color-text-muted);font-size:13px;margin-bottom:16px;">不知道听哪一首？告诉海你现在的样子，让 AI 替你挑一曲。</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="ai-mood-input" type="text" class="form-input" placeholder="比如：心里有点紧，想慢下来" maxlength="100" style="flex:1;min-width:240px;">
+      <button id="ai-mood-btn" class="btn btn--primary">让 AI 替我选</button>
+    </div>
+    <div id="ai-mood-result" style="display:none;margin-top:16px;padding:14px 16px;border-radius:var(--radius-md);background:rgba(255,255,255,0.6);border:1px solid var(--color-border);">
+      <p id="ai-mood-reason" style="font-size:14px;line-height:1.7;color:var(--color-text-primary);margin:0 0 10px;white-space:pre-wrap;"></p>
+      <a id="ai-mood-go" class="btn btn--soft btn--sm" href="#">去听这一曲 →</a>
+    </div>
+  </div>
+  {% endif %}
 </section>
 
 <!-- 其他模块入口 -->
@@ -70,7 +89,12 @@
     <a href="/mood-calendar" class="module-card fade-in">
       <div class="module-card__icon" style="background:linear-gradient(135deg, #FFD56B, #A8D5BA);">📅</div>
       <h3 class="module-card__title">情绪日历</h3>
-      <p class="module-card__desc">记今日心情，把日子染成颜色。<br>不勉强每天，想记就记。</p>
+      <p class="module-card__desc">记今日心情，把日期染成 emoji。<br>不勉强每天，想记就记。</p>
+    </a>
+    <a href="/ai-chat" class="module-card fade-in">
+      <div class="module-card__icon" style="background:linear-gradient(135deg, #B8C5E8, #A8D5BA);">🌿</div>
+      <h3 class="module-card__title">AI 树洞</h3>
+      <p class="module-card__desc">说出来，海会接住。<br>对话不存历史，刷新即清空。</p>
     </a>
 
     <a href="/garden" class="module-card fade-in">
@@ -86,4 +110,8 @@
     </a>
   </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/home.js"></script>
 {% endblock %}

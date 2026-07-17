@@ -324,3 +324,22 @@ def shop(
             "items_by_type": by_type,
         },
     )
+
+
+# ─────────────────────────────────────────────────────────────
+# AI 树洞（NVIDIA NIM 接入）
+# ─────────────────────────────────────────────────────────────
+
+@router.get("/ai-chat", response_class=HTMLResponse)
+def ai_chat(
+    request: Request,
+    user: Optional[User] = Depends(get_current_user_optional),
+):
+    """AI 树洞对话页。需登录。对话历史不存库，前端内存里，刷新即清空。"""
+    if user is None:
+        return RedirectResponse("/login?next=/ai-chat", status_code=302)
+    return templates.TemplateResponse(
+        request,
+        "ai_chat.html",
+        {"current_user": user},
+    )

@@ -31,6 +31,15 @@
   <div style="text-align:center;margin-top:16px;">
     <button id="save-mood" class="btn btn--primary">{{ '改 一 下' if today_record else '收 好' }}</button>
   </div>
+
+  <!-- AI 治愈语：打卡成功后 AI 根据心情回一句温柔话语 -->
+  <div id="ai-healing-msg" style="display:none;margin-top:16px;padding:16px 20px;border-radius:var(--radius-md);background:linear-gradient(135deg, rgba(184,197,232,0.12), rgba(168,213,186,0.12));border:1px dashed var(--color-border);">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="font-size:16px;">🌙</span>
+      <span style="font-family:var(--font-serif);font-size:12px;color:var(--color-text-secondary);letter-spacing:0.05em;">岛上的一句治愈</span>
+    </div>
+    <p id="ai-healing-text" style="font-size:15px;line-height:1.8;color:var(--color-text-primary);white-space:pre-wrap;margin:0;"></p>
+  </div>
 </div>
 
 <!-- 当前连胜 -->
@@ -68,5 +77,6 @@
 {% endblock %}
 
 {% block extra_js %}
+<script type="application/json" id="mood-info">{{ mood_info | tojson }}</script>
 <script defer src="/static/js/pages/mood_calendar.js"></script>
 {% endblock %}

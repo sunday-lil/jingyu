@@ -98,29 +98,33 @@ webwrold/
 │   ├── schemas/              ← Pydantic v2 入参/出参
 │   │   ├── auth.py / diary.py / mood.py / music.py / energy.py
 │   │   ├── admin.py          ← 后台统计/用户/系统 Pydantic
+│   │   └── ai.py             ← AI 4 场景 Pydantic（2026-07-17 加，7 个模型：ChatMessage/AIChatIn/Out/AIEncouragementIn/AIHealingIn/AIMusicRecommendIn/Out）
 │   │
 │   ├── routers/              ← 一个领域一个文件
-│   │   ├── pages.py          ← SSR 页面（/、/login、/music/*、/diary 等）
+│   │   ├── pages.py          ← SSR 页面（/、/login、/music/*、/diary 等，含 /ai-chat）
 │   │   ├── auth.py / music.py / diary.py / mood.py / energy.py / garden.py
 │   │   ├── admin.py          ← 后台 API（/api/admin/*）
 │   │   ├── admin_pages.py    ← 后台 SSR 页面（/admin/*）
+│   │   └── ai.py             ← /api/ai/* 4 个 AI 端点（2026-07-17 加，全部需登录 + 全部有降级）
 │   │
 │   ├── services/             ← 业务逻辑层（routers 不直接调 model）
 │   │   ├── energy_service.py ← 能量获取 + 单日上限
 │   │   ├── diary_service.py  ← 漂流瓶随机抽取
-│   │   └── mood_service.py   ← 日历 + 30 天趋势
+│   │   ├── mood_service.py   ← 日历 + 30 天趋势
+│   │   └── ai_service.py     ← NVIDIA NIM API 调用 + 降级处理（2026-07-17 加，4 个场景 + _call_nvidia 底层 + AIServiceUnavailable 异常）
 │   │
 │   └── utils/
 │       ├── constants.py      ← YIN_TYPES / MOOD_INFO / ENERGY_RULES
 │       └── crypto.py         ← bcrypt + Fernet + PBKDF2
 │
-├── templates/                ← Jinja2（13 个前台页面 + 7 个后台页面 + 宏）
+├── templates/                ← Jinja2（14 个前台页面 + 7 个后台页面 + 宏）
 │   ├── base.html / _nav.html / _toast.html
-│   ├── index.html / login.html / register.html
+│   ├── index.html / login.html / register.html   ← index.html 加「AI 帮我选音」卡片（仅登录可见，2026-07-17）
 │   ├── music_list.html
-│   ├── diary_write.html / my_bottles.html / diary_detail.html / pick_bottle.html
-│   ├── mood_calendar.html      ← 情绪日历（今日打卡仅选表情 + 月历 + 30 天趋势；2026-07-16 会话 6 合并原 /mood 打卡页 / 会话 7 删文本输入、emoji 替代数字）
+│   ├── diary_write.html / my_bottles.html / diary_detail.html / pick_bottle.html   ← pick_bottle.html 加 #ai-encouragement 容器（2026-07-17）
+│   ├── mood_calendar.html      ← 情绪日历（今日打卡仅选表情 + 月历 + 30 天趋势 + #ai-healing-msg 容器；2026-07-16 会话 6 合并原 /mood 打卡页 / 会话 7 删文本输入、emoji 替代数字；2026-07-17 加 AI 治愈语）
 │   ├── garden.html / shop.html
+│   ├── ai_chat.html            ← AI 树洞对话页（2026-07-17 加，独立页面，需登录，多轮对话仅存浏览器内存）
 │   └── admin/                ← 秘密后台模板（继承 admin/_base.html）
 │       ├── _base.html        ← 暗色侧栏 + 金边 logo
 │       ├── login.html        ← 单独登录页
@@ -145,8 +149,10 @@ webwrold/
 │   │   ├── app.js            ← window.QI 全局（fetch / toast / confirmThen / reveal / ripple / countUp / confetti / petals / pageTransition / passwordToggle）
 │   │   └── pages/            ← 一页一个 JS
 │   │       ├── auth.js / music.js / diary.js / diary_detail.js
-│   │       ├── my_bottles.js / pick.js
-│   │       ├── mood_calendar.js ← 情绪日历（含今日打卡逻辑；2026-07-16 会话 6 合并原 mood.js / 会话 7 删文本输入、note 提交 null、emoji 替代数字）
+│   │       ├── my_bottles.js / pick.js   ← pick.js 加 loadAIEncouragement（2026-07-17，拾瓶后调 /api/ai/encouragement）
+│   │       ├── mood_calendar.js ← 情绪日历（含今日打卡逻辑；2026-07-16 会话 6 合并原 mood.js / 会话 7 删文本输入、note 提交 null、emoji 替代数字；2026-07-17 加 loadAIHealing 调 /api/ai/healing）
+│   │       ├── ai_chat.js      ← AI 树洞对话页逻辑（2026-07-17 加，多轮对话历史只存浏览器内存）
+│   │       ├── home.js         ← 首页「AI 帮我选音」卡片逻辑（2026-07-17 加，新建，调 /api/ai/recommend-music）
 │   │       ├── shop.js
 │   │       ├── admin_login.js / admin_dashboard.js
 │   │       ├── admin_users.js / admin_user_detail.js
@@ -212,6 +218,43 @@ webwrold/
 ⚠️ **端到端加密边界**：管理员能看到 diary 的 ID / 时间 / `is_public` / `mood_type`，但**永远**拿不到 `content_encrypted` 的明文。
 重置用户密码时，**`encryption_salt` 不会被改**（同一密码的密钥可复用），但用户**重置后用新密码登录**，PBKDF2 派生的 Fernet 密钥会变化，**旧日记在本机无法解密**（除非用户记得旧密码）。
 
+### Phase 6 — AI 全面接入（NVIDIA NIM API，2026-07-17 加）
+> 设计原则：**「渐进增强」+「不污染数据」+「治愈系温柔语气」** —— AI 是陪伴而非诊断，不诊断不开药，危机情况引导求助专业资源。
+
+**模型与 API**：
+- 模型：`nvidia/llama-3.1-nemotron-70b-instruct`（NVIDIA 提供**免费 API key**，注册 [build.nvidia.com](https://build.nvidia.com)）
+- API：`https://integrate.api.nvidia.com/v1/chat/completions`（OpenAI 兼容格式）
+- 客户端：`httpx.Client`，30s 超时，同步调用
+- 依赖：`httpx>=0.27.0,<0.29.0`（[requirements.txt](file:///c:/Users/Administrator/Desktop/webwrold/requirements.txt)）
+
+**4 个 AI 场景**（全部接入，**全部需登录**，**全部有降级处理**）：
+
+| # | 场景 | 前端 | 后端端点 | AI 文案去向 |
+|---|---|---|---|---|
+| 1 | AI 树洞对话 | [templates/ai_chat.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/ai_chat.html) + [static/js/pages/ai_chat.js](file:///c:/Users/Administrator/Desktop/webwrold/static/js/pages/ai_chat.js) | `POST /api/ai/chat` | 多轮对话，历史只在浏览器内存，**刷新清空，不落库** |
+| 2 | 漂流瓶 AI 鼓励语 | [templates/pick_bottle.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/pick_bottle.html) `#ai-encouragement` + [static/js/pages/pick.js](file:///c:/Users/Administrator/Desktop/webwrold/static/js/pages/pick.js) `loadAIEncouragement` | `POST /api/ai/encouragement` | 给读者看的现场文案，**不写库**，不污染作者收件箱 |
+| 3 | 情绪日历 AI 治愈语 | [templates/mood_calendar.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/mood_calendar.html) `#ai-healing-msg` + [static/js/pages/mood_calendar.js](file:///c:/Users/Administrator/Desktop/webwrold/static/js/pages/mood_calendar.js) `loadAIHealing` | `POST /api/ai/healing` | 显示在今日心情卡片下方，**不落库** |
+| 4 | 音乐 AI 心情推荐 | [templates/index.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/index.html) 「AI 帮我选音」卡片（仅登录可见）+ [static/js/pages/home.js](file:///c:/Users/Administrator/Desktop/webwrold/static/js/pages/home.js)（新建） | `POST /api/ai/recommend-music` | 推荐宫商角徵羽之一 + 理由 + 跳转 `/music/{yin}` |
+
+**后端模块清单**：
+- 配置：[app/config.py](file:///c:/Users/Administrator/Desktop/webwrold/app/config.py) `Settings` 类新增 3 字段 `nvidia_api_key` / `ai_model` / `ai_base_url`
+- Schema：[app/schemas/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/ai.py) — 7 个 Pydantic 模型（`ChatMessage` / `AIChatIn` / `AIChatOut` / `AIEncouragementIn` / `AIHealingIn` / `AIMusicRecommendIn` / `AIMusicRecommendOut`），已注册到 [app/schemas/__init__.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/__init__.py) 的 `__all__` + `model_rebuild()`
+- Service：[app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) — `AIServiceUnavailable` 异常 + 4 个系统提示词常量（温柔倾听风格，不诊断不开药，危机引导专业帮助） + `_call_nvidia(system_prompt, user_content, *, max_tokens, temperature, history)` 底层同步调用 + 4 个上层方法 `chat()` / `generate_encouragement()` / `generate_healing_message()` / `recommend_music()`。`recommend_music` 有容错 JSON 解析（处理 ```` ```json ```` 包裹、find `{` 到 `}`）
+- Router：[app/routers/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/ai.py) — 4 个端点全部 `Depends(get_current_user)` + 全部 try/except 降级
+- 入口注册：[app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py) 注册 `ai router`（prefix=`/api/ai`）
+
+**降级策略**（重要）：所有 AI 端点在以下情况返回 `200 + available:false + 治愈系友好提示`（**不报 500**）：
+- 未配置 `QI_NVIDIA_API_KEY`
+- NVIDIA API 调用失败（网络/超时/限流/4xx/5xx）
+
+前端拿到 `available:false` 时**仍正常显示**提示文案，不报错。这保证 AI 接入是「渐进增强」——没有 key 也能正常用所有功能。
+
+**隐私承诺**：
+- AI 树洞对话历史只在浏览器内存，**刷新即清空，不落库**
+- 漂流瓶 AI 鼓励语是给读者看的，**不写入数据库，不污染作者收件箱**
+- 情绪日历 AI 治愈语也**不落库**
+- 用户日记内容传给 AI 时**只取前 120 字预览**（在 `ai_service.generate_encouragement()` 里截断）
+
 ---
 
 ## 5. 关键设计决策（带原因）
@@ -255,6 +298,16 @@ webwrold/
   - **不能做**：读 diary 明文（端到端加密保护）、导出全库（隐私）
 - **为什么用 SQLAlchemy 显式 `.update()` 而不是 `user.total_energy = ...`**：见 [§6.7](#67-能量累加一定要用-queryupdate)
 - **为什么自动迁移字段而不上 Alembic**：见 [§6.10](#610-加新字段用-lightweight-migrate-不引-alembic)
+
+### 5.7 为什么 AI 接入用 NVIDIA NIM API + 渐进增强降级（2026-07-17 加）
+- **选 NVIDIA NIM**：[build.nvidia.com](https://build.nvidia.com) 提供**免费** API key，模型 `nvidia/llama-3.1-nemotron-70b-instruct` 是 Llama 3.1 系列经 NVIDIA 微调的 70B 指令模型，OpenAI 兼容格式接入成本几乎为零，符合本项目「非商业纯治愈」调性
+- **OpenAI 兼容**：将来想换其他厂商（DeepSeek / 智谱 / 自部署 vLLM）只改 `QI_AI_BASE_URL` + `QI_AI_MODEL`，不动业务代码
+- **降级而非报错**：AI 是「锦上添花」不是核心功能，**未配置 key 或调用失败时返回 200 + `available:false` + 治愈系友好提示**（**不报 500**）。前端拿到 `available:false` 仍正常显示文案。这保证：① 没拿到 key 的部署方也能跑；② NVIDIA 限流时业务不中断；③ 用户感知不到「故障」，只感知「AI 在休息」
+- **对话历史不入库**：AI 树洞对话历史只存浏览器内存（刷新清空），符合「日记端到端加密」的隐私承诺——服务端不留对话痕迹
+- **日记预览只取前 120 字**：漂流瓶 AI 鼓励语调用时，把作者日记**截断到前 120 字**再发给 AI，避免长文本消耗 token + 减少隐私暴露面
+- **温柔语气系统提示词**：4 个场景的 system_prompt 统一约定「不诊断不开药、危机情况引导求助专业资源、温柔倾听」，与项目治愈系调性一致
+
+详见 [app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) 顶部的 4 个系统提示词常量。
 
 ---
 
@@ -451,6 +504,25 @@ class AuthOut(BaseModel):
 - `.env` 改 `QI_ADMIN_PATH_PREFIX=/your-secret-path`
 - 重启服务即可
 - ⚠️ 改完**不会**自动迁移用户的书签，需要更新 [README.md](file:///c:/Users/Administrator/Desktop/webwrold/README.md) / [HANDOFF.md §1](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) 等文档
+
+### 7.9 加一个 AI 场景（2026-07-17 起约定）
+> 现有 4 个场景在 [app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) / [app/routers/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/ai.py) / [app/schemas/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/ai.py)。再加一个走同样套路：
+
+1. **Schema**：在 [app/schemas/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/ai.py) 加 `AI<X>In` + `AI<X>Out` 两个 Pydantic 模型；在 [app/schemas/__init__.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/__init__.py) 的 `__all__` 里加 import + 在末尾 `model_rebuild()` 区段确保新模型也被 rebuild
+2. **Service**：在 [app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) 加 ① 系统提示词常量（温柔语气、不诊断不开药、危机引导专业帮助） ② 上层方法 `generate_xxx()`，调 `_call_nvidia()`；**禁止**在 router 里直接调 `_call_nvidia()`
+3. **Router**：在 [app/routers/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/ai.py) 加 `@router.post("/xxx")`，**必须**：
+   - `Depends(get_current_user)` 鉴权
+   - `try: ... except AIServiceUnavailable: return {"available": False, "message": "治愈系友好提示"}` 降级，**不报 500**
+4. **前端集成**：3 选 1
+   - 独立新页面：`templates/xxx.html` + `static/js/pages/xxx.js`，在 [app/routers/pages.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/pages.py) 加 SSR 路由
+   - 已有页面加容器：在 `templates/xxx.html` 加 `<div id="ai-xxx">`，在 `static/js/pages/xxx.js` 加 `loadAIXxx()` 函数
+5. **测试降级**：先**不配** `QI_NVIDIA_API_KEY` 跑一遍，确认返回 `available:false` + 友好提示；再配 key 跑一遍，确认 `available:true` + AI 文案
+
+**铁律**：
+- AI 文案**永不入库**（保持隐私承诺，与日记端到端加密一脉相承）
+- 系统提示词**必须**包含「不诊断不开药、危机情况引导求助专业资源」语义（治愈系调性 + 责任边界）
+- 端点**必须**有 try/except 降级（「渐进增强」原则，没 key 也能跑）
+- 改完同步更新 README §3.7、本节 §4 Phase 6 表格、[docs/DEVELOPMENT.md §2.x](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEVELOPMENT.md)
 
 ---
 
@@ -734,3 +806,5 @@ Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yello
 > 末次更新 2026-07-15（会话 2）：补 §6.11 Pydantic schema 字段缺失踩坑、§12 文档自动同步铁律、首管密码现状说明。
 >
 > 末次更新 2026-07-15（会话 3）：首发到 GitHub — `https://github.com/sunday-lil/jingyu`（public）。
+>
+> 末次更新 2026-07-17（会话 8）：AI 全面接入（Phase 6）—— NVIDIA NIM API 4 个场景（树洞对话 / 漂流瓶鼓励语 / 情绪日历治愈语 / 音乐推荐），新增 [app/schemas/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/ai.py) + [app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) + [app/routers/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/ai.py) + [templates/ai_chat.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/ai_chat.html) + 4 个前端集成点；§4 加 Phase 6、§5.7 加 NVIDIA NIM 选型理由、§7.9 加「加 AI 场景」指南；可选功能，未配 key 时优雅降级。

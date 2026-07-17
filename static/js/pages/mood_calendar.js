@@ -60,6 +60,8 @@
         // 刷新日历今日格子 + 趋势 + 连胜
         loadCalendar();
         loadTrend();
+        // AI 治愈语：根据心情给一句温柔话语
+        loadAIHealing(selectedMood);
       } catch (e) {
         QI.toast(e.message, "error");
         saveBtn.disabled = false;
@@ -101,6 +103,35 @@
     renderTrend(data.items);
     if (streakEl) {
       streakEl.textContent = `已连续 ${data.current_streak} 天`;
+    }
+  }
+
+  // AI 治愈语：打卡成功后根据心情给一句温柔话语
+  async function loadAIHealing(moodCode) {
+    const box = document.getElementById("ai-healing-msg");
+    const textEl = document.getElementById("ai-healing-text");
+    if (!box || !textEl) return;
+    box.style.display = "none"; // 加载中先隐藏
+    try {
+      const moodInfoEl = document.getElementById("mood-info");
+      let moodLabel = moodCode;
+      if (moodInfoEl) {
+        try {
+          const info = JSON.parse(moodInfoEl.textContent || "{}");
+          if (info[moodCode]) moodLabel = info[moodCode].label || moodCode;
+        } catch (_) {}
+      }
+      const resp = await QI.fetchJSON("/api/ai/healing", {
+        method: "POST",
+        body: { mood_emoji: moodCode, mood_label: moodLabel },
+      });
+      if (!resp || !resp.text) return;
+      textEl.textContent = resp.text;
+      box.style.display = "block";
+      // 平滑滚动到治愈语
+      setTimeout(() => box.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
+    } catch (e) {
+      // 静默失败
     }
   }
 

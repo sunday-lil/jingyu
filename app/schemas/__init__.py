@@ -11,6 +11,12 @@ from app.schemas.admin import (
     ResetPasswordIn, CreateUserIn, AdjustEnergyIn,
     PyCacheCleanResult, SystemInfo,
 )
+from app.schemas.ai import (
+    ChatMessage, AIChatIn, AIChatOut,
+    AIEncouragementIn,
+    AIHealingIn,
+    AIMusicRecommendIn, AIMusicRecommendOut,
+)
 
 # Pydantic 2 + PEP 563 注解延迟求值时，部分 Optional/List 类型
 # 在 FastAPI 0.139 响应模型包装时未完全重建。显式 rebuild 一次解决。
@@ -24,6 +30,10 @@ for _m in (
     UserListItem, UserListOut, UserDetailOut,
     ResetPasswordIn, CreateUserIn, AdjustEnergyIn,
     PyCacheCleanResult, SystemInfo,
+    ChatMessage, AIChatIn, AIChatOut,
+    AIEncouragementIn,
+    AIHealingIn,
+    AIMusicRecommendIn, AIMusicRecommendOut,
 ):
     try:
         _m.model_rebuild()
@@ -40,4 +50,8 @@ __all__ = [
     "UserListItem", "UserListOut", "UserDetailOut",
     "ResetPasswordIn", "CreateUserIn", "AdjustEnergyIn",
     "PyCacheCleanResult", "SystemInfo",
+    "ChatMessage", "AIChatIn", "AIChatOut",
+    "AIEncouragementIn",
+    "AIHealingIn",
+    "AIMusicRecommendIn", "AIMusicRecommendOut",
 ]

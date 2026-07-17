@@ -184,6 +184,89 @@ class Xxx(Base):
 - 所有动效已内置 `prefers-reduced-motion` 降级，新增 `@keyframes` 时**必须**也加一段 `@media (prefers-reduced-motion: reduce)` 关闭它（无障碍）。
 - 涟漪用事件委托，**动态插入**的 `.btn` 也自动生效，无需手动 `initRipple()`。
 
+### 2.7 加一个 AI 场景（2026-07-17 起）
+
+> 现有 4 个场景在 [app/services/ai_service.py](../../app/services/ai_service.py) / [app/routers/ai.py](../../app/routers/ai.py) / [app/schemas/ai.py](../../app/schemas/ai.py)。再加一个走同样套路。完整决策见 [HANDOFF §7.9](../../HANDOFF.md)。
+
+**4 步走**：
+
+#### 第 1 步：Schema
+在 [app/schemas/ai.py](../../app/schemas/ai.py) 加 `AI<X>In` + `AI<X>Out` 两个 Pydantic 模型：
+
+```python
+class AIXxxIn(BaseModel):
+    """入参：xxx 场景"""
+    user_text: str = Field(..., min_length=1, max_length=500)
+
+class AIXxxOut(BaseModel):
+    """出参：xxx 场景"""
+    available: bool
+    message: str
+```
+
+在 [app/schemas/__init__.py](../../app/schemas/__init__.py) 的 `__all__` 加 import；末尾 `model_rebuild()` 区段确保新模型也被 rebuild（防 §3.1 Pydantic 前向引用坑）。
+
+#### 第 2 步：Service
+在 [app/services/ai_service.py](../../app/services/ai_service.py) 加：
+
+```python
+# 1. 系统提示词常量（温柔语气、不诊断不开药、危机引导专业帮助）
+SYSTEM_PROMPT_XXX = """你是一个温柔的倾听者..."""
+
+# 2. 上层方法
+def generate_xxx(self, user_text: str) -> str:
+    return self._call_nvidia(
+        system_prompt=SYSTEM_PROMPT_XXX,
+        user_content=user_text,
+        max_tokens=300,
+        temperature=0.7,
+    )
+```
+
+**禁止**在 router 里直接调 `_call_nvidia()`——业务规则集中在 service。
+
+#### 第 3 步：Router
+在 [app/routers/ai.py](../../app/routers/ai.py) 加：
+
+```python
+@router.post("/xxx", response_model=AIXxxOut)
+def xxx(body: AIXxxIn, user: User = Depends(get_current_user)):
+    try:
+        msg = ai_service.generate_xxx(body.user_text)
+        return {"available": True, "message": msg}
+    except AIServiceUnavailable:
+        # 降级：不报 500，返回治愈系友好提示
+        return {"available": False, "message": "AI 在休息一下，待会儿再来轻声陪伴你"}
+```
+
+**铁律**：
+- 端点**必须** `Depends(get_current_user)` 鉴权
+- 端点**必须** try/except `AIServiceUnavailable` 降级，**不报 500**
+
+#### 第 4 步：前端集成（3 选 1）
+
+| 方式 | 模板 | JS |
+|---|---|---|
+| **独立新页面**（如 AI 树洞对话） | `templates/xxx.html` + 在 [app/routers/pages.py](../../app/routers/pages.py) 加 SSR 路由 | `static/js/pages/xxx.js` |
+| **已有页面加容器**（如漂流瓶鼓励语 / 情绪日历治愈语） | 在 `templates/xxx.html` 加 `<div id="ai-xxx">` | 在 `static/js/pages/xxx.js` 加 `loadAIXxx()` 函数 |
+| **首页加卡片**（如音乐推荐） | 在 `templates/index.html` 加卡片（用 `{% if current_user %}` 控制仅登录可见） | `static/js/pages/home.js` 或新建 JS |
+
+JS 调用示例：
+
+```javascript
+async function loadAIXxx() {
+  const data = await QI.fetchJSON('/api/ai/xxx', {
+    method: 'POST',
+    body: JSON.stringify({ user_text: '...' }),
+  });
+  // 拿到 available:true/false 都正常显示文案，不报错
+  document.querySelector('#ai-xxx').textContent = data.message;
+}
+```
+
+#### 第 5 步：测试降级（必做）
+**先不配 `QI_NVIDIA_API_KEY`**，确认端点返回 `available:false` + 友好提示；**再配 key** 跑一遍，确认 `available:true` + AI 文案。详见 [§3.14](#314-ai-端点降级测试方法)。
+
 ---
 
 ## 3. 9 个真实踩过的坑
@@ -556,6 +639,59 @@ curl /                 → 200，HTML 不含"心情手帐"，含"情绪日历"
 - 删 UI 功能 ≠ 删 DB 字段：先查历史数据，nullable 字段保留向后兼容，新数据写 null
 - 日历 emoji 替代数字：复用已有 flex 居中，不新写定位
 - 「自由贴 emoji」需求不做 picker，让用户用系统输入法
+
+### 3.14 AI 端点降级测试方法（2026-07-17 加）
+
+**场景**：4 个 AI 端点（`/api/ai/chat` / `/api/ai/encouragement` / `/api/ai/healing` / `/api/ai/recommend-music`）必须保证「未配 key 或调用失败时返回 200 + `available:false` + 治愈系友好提示」，**不报 500**。这是 AI 接入「渐进增强」的核心保证。
+
+**测试 1：未配 key 降级**（默认状态）
+```bash
+# 1. 确保 .env 没有 QI_NVIDIA_API_KEY（或留空）
+# 2. 重启
+python start.py restart
+# 3. 登录拿 cookie
+curl -c c.txt -X POST http://127.0.0.1:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"nickname":"test","password":"hello123"}'
+# 4. 调 4 个 AI 端点，应该都返回 200 + available:false
+curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
+  -H "Content-Type: application/json" \
+  -d '{"mood_emoji":"calm"}'
+# 期望: {"available":false,"message":"AI 在休息一下..."}
+```
+
+**测试 2：配 key 正常返回**
+```bash
+# 1. 在 .env 加入 3 个变量（参考 DEPLOYMENT「AI 接入」段）
+# 2. 重启
+python start.py restart
+# 3. 调端点，应该返回 200 + available:true + AI 文案
+curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
+  -H "Content-Type: application/json" \
+  -d '{"mood_emoji":"calm"}'
+# 期望: {"available":true,"message":"<AI 生成的治愈语>"}
+```
+
+**测试 3：调用失败降级**（模拟网络/限流/4xx/5xx）
+```bash
+# 方法 A：临时把 QI_AI_BASE_URL 改成无效地址（如 https://invalid.example.com/v1）→ 重启 → 调端点
+# 方法 B：临时把 QI_NVIDIA_API_KEY 改成无效 key（如 nvapi-invalid）→ 重启 → 调端点
+# 期望: 200 + available:false + 治愈系提示（不报 500）
+```
+
+**测试 4：前端浏览器手动测**
+```
+# 1. 浏览器访问 /ai-chat（需登录）→ 输入对话 → 看到回复（配 key）或治愈系提示（不配 key）
+# 2. /pick 拾瓶后看 #ai-encouragement 容器有内容
+# 3. /mood-calendar 打卡后看 #ai-healing-msg 容器有内容
+# 4. / 首页「AI 帮我选音」卡片（仅登录可见）→ 描述状态 → 看推荐 + 跳转链接
+```
+
+**铁律**：
+- AI 端点**永不**返回 5xx——失败时统一返回 200 + `available:false` + 治愈系提示
+- 前端拿 `available:true/false` 都正常显示文案，**不报错**
+- 改完 AI 代码必须跑测试 1（不配 key 降级）+ 测试 2（配 key 正常）—— 两个状态都要测
+- 失败原因走 `logger.warning`，**不**暴露给前端（避免泄露内部信息）
 
 ---
 

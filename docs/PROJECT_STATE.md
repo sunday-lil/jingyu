@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-16（会话 7 — 5 项 UX 优化：密码可见性切换 / iOS 导航栏 / 模块职责分离 / 日历 emoji）
+**最后更新**：2026-07-17（会话 8 — AI 全面接入：NVIDIA NIM API 4 个场景 / 树洞对话 / 漂流瓶鼓励语 / 情绪日历治愈语 / 音乐推荐）
 
 ---
 
@@ -12,9 +12,10 @@
 | 维度 | 状态 | 备注 |
 |---|---|---|
 | **可运行** | ✅ | `python start.py` 即可起，端口 5000 |
-| **5 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** |
+| **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
 | **秘密后台** | ✅ | `/admin` 入口，6 个页面 + `/api/admin/*` |
+| **AI 全面接入** | ✅ 可选 | NVIDIA NIM API（`nvidia/llama-3.1-nemotron-70b-instruct`），4 个场景；未配 `QI_NVIDIA_API_KEY` 时优雅降级，业务不中断 |
 | **种子数据** | ✅ | 5 音 × 3-4 首 = 16 首古琴曲 + 11 件商店物品 + 首个管理员 |
 | **文档** | ✅ | README + HANDOFF + 4 个 docs/ |
 | **单元测试** | ❌ | 没有 pytest 套件（next agent 可加） |
@@ -24,6 +25,27 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-17（会话 8）— Phase 6：AI 全面接入（NVIDIA NIM API，4 个场景，可选）
+- [x] 起因：项目要加入 AI 陪伴能力，要求治愈系语气 + 不污染数据 + 未配 key 也能跑
+- [x] **模型与 API**：`nvidia/llama-3.1-nemotron-70b-instruct` via NVIDIA NIM API（OpenAI 兼容格式 `/chat/completions`，base_url=`https://integrate.api.nvidia.com/v1`），用 [build.nvidia.com](https://build.nvidia.com) 免费 key
+- [x] **后端新增**：
+  - [app/config.py](../../app/config.py)：`Settings` 新增 `nvidia_api_key` / `ai_model` / `ai_base_url` 3 字段
+  - [app/schemas/ai.py](../../app/schemas/ai.py)：7 个 Pydantic 模型（`ChatMessage`/`AIChatIn`/`AIChatOut`/`AIEncouragementIn`/`AIHealingIn`/`AIMusicRecommendIn`/`AIMusicRecommendOut`），已注册到 [app/schemas/__init__.py](../../app/schemas/__init__.py) 的 `__all__` + `model_rebuild()`
+  - [app/services/ai_service.py](../../app/services/ai_service.py)：`AIServiceUnavailable` 异常 + 4 个系统提示词常量（温柔倾听 / 不诊断不开药 / 危机引导专业帮助） + `_call_nvidia()` 底层同步调用（httpx.Client 30s 超时） + 4 个上层方法 `chat()`/`generate_encouragement()`/`generate_healing_message()`/`recommend_music()`（后者含容错 JSON 解析）
+  - [app/routers/ai.py](../../app/routers/ai.py)：4 个端点全部 `Depends(get_current_user)` + 全部 try/except 降级
+  - [app/main.py](../../app/main.py)：注册 `ai` router（prefix=`/api/ai`）
+- [x] **前端集成 4 处**：
+  - **AI 树洞对话**：新增 [templates/ai_chat.html](../../templates/ai_chat.html) + [static/js/pages/ai_chat.js](../../static/js/pages/ai_chat.js)，独立页面 `/ai-chat`（需登录），多轮对话历史只存浏览器内存，刷新清空，**不落库**
+  - **漂流瓶 AI 鼓励语**：[templates/pick_bottle.html](../../templates/pick_bottle.html) 加 `#ai-encouragement` 容器 + [static/js/pages/pick.js](../../static/js/pages/pick.js) 加 `loadAIEncouragement`，拾瓶成功后调 `/api/ai/encouragement`；AI 文案给读者看，**不写库**，不污染作者收件箱
+  - **情绪日历 AI 治愈语**：[templates/mood_calendar.html](../../templates/mood_calendar.html) 加 `#ai-healing-msg` 容器 + [static/js/pages/mood_calendar.js](../../static/js/pages/mood_calendar.js) 加 `loadAIHealing`，打卡成功后调 `/api/ai/healing`，显示在今日心情卡片下方，**不落库**
+  - **音乐 AI 心情推荐**：[templates/index.html](../../templates/index.html) 加「AI 帮我选音」卡片（仅登录可见）+ 新建 [static/js/pages/home.js](../../static/js/pages/home.js)，调 `/api/ai/recommend-music`，推荐宫商角徵羽之一 + 理由 + 跳转 `/music/{yin}`
+- [x] **降级策略**：未配置 `QI_NVIDIA_API_KEY` 或调用失败（网络/超时/限流/4xx/5xx）→ 端点返回 `200 + available:false + 治愈系友好提示`，**不报 500**。前端照常显示文案，业务不中断
+- [x] **隐私承诺**：AI 对话不入库；日记预览传 AI 时只取**前 120 字**（在 `ai_service.generate_encouragement()` 截断）
+- [x] 依赖：[requirements.txt](../../requirements.txt) 新增 `httpx>=0.27.0,<0.29.0`
+- [x] 配置：[.env.example](../../.env.example) 末尾新增 AI 配置段（默认注释掉）
+- [x] 文档同步（铁律）：README §0/§2/§3.7/§8、HANDOFF §3/§4 Phase 6/§5.7/§7.9/末次更新、PROJECT_STATE §1/§2/§3（本条）、ARCHITECTURE §6.6/§7.8、DEPLOYMENT AI 环境变量段、DEVELOPMENT §2.7/§3.14
+- [x] 验证：① 不配 key 跑 → 4 个 AI 端点均返回 200 + `available:false` + 治愈系提示；② 配 key 跑 → 4 个端点返回 200 + `available:true` + AI 文案；③ 浏览器手动测：/ai-chat 多轮对话 / 拾瓶后看鼓励语 / 打卡后看治愈语 / 首页 AI 推荐音
 
 ### 2026-07-16（会话 7）— 5 项 UX 优化（密码切换 / iOS 导航栏 / 模块职责分离 / 日历 emoji / 日记去心情）
 - [x] 起因：甲方提 5 项需求 — ① 密码可见性切换 ② 苹果设备导航栏过大 ③ 情绪日历文本输入整合到日记 ④ 日历日期数字替换为情绪 emoji ⑤ 日记编辑页移除心情选择
@@ -165,15 +187,15 @@
 ### 3.2 后端（[app/](../../app/)）
 - `__init__.py` / `main.py` / `config.py` / `database.py` / `deps.py` / `security.py` / `seed.py`
 - `models/` — 7 张表 + `__init__.py`（users 含 `is_admin`）
-- `schemas/` — 6 个 Pydantic 模块（auth/diary/mood/music/energy/**admin**）+ `__init__.py`
-- `routers/` — 9 个 router（pages + 6 业务 + **admin + admin_pages**）
-- `services/` — 3 个业务服务
+- `schemas/` — **7 个** Pydantic 模块（auth/diary/mood/music/energy/**admin**/**ai**）+ `__init__.py`
+- `routers/` — **10 个** router（pages + 6 业务 + **admin + admin_pages** + **ai**）
+- `services/` — **4 个**业务服务（energy / diary / mood / **ai_service**）
 - `utils/` — 加密 + 常量
 
 ### 3.3 前端
-- `templates/` — 13 个前台 .html + **6 个后台 .html**（`templates/admin/`）+ 宏
+- `templates/` — **14 个**前台 .html（含 **ai_chat.html**）+ **6 个后台 .html**（`templates/admin/`）+ 宏
 - `static/css/` — 8 个 .css（含 **07-admin.css**）
-- `static/js/` — 1 个 app.js + **15 个** pages/（9 个前台 + 6 个后台）
+- `static/js/` — 1 个 app.js + **17 个** pages/（11 个前台：含 **ai_chat.js** + **home.js**；6 个后台）
 
 ### 3.4 脚本
 - [start.py](../../start.py) — 服务管理（核心）

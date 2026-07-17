@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}AI 树洞 — 静屿{% endblock %}
+
+{% block content %}
+<div class="ai-chat-page">
+  <div class="page-header">
+    <h1 class="page-header__title">AI 树洞</h1>
+    <p class="page-header__subtitle">把这里当作一座小小的岛<br>说出来，海会接住</p>
+    <p class="page-header__verse">对话不存历史，刷新即清空 · 若遇危机，请寻求专业帮助</p>
+  </div>
+
+  <div class="chat-window" id="chat-window">
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg chat-msg--ai">
+        <div class="chat-msg__avatar">🌿</div>
+        <div class="chat-msg__bubble">我在这里。想说什么都可以，不用整理好情绪再来。</div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-wrap">
+        <textarea id="chat-input" class="chat-input" placeholder="想说点什么…" rows="1"></textarea>
+        <button id="chat-send" class="btn btn--primary chat-send" type="button">说</button>
+      </div>
+      <p class="chat-hint">Enter 发送 · Shift+Enter 换行</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="/static/js/pages/ai_chat.js"></script>
+{% endblock %}

@@ -19,6 +19,8 @@
 
 **强隐私承诺**：用户日记内容使用对称加密存储，密钥与用户密码派生。即便数据库泄露也无法直接读取明文（端到端加密）。
 
+**AI 全面接入**（2026-07-17 加入，**可选**功能）：基于 NVIDIA NIM API（OpenAI 兼容格式，模型 `nvidia/llama-3.1-nemotron-70b-instruct`）的 4 个治愈场景——AI 树洞对话、漂流瓶 AI 鼓励语、情绪日历 AI 治愈语、首页音乐 AI 心情推荐。**不配置 API key 时所有功能照常可用**（优雅降级，仅少 AI 文案），保持「渐进增强」原则。AI 文案不入库，对话历史只在浏览器内存（刷新即清空）。
+
 ---
 
 ## 1. 跑起来
@@ -88,7 +90,8 @@ webwrold/
 │   │   ├── diary.py
 │   │   ├── mood.py
 │   │   ├── music.py
-│   │   └── energy.py
+│   │   ├── energy.py
+│   │   └── ai.py                 # AI 4 场景入参/出参（2026-07-17 加）
 │   ├── routers/
 │   │   ├── __init__.py
 │   │   ├── pages.py              # SSR 页面路由（返回 HTML）
@@ -97,12 +100,14 @@ webwrold/
 │   │   ├── diary.py              # /api/diary/*
 │   │   ├── mood.py               # /api/mood/*
 │   │   ├── energy.py             # /api/energy/*
-│   │   └── garden.py             # /api/garden/*
+│   │   ├── garden.py             # /api/garden/*
+│   │   └── ai.py                 # /api/ai/* 4 个 AI 端点（2026-07-17 加）
 │   ├── services/
 │   │   ├── __init__.py
 │   │   ├── energy_service.py     # 能量获取规则（听歌 90%+ / 日记 / 打卡 / 连胜）
 │   │   ├── diary_service.py      # 漂流瓶随机拾取
-│   │   └── mood_service.py       # 心情日历统计 + 趋势数据
+│   │   ├── mood_service.py       # 心情日历统计 + 趋势数据
+│   │   └── ai_service.py         # NVIDIA NIM API 调用 + 降级处理（2026-07-17 加）
 │   └── utils/
 │       ├── __init__.py
 │       ├── constants.py          # 5 音定义 / 心情枚举 / 能量来源枚举
@@ -112,16 +117,17 @@ webwrold/
 │   ├── base.html                 #   全局骨架（导航 + Toast + 页脚）
 │   ├── _nav.html                 #   导航宏
 │   ├── _toast.html               #   全局 Toast 提示
-│   ├── index.html                #   首页（5 音入口 + 漂流瓶入口 + 情绪日历入口）
+│   ├── index.html                #   首页（5 音入口 + 漂流瓶入口 + 情绪日历入口 + AI 推荐音卡片）
 │   ├── login.html / register.html
 │   ├── music_list.html           #   单音曲目列表 + 沉浸式播放器
 │   ├── diary_write.html          #   漂流瓶写作页（含投瓶动效）
 │   ├── my_bottles.html           #   我的瓶子时间线
 │   ├── diary_detail.html         #   单个瓶子详情
-│   ├── pick_bottle.html          #   拾取陌生人漂流瓶
-│   ├── mood_calendar.html        #   情绪日历（今日打卡 + 月历 + 30 天趋势）
+│   ├── pick_bottle.html          #   拾取陌生人漂流瓶（含 #ai-encouragement 容器）
+│   ├── mood_calendar.html        #   情绪日历（今日打卡 + 月历 + 30 天趋势 + #ai-healing-msg 容器）
 │   ├── garden.html               #   精神花园（已种植物 + 装扮）
-│   └── shop.html                 #   兑换商店（花种 / 装扮 / 徽章）
+│   ├── shop.html                 #   兑换商店（花种 / 装扮 / 徽章）
+│   └── ai_chat.html              #   AI 树洞对话页（2026-07-17 加，需登录，多轮对话仅存浏览器）
 │
 ├── static/
 │   ├── css/
@@ -233,6 +239,40 @@ YIN_TYPES = {
 }
 ```
 
+### 3.7 AI 接入（NVIDIA NIM API，可选，2026-07-17 加入）
+
+4 个治愈场景，全部走 NVIDIA NIM API（OpenAI 兼容格式 `/chat/completions`，模型 `nvidia/llama-3.1-nemotron-70b-instruct`）。**未配置 API key 时端点返回 200 + `available:false` + 治愈系友好提示**，前端照常显示文案不报错——AI 是「渐进增强」，不是核心功能。
+
+| 场景 | 前端入口 | 后端端点 | AI 文案去向 |
+|---|---|---|---|
+| AI 树洞对话 | `/ai-chat`（独立页面，需登录） | `POST /api/ai/chat` | 仅浏览器内存，刷新即清空，**不落库** |
+| 漂流瓶 AI 鼓励语 | `/pick` 拾瓶后 `#ai-encouragement` | `POST /api/ai/encouragement` | 给读者看的现场文案，**不写库**，不污染作者收件箱 |
+| 情绪日历 AI 治愈语 | `/mood-calendar` 打卡后 `#ai-healing-msg` | `POST /api/ai/healing` | 显示在今日心情卡片下方，**不落库** |
+| 音乐 AI 心情推荐 | 首页 `/` 「AI 帮我选音」卡片（仅登录可见） | `POST /api/ai/recommend-music` | 推荐宫商角徵羽之一 + 理由 + 跳转 `/music/{yin}` 链接 |
+
+**4 个 AI 场景的隐私承诺**：
+- AI 树洞对话历史只在浏览器内存，刷新清空，**不落库**
+- 漂流瓶 AI 鼓励语是给读者看的，不写入数据库，不污染作者收件箱
+- 情绪日历 AI 治愈语也不落库
+- 用户日记内容传给 AI 时只取**前 120 字**预览（在 `ai_service.generate_encouragement()` 里截断）
+
+**相关文件**：
+- 配置：[app/config.py](file:///c:/Users/Administrator/Desktop/webwrold/app/config.py) `Settings` 类的 `nvidia_api_key` / `ai_model` / `ai_base_url`
+- Schema：[app/schemas/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/ai.py) 7 个 Pydantic 模型
+- Service：[app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) — `AIServiceUnavailable` 异常 + 4 个系统提示词常量 + `_call_nvidia()` 底层调用 + 4 个上层方法
+- Router：[app/routers/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/ai.py) 4 个端点（全部 `Depends(get_current_user)` + 全部有降级处理）
+- 依赖：[requirements.txt](file:///c:/Users/Administrator/Desktop/webwrold/requirements.txt) 新增 `httpx>=0.27.0,<0.29.0`
+
+**.env 配置示例**（在 [.env.example](file:///c:/Users/Administrator/Desktop/webwrold/.env.example) 末尾，默认注释掉）：
+```env
+# AI 接入（可选，不配置时所有功能正常，AI 端点会优雅降级）
+# QI_NVIDIA_API_KEY=nvapi-xxxxx
+# QI_AI_MODEL=nvidia/llama-3.1-nemotron-70b-instruct
+# QI_AI_BASE_URL=https://integrate.api.nvidia.com/v1
+```
+
+> 模型选 `nemotron-70b-instruct` 是因为 NVIDIA 提供**免费 API key**，注册 [build.nvidia.com](https://build.nvidia.com) 即可获取，符合本项目「非商业纯治愈」调性。
+
 ---
 
 ## 4. 数据库表速查
@@ -338,6 +378,10 @@ tail -n 50 logs/healing.log        # Linux/macOS
 | 导航宏 | [templates/_nav.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/_nav.html) |
 | CSS 变量 | [static/css/00-variables.css](file:///c:/Users/Administrator/Desktop/webwrold/static/css/00-variables.css) |
 | 全局 JS | [static/js/app.js](file:///c:/Users/Administrator/Desktop/webwrold/static/js/app.js) |
+| AI 服务层 | [app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) |
+| AI API 端点 | [app/routers/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/ai.py) |
+| AI Schema | [app/schemas/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/ai.py) |
+| AI 树洞对话页 | [templates/ai_chat.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/ai_chat.html) |
 | API 文档（自动） | http://127.0.0.1:5000/docs |
 | **AI 交接** | [HANDOFF.md](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) |
 | 详细文档 | [docs/](file:///c:/Users/Administrator/Desktop/webwrold/docs/) |

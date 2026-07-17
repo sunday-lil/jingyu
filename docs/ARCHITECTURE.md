@@ -386,6 +386,87 @@ def clear_pycaches(...):
 
 ---
 
+## 6.6 AI 层架构（2026-07-17 加，可选）
+
+> 设计原则：**「渐进增强」+「不污染数据」+「治愈系温柔语气」** —— AI 是「锦上添花」而非核心功能，没配 key 也能跑；AI 文案永不入库，与日记端到端加密一脉相承。
+
+### 6.6.1 模块组成
+
+| 层 | 文件 | 说明 |
+|---|---|---|
+| 配置 | [app/config.py](../../app/config.py) | `Settings` 类新增 `nvidia_api_key` / `ai_model` / `ai_base_url` 3 字段，从 `.env` 读 |
+| Schema | [app/schemas/ai.py](../../app/schemas/ai.py) | 7 个 Pydantic 模型：`ChatMessage` / `AIChatIn` / `AIChatOut` / `AIEncouragementIn` / `AIHealingIn` / `AIMusicRecommendIn` / `AIMusicRecommendOut`；已注册到 [app/schemas/__init__.py](../../app/schemas/__init__.py) 的 `__all__` + `model_rebuild()` |
+| Service | [app/services/ai_service.py](../../app/services/ai_service.py) | `AIServiceUnavailable` 异常 + 4 个系统提示词常量 + `_call_nvidia()` 底层同步调用 + 4 个上层方法 |
+| Router | [app/routers/ai.py](../../app/routers/ai.py) | 4 个端点（全部 `Depends(get_current_user)` + 全部 try/except 降级），prefix=`/api/ai` |
+| 入口注册 | [app/main.py](../../app/main.py) | `app.include_router(ai.router, prefix="/api/ai")` |
+| 外部依赖 | NVIDIA NIM API | `https://integrate.api.nvidia.com/v1/chat/completions`（OpenAI 兼容格式），模型 `nvidia/llama-3.1-nemotron-70b-instruct` |
+| 依赖 | [requirements.txt](../../requirements.txt) | 新增 `httpx>=0.27.0,<0.29.0` |
+
+### 6.6.2 调用流（4 个场景同构）
+
+```
+浏览器                          FastAPI                          NVIDIA NIM
+  │                                │                                │
+  │ POST /api/ai/<scene>           │                                │
+  │ Cookie: qi_session=...         │                                │
+  │ { ... 入参 ... }               │                                │
+  ├───────────────────────────────→│                                │
+  │                                │ 1. get_current_user 鉴权        │
+  │                                │ 2. try:                         │
+  │                                │    ai_service.generate_xxx()    │
+  │                                │    → _call_nvidia(              │
+  │                                │        system_prompt,           │
+  │                                │        user_content,           │
+  │                                │        history=...,             │
+  │                                │      )                          │
+  │                                │    ────────────────────────────→│
+  │                                │    POST /chat/completions       │
+  │                                │    Authorization: Bearer        │
+  │                                │      ${QI_NVIDIA_API_KEY}      │
+  │                                │  ←─────── 200 + AI 文案 ────────│
+  │                                │ 3. except AIServiceUnavailable: │
+  │                                │    return available:false + 友好提示
+  │                                │                                │
+  │ ←─ 200 { available:true/false, message }                        │
+  │                                │                                │
+```
+
+### 6.6.3 4 个场景
+
+| # | 场景 | 端点 | 前端集成点 | AI 文案去向 |
+|---|---|---|---|---|
+| 1 | AI 树洞对话 | `POST /api/ai/chat` | [templates/ai_chat.html](../../templates/ai_chat.html) + [static/js/pages/ai_chat.js](../../static/js/pages/ai_chat.js)，独立页面 `/ai-chat`，多轮对话 | 仅浏览器内存，刷新清空，**不落库** |
+| 2 | 漂流瓶 AI 鼓励语 | `POST /api/ai/encouragement` | [templates/pick_bottle.html](../../templates/pick_bottle.html) `#ai-encouragement` + [static/js/pages/pick.js](../../static/js/pages/pick.js) `loadAIEncouragement` | 给读者看的现场文案，**不写库**，不污染作者收件箱；日记内容传 AI 时**只取前 120 字** |
+| 3 | 情绪日历 AI 治愈语 | `POST /api/ai/healing` | [templates/mood_calendar.html](../../templates/mood_calendar.html) `#ai-healing-msg` + [static/js/pages/mood_calendar.js](../../static/js/pages/mood_calendar.js) `loadAIHealing` | 显示在今日心情卡片下方，**不落库** |
+| 4 | 音乐 AI 心情推荐 | `POST /api/ai/recommend-music` | [templates/index.html](../../templates/index.html) 「AI 帮我选音」卡片（仅登录可见）+ [static/js/pages/home.js](../../static/js/pages/home.js)（新建） | 返回宫商角徵羽之一 + 理由 + 跳转 `/music/{yin}` 链接；service 层有容错 JSON 解析（处理 ```` ```json ```` 包裹、find `{` 到 `}`） |
+
+### 6.6.4 降级策略（核心）
+
+所有 AI 端点在以下情况返回 **200 + `available:false` + 治愈系友好提示**（**不报 500**）：
+- 未配置 `QI_NVIDIA_API_KEY`（启动时检查）
+- NVIDIA API 调用失败（网络 / 超时 / 限流 / 4xx / 5xx）
+
+前端拿到 `available:false` 时**仍正常显示**提示文案，不报错。架构上意味着：
+
+- **AI 是「渐进增强」**——没有 key 也能正常用所有功能
+- **NVIDIA 限流时业务不中断**——用户只感知「AI 在休息」，不感知「故障」
+- **可观测性**：失败原因走 `logger.warning`，不暴露给前端（避免泄露内部信息）
+
+### 6.6.5 隐私承诺
+
+| 场景 | 数据流向 | 入库？ |
+|---|---|---|
+| AI 树洞对话 | 浏览器内存 → POST /api/ai/chat → NVIDIA → 浏览器内存 | ❌ 不入库 |
+| 漂流瓶 AI 鼓励语 | 后端读日记明文（已解密）→ **截断到前 120 字** → NVIDIA → 返回文案给读者 | ❌ 文案不入库；日记明文也不留存 |
+| 情绪日历 AI 治愈语 | 心情 emoji + 可选 note → NVIDIA → 返回治愈语 | ❌ 不入库 |
+| 音乐 AI 心情推荐 | 用户描述的状态文本 → NVIDIA → 返回五音之一 + 理由 | ❌ 不入库 |
+
+**端到端加密边界依然成立**：AI 服务调日记明文时，明文只在 `generate_encouragement()` 函数栈内临时存在，函数返回即被 GC，**不写日志、不写库、不写文件**。
+
+详见 [HANDOFF §5.7](../../HANDOFF.md) AI 接入选型理由。
+
+---
+
 ## 7. 安全模型
 
 ### 7.1 密码
@@ -437,6 +518,22 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 - 改 `to_public_dict()` 字段 → **同一 commit** 改所有对应 `*Out` schema
 - 改完**立即**在浏览器 DevTools Network 标签看 Response body
 - 详见 [HANDOFF §6.11](../../HANDOFF.md) / [DEVELOPMENT §3.10](DEVELOPMENT.md)
+
+### 7.8 AI 隐私边界（2026-07-17 加）
+> AI 接入必须**不破坏**日记端到端加密的隐私承诺。
+
+**4 条边界**：
+1. **AI 文案永不入库**——4 个 AI 场景的输出（对话历史 / 鼓励语 / 治愈语 / 推荐理由）都只在浏览器内存或一次 HTTP 响应里，**绝不**写 SQLite
+2. **对话历史只在浏览器**——AI 树洞对话多轮历史存浏览器 JS 变量，刷新清空，服务端**不留存**
+3. **日记明文调用 AI 时截断到前 120 字**——漂流瓶 AI 鼓励语调用 `generate_encouragement()` 时，把作者日记**只取前 120 字预览**发给 NVIDIA，减少 token + 减少隐私暴露面；明文在函数栈内临时存在，函数返回即被 GC
+4. **API key 不入仓**——`QI_NVIDIA_API_KEY` 只在 `.env`（git 忽略），[.env.example](../../.env.example) 默认注释掉占位
+
+**外部依赖边界**：
+- 第三方服务：NVIDIA NIM API（`https://integrate.api.nvidia.com/v1`），用户日记内容前 120 字 + 心情 emoji + 用户描述的状态文本会发往 NVIDIA
+- 将来想换自部署 vLLM / 其他厂商 → 只改 `QI_AI_BASE_URL` + `QI_AI_MODEL`，业务代码不动（OpenAI 兼容格式）
+- 想完全离线（不发任何数据出去）→ **不配** `QI_NVIDIA_API_KEY`，4 个端点自动降级返回治愈系友好提示，业务正常跑
+
+详见 [§6.6 AI 层架构](#66-ai-层架构2026-07-17-加可选) / [HANDOFF §5.7](../../HANDOFF.md)。
 
 ---
 

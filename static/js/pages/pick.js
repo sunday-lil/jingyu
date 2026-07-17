@@ -93,6 +93,9 @@
       const info = moodInfo[data.mood_type];
       moodEl.textContent = info ? `${info.emoji} ${info.label}` : "无署名";
       dateEl.textContent = QI.formatDate(data.created_at);
+
+      // AI 现场回声：拾瓶后请 AI 给读者一句温柔回应（不写库，纯展示）
+      loadAIEncouragement(text, info);
     } catch (e) {
       QI.toast(e.message, "error");
     } finally {
@@ -100,6 +103,30 @@
       pickBtn.textContent = "再拾一个";
     }
   });
+
+  // AI 现场回声：拾瓶后 AI 给读者一句温柔回应（不写库，不污染作者收件箱）
+  async function loadAIEncouragement(diaryText, moodInfo) {
+    const aiBox = document.getElementById("ai-encouragement");
+    const aiText = document.getElementById("ai-encouragement-text");
+    if (!aiBox || !aiText) return;
+    aiBox.style.display = "none"; // 加载中也隐藏，避免空盒
+    try {
+      const preview = (diaryText || "").slice(0, 120);
+      const moodLabel = moodInfo ? moodInfo.label : "";
+      const resp = await QI.fetchJSON("/api/ai/encouragement", {
+        method: "POST",
+        body: {
+          diary_preview: preview,
+          mood_label: moodLabel,
+        },
+      });
+      if (!resp || !resp.text) return;
+      aiText.textContent = resp.text;
+      aiBox.style.display = "block";
+    } catch (e) {
+      // 静默失败：不打扰读者
+    }
+  }
 
   encourageBtn?.addEventListener("click", async () => {
     if (!currentDiary) return;

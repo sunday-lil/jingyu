@@ -11,6 +11,7 @@
       {% if current_user %}
       <a href="/diary" class="nav__link">漂流瓶</a>
       <a href="/mood-calendar" class="nav__link">日历</a>
+      <a href="/ai-chat" class="nav__link {% if request.url.path == '/ai-chat' %}is-active{% endif %}">树洞</a>
       <a href="/garden" class="nav__link">花园</a>
       <a href="/shop" class="nav__link">兑换</a>
       {% endif %}
