@@ -136,8 +136,8 @@ def _call_nvidia(
     }
 
     try:
-        # 同步调用，超时 30s（NVIDIA NIM 首 token 一般 < 3s）
-        with httpx.Client(timeout=30.0) as client:
+        # 同步调用，超时 60s（NVIDIA NIM 70B 冷启动可能 30-60s，后续会快）
+        with httpx.Client(timeout=60.0) as client:
             resp = client.post(url, headers=headers, json=payload)
         resp.raise_for_status()
         data = resp.json()

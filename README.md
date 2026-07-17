@@ -19,7 +19,7 @@
 
 **强隐私承诺**：用户日记内容使用对称加密存储，密钥与用户密码派生。即便数据库泄露也无法直接读取明文（端到端加密）。
 
-**AI 全面接入**（2026-07-17 加入，**可选**功能）：基于 NVIDIA NIM API（OpenAI 兼容格式，模型 `nvidia/llama-3.1-nemotron-70b-instruct`）的 4 个治愈场景——AI 树洞对话、漂流瓶 AI 鼓励语、情绪日历 AI 治愈语、首页音乐 AI 心情推荐。**不配置 API key 时所有功能照常可用**（优雅降级，仅少 AI 文案），保持「渐进增强」原则。AI 文案不入库，对话历史只在浏览器内存（刷新即清空）。
+**AI 全面接入**（2026-07-17 加入，**可选**功能）：基于 NVIDIA NIM API（OpenAI 兼容格式，模型 `meta/llama-3.1-8b-instruct`）的 4 个治愈场景——AI 树洞对话、漂流瓶 AI 鼓励语、情绪日历 AI 治愈语、首页音乐 AI 心情推荐。**不配置 API key 时所有功能照常可用**（优雅降级，仅少 AI 文案），保持「渐进增强」原则。AI 文案不入库，对话历史只在浏览器内存（刷新即清空）。
 
 ---
 
@@ -226,6 +226,7 @@ webwrold/
   - 播放器音频频谱 `.eq-bars`（播放时 `.is-active`，由 `music.js` 切换）
   - 成功反馈 `QI.confetti(fromEl, opts)`（兑换 / 打卡成功撒花瓣）
   - 页面进入过渡 `<main class="page-transition">`、标题流光 `.title-shimmer`
+- **字体加载（国内镜像）**：模板通过 `fonts.loli.net` / `gstatic.loli.net`（Google Fonts 国内镜像）加载 Noto Sans/Serif SC，国内可访问（原 `fonts.googleapis.com` 被墙会 ERR_CONNECTION_REFUSED）；CSS 变量 `--font-sans` / `--font-serif` 里有 `"PingFang SC", "Microsoft YaHei"` 等系统字体兜底，镜像挂了也不会变方块字
 
 ### 3.6 5 音定义（[app/utils/constants.py](file:///c:/Users/Administrator/Desktop/webwrold/app/utils/constants.py)）
 
@@ -241,7 +242,7 @@ YIN_TYPES = {
 
 ### 3.7 AI 接入（NVIDIA NIM API，可选，2026-07-17 加入）
 
-4 个治愈场景，全部走 NVIDIA NIM API（OpenAI 兼容格式 `/chat/completions`，模型 `nvidia/llama-3.1-nemotron-70b-instruct`）。**未配置 API key 时端点返回 200 + `available:false` + 治愈系友好提示**，前端照常显示文案不报错——AI 是「渐进增强」，不是核心功能。
+4 个治愈场景，全部走 NVIDIA NIM API（OpenAI 兼容格式 `/chat/completions`，模型 `meta/llama-3.1-8b-instruct`）。**未配置 API key 时端点返回 200 + `available:false` + 治愈系友好提示**，前端照常显示文案不报错——AI 是「渐进增强」，不是核心功能。
 
 | 场景 | 前端入口 | 后端端点 | AI 文案去向 |
 |---|---|---|---|
@@ -267,11 +268,11 @@ YIN_TYPES = {
 ```env
 # AI 接入（可选，不配置时所有功能正常，AI 端点会优雅降级）
 # QI_NVIDIA_API_KEY=nvapi-xxxxx
-# QI_AI_MODEL=nvidia/llama-3.1-nemotron-70b-instruct
+# QI_AI_MODEL=meta/llama-3.1-8b-instruct
 # QI_AI_BASE_URL=https://integrate.api.nvidia.com/v1
 ```
 
-> 模型选 `nemotron-70b-instruct` 是因为 NVIDIA 提供**免费 API key**，注册 [build.nvidia.com](https://build.nvidia.com) 即可获取，符合本项目「非商业纯治愈」调性。
+> 模型默认用 `meta/llama-3.1-8b-instruct`（8B 小模型，响应快：首次 5-10s，后续 1-3s）。原默认 `nvidia/llama-3.1-nemotron-70b-instruct` 在用户 NVIDIA 账户下 API 返回 404（"Function not found for account"，账户实际有 119 个可用模型但不含该 70B 模型），故换 8B 兼顾速度与质量。NVIDIA 提供**免费 API key**，注册 [build.nvidia.com](https://build.nvidia.com) 即可获取，符合本项目「非商业纯治愈」调性。
 
 ---
 

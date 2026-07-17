@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-17（会话 8 — AI 全面接入：NVIDIA NIM API 4 个场景 / 树洞对话 / 漂流瓶鼓励语 / 情绪日历治愈语 / 音乐推荐）
+**最后更新**：2026-07-17（会话 8 后续修复 — AI 模型换 `meta/llama-3.1-8b-instruct` + `_call_nvidia` 超时 60s + Google Fonts 换 `fonts.loli.net` 国内镜像）
 
 ---
 
@@ -15,7 +15,7 @@
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
 | **秘密后台** | ✅ | `/admin` 入口，6 个页面 + `/api/admin/*` |
-| **AI 全面接入** | ✅ 可选 | NVIDIA NIM API（`nvidia/llama-3.1-nemotron-70b-instruct`），4 个场景；未配 `QI_NVIDIA_API_KEY` 时优雅降级，业务不中断 |
+| **AI 全面接入** | ✅ 可选 | NVIDIA NIM API（`meta/llama-3.1-8b-instruct`），4 个场景；未配 `QI_NVIDIA_API_KEY` 时优雅降级，业务不中断 |
 | **种子数据** | ✅ | 5 音 × 3-4 首 = 16 首古琴曲 + 11 件商店物品 + 首个管理员 |
 | **文档** | ✅ | README + HANDOFF + 4 个 docs/ |
 | **单元测试** | ❌ | 没有 pytest 套件（next agent 可加） |
@@ -25,6 +25,21 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-17（会话 8 后续修复）— AI 模型默认值更换 + Google Fonts 国内镜像
+
+- [x] 起因：① 用户 NVIDIA 账户下 `nvidia/llama-3.1-nemotron-70b-instruct` 模型不可用（API 返回 404 "Function not found for account"），实际查询账户有 119 个可用模型但不含该 70B 模型；② 国内访问 `fonts.googleapis.com` 会 ERR_CONNECTION_REFUSED（被墙），导致字体加载失败
+- [x] **改动 1：AI 模型默认值更换**
+  - [app/config.py](../../app/config.py)：`ai_model` 默认值 `nvidia/llama-3.1-nemotron-70b-instruct` → `meta/llama-3.1-8b-instruct`（8B 小模型，响应快：首次 5-10s，后续 1-3s）
+  - [.env.example](../../.env.example)：注释里的示例值同步改为 `meta/llama-3.1-8b-instruct`
+  - [app/services/ai_service.py](../../app/services/ai_service.py)：`_call_nvidia` 超时 30s → 60s（保留余量，8B 实际很快但兜底）
+- [x] **改动 2：Google Fonts 换国内镜像**
+  - [templates/base.html](../../templates/base.html)：3 行字体引用（preconnect + link）从 `fonts.googleapis.com` / `fonts.gstatic.com` 改为 `fonts.loli.net` / `gstatic.loli.net`
+  - [templates/admin/_base.html](../../templates/admin/_base.html)：同上
+  - 镜像测试：`fonts.loli.net` HTTP 200 / 1.9s（采用）；`fonts.lug.ustc.edu.cn` 301 跳转（域名已废弃）；`fonts.proxy.ustclug.org` SSL 失败；`fonts.font.im` 不可用
+  - 兜底：CSS 变量 `--font-sans` / `--font-serif` 里有 `"PingFang SC", "Microsoft YaHei"` 等系统字体，镜像挂了也不会变方块字
+- [x] 文档同步（铁律）：README §0/§3.5/§3.7、HANDOFF §2/§4/§5.7/末次更新、PROJECT_STATE §1/§2（本条）、ARCHITECTURE §6.6/§5、DEPLOYMENT §1.4/§2.4/AI 接入/网络要求、DEVELOPMENT §2.7/§3.14
+- [x] 验证：① `meta/llama-3.1-8b-instruct` API 调用返回 200 + AI 文案；② 浏览器访问首页字体正常加载（Network 标签 `fonts.loli.net` 200）；③ 4 个 AI 端点降级正常
 
 ### 2026-07-17（会话 8）— Phase 6：AI 全面接入（NVIDIA NIM API，4 个场景，可选）
 - [x] 起因：项目要加入 AI 陪伴能力，要求治愈系语气 + 不污染数据 + 未配 key 也能跑

@@ -692,6 +692,7 @@ curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
 - 前端拿 `available:true/false` 都正常显示文案，**不报错**
 - 改完 AI 代码必须跑测试 1（不配 key 降级）+ 测试 2（配 key 正常）—— 两个状态都要测
 - 失败原因走 `logger.warning`，**不**暴露给前端（避免泄露内部信息）
+- `_call_nvidia()` 超时 60s（模型默认 `meta/llama-3.1-8b-instruct`，8B 实际 1-10s，60s 纯兜底；原默认 `nvidia/llama-3.1-nemotron-70b-instruct` 在用户 NVIDIA 账户下 404 不可用）；超时也走降级返回 `available:false`，不报 500
 
 ---
 

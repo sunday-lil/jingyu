@@ -60,6 +60,8 @@ python start.py --init-db # 启动前重置数据库
 | 会话 | **itsdangerous URLSafeTimedSerializer** | 签名 cookie，HttpOnly + SameSite=Lax |
 | 启动 | **uvicorn** | `app.main:app` |
 
+**前端字体依赖**：[templates/base.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/base.html) + [templates/admin/_base.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/admin/_base.html) 通过 `fonts.loli.net` / `gstatic.loli.net`（Google Fonts 国内镜像）加载 Noto Sans/Serif SC，国内可访问（原 `fonts.googleapis.com` / `fonts.gstatic.com` 被墙会 ERR_CONNECTION_REFUSED）；CSS 变量 `--font-sans` / `--font-serif` 有 `"PingFang SC", "Microsoft YaHei"` 等系统字体兜底，镜像挂了也不影响显示。
+
 **不要做的事**：
 - ❌ 引入 React / Vue / Tailwind / Vite —— 项目刻意保持轻量
 - ❌ 引入 Alembic —— 改完模型重启即可，`init_db()` 自动建表
@@ -222,9 +224,9 @@ webwrold/
 > 设计原则：**「渐进增强」+「不污染数据」+「治愈系温柔语气」** —— AI 是陪伴而非诊断，不诊断不开药，危机情况引导求助专业资源。
 
 **模型与 API**：
-- 模型：`nvidia/llama-3.1-nemotron-70b-instruct`（NVIDIA 提供**免费 API key**，注册 [build.nvidia.com](https://build.nvidia.com)）
+- 模型：`meta/llama-3.1-8b-instruct`（8B 小模型，响应快；原默认 `nvidia/llama-3.1-nemotron-70b-instruct` 在用户 NVIDIA 账户下 API 返回 404 不可用，详见 §5.7）
 - API：`https://integrate.api.nvidia.com/v1/chat/completions`（OpenAI 兼容格式）
-- 客户端：`httpx.Client`，30s 超时，同步调用
+- 客户端：`httpx.Client`，60s 超时，同步调用（8B 实际 1-10s，60s 纯兜底）
 - 依赖：`httpx>=0.27.0,<0.29.0`（[requirements.txt](file:///c:/Users/Administrator/Desktop/webwrold/requirements.txt)）
 
 **4 个 AI 场景**（全部接入，**全部需登录**，**全部有降级处理**）：
@@ -300,7 +302,8 @@ webwrold/
 - **为什么自动迁移字段而不上 Alembic**：见 [§6.10](#610-加新字段用-lightweight-migrate-不引-alembic)
 
 ### 5.7 为什么 AI 接入用 NVIDIA NIM API + 渐进增强降级（2026-07-17 加）
-- **选 NVIDIA NIM**：[build.nvidia.com](https://build.nvidia.com) 提供**免费** API key，模型 `nvidia/llama-3.1-nemotron-70b-instruct` 是 Llama 3.1 系列经 NVIDIA 微调的 70B 指令模型，OpenAI 兼容格式接入成本几乎为零，符合本项目「非商业纯治愈」调性
+- **选 NVIDIA NIM**：[build.nvidia.com](https://build.nvidia.com) 提供**免费** API key，OpenAI 兼容格式接入成本几乎为零，符合本项目「非商业纯治愈」调性
+- **模型默认 `meta/llama-3.1-8b-instruct`**（2026-07-17 会话 8 后续修复）：原默认 `nvidia/llama-3.1-nemotron-70b-instruct`（Llama 3.1 系列 NVIDIA 微调的 70B 指令模型）在用户 NVIDIA 账户下 API 返回 404（"Function not found for account"），实际查询账户有 119 个可用模型但不含该 70B 模型；改用 8B 小模型兼顾速度与质量：首次 5-10s、后续 1-3s。`_call_nvidia` 超时也相应从 30s 调到 60s 保留余量（8B 实际很快但兜底）
 - **OpenAI 兼容**：将来想换其他厂商（DeepSeek / 智谱 / 自部署 vLLM）只改 `QI_AI_BASE_URL` + `QI_AI_MODEL`，不动业务代码
 - **降级而非报错**：AI 是「锦上添花」不是核心功能，**未配置 key 或调用失败时返回 200 + `available:false` + 治愈系友好提示**（**不报 500**）。前端拿到 `available:false` 仍正常显示文案。这保证：① 没拿到 key 的部署方也能跑；② NVIDIA 限流时业务不中断；③ 用户感知不到「故障」，只感知「AI 在休息」
 - **对话历史不入库**：AI 树洞对话历史只存浏览器内存（刷新清空），符合「日记端到端加密」的隐私承诺——服务端不留对话痕迹
@@ -808,3 +811,5 @@ Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yello
 > 末次更新 2026-07-15（会话 3）：首发到 GitHub — `https://github.com/sunday-lil/jingyu`（public）。
 >
 > 末次更新 2026-07-17（会话 8）：AI 全面接入（Phase 6）—— NVIDIA NIM API 4 个场景（树洞对话 / 漂流瓶鼓励语 / 情绪日历治愈语 / 音乐推荐），新增 [app/schemas/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/ai.py) + [app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) + [app/routers/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/ai.py) + [templates/ai_chat.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/ai_chat.html) + 4 个前端集成点；§4 加 Phase 6、§5.7 加 NVIDIA NIM 选型理由、§7.9 加「加 AI 场景」指南；可选功能，未配 key 时优雅降级。
+>
+> 末次更新 2026-07-17（会话 8 后续修复）：① AI 模型默认值 `nvidia/llama-3.1-nemotron-70b-instruct` → `meta/llama-3.1-8b-instruct`（70B 在用户 NVIDIA 账户下 404 不可用，换 8B 兼顾速度与质量）；② `_call_nvidia` 超时 30s → 60s 兜底；③ 模板字体引用换国内镜像 `fonts.loli.net` / `gstatic.loli.net`（原 `fonts.googleapis.com` 被墙 ERR_CONNECTION_REFUSED），CSS 变量有系统字体兜底。同步更新 README / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。

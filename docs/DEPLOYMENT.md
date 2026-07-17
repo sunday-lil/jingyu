@@ -61,7 +61,7 @@ QI_PORT=5000
 QI_DEBUG=false
 # AI 接入（可选）：不配置也能跑，4 个 AI 端点会优雅降级返回治愈系提示
 # QI_NVIDIA_API_KEY=nvapi-xxxxx
-# QI_AI_MODEL=nvidia/llama-3.1-nemotron-70b-instruct
+# QI_AI_MODEL=meta/llama-3.1-8b-instruct
 # QI_AI_BASE_URL=https://integrate.api.nvidia.com/v1
 # 详见下方「AI 接入（可选）」章节
 ```
@@ -170,7 +170,7 @@ vi .env
 # 修改 QI_SECRET_KEY, QI_HOST=0.0.0.0, QI_DEBUG=false
 # 可选：AI 接入（不配置也能跑，4 个端点会优雅降级）
 #   QI_NVIDIA_API_KEY=nvapi-xxxxx
-#   QI_AI_MODEL=nvidia/llama-3.1-nemotron-70b-instruct
+#   QI_AI_MODEL=meta/llama-3.1-8b-instruct
 #   QI_AI_BASE_URL=https://integrate.api.nvidia.com/v1
 #   详见下方「AI 接入（可选）」章节
 ```
@@ -349,7 +349,7 @@ curl -X POST http://127.0.0.1:5000/api/auth/register \
 
 ### 是什么
 
-静屿 4 个场景接入 NVIDIA NIM API（OpenAI 兼容格式），模型 `nvidia/llama-3.1-nemotron-70b-instruct`：
+静屿 4 个场景接入 NVIDIA NIM API（OpenAI 兼容格式），模型 `meta/llama-3.1-8b-instruct`（8B 小模型，响应快；原默认 `nvidia/llama-3.1-nemotron-70b-instruct` 在用户 NVIDIA 账户下 404 不可用，详见 [HANDOFF §5.7](../../HANDOFF.md)）：
 
 | 场景 | 端点 | 入口 |
 |---|---|---|
@@ -360,14 +360,14 @@ curl -X POST http://127.0.0.1:5000/api/auth/register \
 
 ### 配置 3 个环境变量
 
-获取 NVIDIA 免费 API key：访问 [build.nvidia.com](https://build.nvidia.com) → 注册 → 在「nvidia/llama-3.1-nemotron-70b-instruct」模型页生成 key（格式 `nvapi-xxxxx`）。
+获取 NVIDIA 免费 API key：访问 [build.nvidia.com](https://build.nvidia.com) → 注册 → 在 `meta/llama-3.1-8b-instruct` 模型页生成 key（格式 `nvapi-xxxxx`）。
 
 在 `.env` 加入（或取消注释 [.env.example](../../.env.example) 末尾的对应行）：
 
 ```env
 # NVIDIA NIM API（OpenAI 兼容格式）
 QI_NVIDIA_API_KEY=nvapi-你的真实key
-QI_AI_MODEL=nvidia/llama-3.1-nemotron-70b-instruct
+QI_AI_MODEL=meta/llama-3.1-8b-instruct
 QI_AI_BASE_URL=https://integrate.api.nvidia.com/v1
 ```
 
@@ -376,7 +376,7 @@ QI_AI_BASE_URL=https://integrate.api.nvidia.com/v1
 | 变量 | 必填？ | 默认值 | 说明 |
 |---|---|---|---|
 | `QI_NVIDIA_API_KEY` | 否 | 空 | NVIDIA NIM API 的 key，`nvapi-` 开头；**留空时 4 个 AI 端点自动降级**返回 `available:false` + 治愈系提示 |
-| `QI_AI_MODEL` | 否 | `nvidia/llama-3.1-nemotron-70b-instruct` | 模型名，OpenAI 兼容格式。换其他 NVIDIA NIM 模型只改这里 |
+| `QI_AI_MODEL` | 否 | `meta/llama-3.1-8b-instruct` | 模型名，OpenAI 兼容格式。换其他 NVIDIA NIM 模型只改这里 |
 | `QI_AI_BASE_URL` | 否 | `https://integrate.api.nvidia.com/v1` | API base URL，换其他厂商（DeepSeek / 智谱 / 自部署 vLLM）只改这里 |
 
 ### 重启 + 验证
@@ -400,8 +400,9 @@ curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
 ### 网络要求
 
 - 出站访问 `https://integrate.api.nvidia.com`（443）— 服务器防火墙需放行
-- 超时设置：[app/services/ai_service.py](../../app/services/ai_service.py) `_call_nvidia()` 默认 **30 秒**
+- 超时设置：[app/services/ai_service.py](../../app/services/ai_service.py) `_call_nvidia()` 默认 **60 秒**（8B 模型实际 1-10s，60s 纯兜底）
 - 调用失败（网络/超时/限流/4xx/5xx）→ 端点返回 200 + `available:false` + 治愈系提示，**不报 500**
+- **前端字体**：模板通过 `fonts.loli.net` / `gstatic.loli.net`（Google Fonts 国内镜像）加载 Noto Sans/Serif SC，国内可访问；如完全离线部署（不允许任何出站），CSS 变量 `--font-sans` / `--font-serif` 有 `"PingFang SC", "Microsoft YaHei"` 等系统字体兜底，不影响功能
 
 ### 成本
 

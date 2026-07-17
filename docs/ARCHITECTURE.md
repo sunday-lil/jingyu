@@ -201,6 +201,8 @@ admin/_base.html             ← 后台骨架（暗色侧栏 + 金边 logo，独
 2. `{% block content %}` 写主内容
 3. 底部 `<script defer src="/static/js/pages/admin_xxx.js"></script>` 加载专属 JS
 
+**字体加载（国内镜像）**：[templates/base.html](../../templates/base.html) + [templates/admin/_base.html](../../templates/admin/_base.html) 通过 `fonts.loli.net` / `gstatic.loli.net`（Google Fonts 国内镜像）加载 Noto Sans/Serif SC，国内可访问（原 `fonts.googleapis.com` / `fonts.gstatic.com` 被墙会 ERR_CONNECTION_REFUSED）；CSS 变量 `--font-sans` / `--font-serif`（[static/css/00-variables.css](../../static/css/00-variables.css)）里有 `"PingFang SC", "Microsoft YaHei"` 等系统字体兜底，镜像挂了也不会变方块字。
+
 ### 5.2 CSS 模块化
 
 ```
@@ -399,7 +401,7 @@ def clear_pycaches(...):
 | Service | [app/services/ai_service.py](../../app/services/ai_service.py) | `AIServiceUnavailable` 异常 + 4 个系统提示词常量 + `_call_nvidia()` 底层同步调用 + 4 个上层方法 |
 | Router | [app/routers/ai.py](../../app/routers/ai.py) | 4 个端点（全部 `Depends(get_current_user)` + 全部 try/except 降级），prefix=`/api/ai` |
 | 入口注册 | [app/main.py](../../app/main.py) | `app.include_router(ai.router, prefix="/api/ai")` |
-| 外部依赖 | NVIDIA NIM API | `https://integrate.api.nvidia.com/v1/chat/completions`（OpenAI 兼容格式），模型 `nvidia/llama-3.1-nemotron-70b-instruct` |
+| 外部依赖 | NVIDIA NIM API | `https://integrate.api.nvidia.com/v1/chat/completions`（OpenAI 兼容格式），模型 `meta/llama-3.1-8b-instruct`（8B，`_call_nvidia` 60s 超时兜底；原默认 `nvidia/llama-3.1-nemotron-70b-instruct` 在用户账户下 404 不可用，见 [HANDOFF §5.7](../../HANDOFF.md)） |
 | 依赖 | [requirements.txt](../../requirements.txt) | 新增 `httpx>=0.27.0,<0.29.0` |
 
 ### 6.6.2 调用流（4 个场景同构）

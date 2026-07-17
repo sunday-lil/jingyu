@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     # AI 接入（NVIDIA NIM API，OpenAI 兼容）
     # 留空 → AI 功能禁用，端点返回"AI 暂时不在"友好提示
     nvidia_api_key: str = ""
-    ai_model: str = "nvidia/llama-3.1-nemotron-70b-instruct"
+    ai_model: str = "meta/llama-3.1-8b-instruct"
     ai_base_url: str = "https://integrate.api.nvidia.com/v1"
 
     # 路径
