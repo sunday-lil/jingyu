@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   静屿 — 全局样式与设计 token
+   ============================================================ */
+
+:root {
+  /* 字体：纯系统字体，零网络请求，避免 Google Fonts 加载失败 */
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+               "Source Han Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: "PingFang SC", "Songti SC", "STSong", "Source Han Serif SC",
+               "Microsoft YaHei", serif;
+
+  /* 主色调（治愈系雾感） */
+  --color-bg-primary: #F9F6F0;
+  --color-bg-card: rgba(255, 255, 255, 0.7);
+  --color-text-primary: #3D3327;
+  --color-text-secondary: #5C4F3E;
+  --color-text-muted: #8B7B5E;
+  --color-border: rgba(139, 123, 94, 0.15);
+  --color-accent: #B8A590;
+  --color-accent-dark: #8B7B5E;
+
+  /* 圆角 */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 32px;
+
+  /* 阴影 */
+  --shadow-sm: 0 2px 8px rgba(139, 123, 94, 0.06);
+  --shadow-md: 0 6px 20px rgba(139, 123, 94, 0.1);
+  --shadow-lg: 0 12px 40px rgba(139, 123, 94, 0.15);
+
+  /* 缓动 */
+  --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: 15px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* iOS 安全区 */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 123, 94, 0.2);
+  border-radius: 3px;
+}
+
+/* ── 通用组件类 ── */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all duration-300;
+  }
+  .btn--primary {
+    background: linear-gradient(135deg, #B8A590 0%, #8B7B5E 100%);
+    color: white;
+  }
+  .btn--primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(139, 123, 94, 0.3);
+  }
+  .btn--ghost {
+    background: rgba(255, 255, 255, 0.5);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+  }
+  .btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  .card {
+    background: var(--color-bg-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    transition: all 0.3s var(--ease-soft);
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 3px rgba(184, 165, 144, 0.1);
+  }
+}
+
+/* ── 页面过渡 ── */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.4s var(--ease-apple), transform 0.4s var(--ease-apple);
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-12px);
+}
+
+/* ── 移动端安全区 ── */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}

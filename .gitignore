@@ -40,3 +40,12 @@ htmlcov/
 
 # 静态资源中转
 static/uploads/
+
+# 前端构建产物（v2.0 Vue 3 重构后由 `npm run build` 生成）
+static/dist/
+
+# 前端依赖（node_modules 体积大，不提交）
+frontend/node_modules/
+
+# 后台运行时 PID
+run/

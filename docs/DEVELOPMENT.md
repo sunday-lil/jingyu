@@ -27,10 +27,21 @@ routers/  →  services/  →  models/  →  database
 - **不要**在子文件里写死颜色
 - 主色调：`#F9F6F0` 米白 / `#E3F0EA` 淡青 / `#F0E3E8` 藕粉
 
-### 1.4 不引外部前端框架
-- ❌ React / Vue / Tailwind / Vite / webpack
-- ✅ 原生 HTML + CSS + JS
+### 1.4 前端框架选型（2026-07-19 v2.0 重构后）
+
+> **2026-07-19 v2.0 全站 Vue 3 重构后**：本节规则已更新。前台 13 个页面已迁移到 Vue 3 SPA，**不再**使用原生 HTML/CSS/JS。后台 `/admin/*` 仍保留 Jinja2 SSR（有意为之的独立隔离）。
+
+**前台 Vue 3 SPA**（[`frontend/src/`](../../frontend/src/)）：
+- ✅ Vue 3 `<script setup>` + Vite 5 + Vue Router 4 + Pinia + Tailwind CSS 3.4 + GSAP + @vueuse/motion + Three.js + axios
+- ❌ 不要再引入 React / Angular / Svelte（已选定 Vue 3，不再讨论）
+- ❌ 不要在 Vue SPA 之外另起前端框架（后台 Jinja2 SSR 是有意为之的独立隔离）
+
+**后台 Jinja2 SSR**（[`templates/admin/`](../../templates/admin/)）：
+- ✅ 原生 HTML + CSS + JS（继承 `admin/_base.html`）
+- ❌ 不引 React / Vue / Tailwind / Vite / webpack
 - 加第三方库前先问：「不用它能写吗？」
+
+> 详见 [§1.9 前端开发模式](#19-前端开发模式vue-3-spa2026-07-19-v20-加) / [HANDOFF §5.8](../../HANDOFF.md) 前端选型决策。
 
 ### 1.5 隐私边界
 - 日记密文**不**能在任何日志 / 错误信息里出现
@@ -70,6 +81,11 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1
 **正模式**：
 - ✅ `feat(xxx): 新功能 + 同步 README / HANDOFF / PROJECT_STATE`
 
+> 🔒 **2026-07-19 v2.0 Vue 3 重构后特殊规则（6 份文档同步）**：
+> 改 Vue 3 前端代码（[`frontend/src/`](../../frontend/src/)）+ 后端 SPA fallback（[app/main.py](../../app/main.py)）= **同一 commit 同步更新 6 份文档**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档中都要出现。**改代码不改文档 = 改了一半。**
+> 同步点速查：[README §9](../../README.md) / [HANDOFF §12](../../HANDOFF.md) / [PROJECT_STATE §8](../PROJECT_STATE.md) / [ARCHITECTURE §7.7](../ARCHITECTURE.md) / [DEPLOYMENT 顶部](../DEPLOYMENT.md) / 本节。
+> 完整规则 + 5 项 pre-commit checklist：[HANDOFF §12](../../HANDOFF.md) / [PROJECT_STATE §8.1](../PROJECT_STATE.md) v2.0 特殊说明。
+
 #### 1.8.1 改完自动 push（不延迟）
 - `git commit` 完**立即** `git push origin main`
 - 不允许「先 commit 一会儿一起推」/「明天推」/「攒一周推一次」
@@ -79,18 +95,179 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1
 - 格式：`<type>(<scope>): <subject>`（subject ≤ 50 字符）
 - type 9 个：`feat` / `fix` / `refactor` / `docs` / `style` / `test` / `chore` / `perf` / `revert`
 - 项目 scope：`auth` / `diary` / `mood` / `music` / `energy` / `garden` / `admin` / `templates` / `static` / `docs` / `deps` / `scripts` …
+- v2.0 起新增 scope：`frontend` / `vue` / `vite` / `tailwind` / `gsap`（[`frontend/`](../../frontend/) 相关改动用）
 - 脚本（`push-to-github.ps1`）的进度输出**也**用 `type(scope)` 标题
 - 完整规则 + 示例：[HANDOFF §12.7](../../HANDOFF.md)
 
 ---
 
+## 1.9 前端开发模式（Vue 3 SPA，2026-07-19 v2.0 加）
+
+> 2026-07-19 v2.0 全站 Vue 3 重构后，前台 13 个页面迁移到 Vue 3 SPA。本节讲**怎么开发前端**，不是讲铁律。架构看 [ARCHITECTURE §1.1](../ARCHITECTURE.md)，部署看 [DEPLOYMENT 前端构建](../DEPLOYMENT.md)。
+
+### 1.9.1 启动开发模式（Vite dev server :5173 + FastAPI :5000）
+
+```bash
+# 终端 1：启动 FastAPI 后端
+cd c:\Users\Administrator\Desktop\webwrold
+python start.py                # http://127.0.0.1:5000
+
+# 终端 2：启动 Vite dev server
+cd c:\Users\Administrator\Desktop\webwrold\frontend
+npm install                    # 首次：含 three.js 大包，约 7 分钟
+npm run dev                    # http://127.0.0.1:5173
+```
+
+浏览器访问 **http://127.0.0.1:5173/**（不是 :5000）。
+- Vite 提供 HMR 热更新（改 `.vue` / `.js` / `.css` 浏览器自动刷新，**保留组件状态**）
+- 所有 `/api/*`、`/static/*`、`/admin/*` 请求自动 proxy 到 FastAPI :5000
+- 改前端代码 → 浏览器秒级热更新；改后端代码 → 重启 `python start.py restart`
+
+> ⚠️ Vite host 显式设 `127.0.0.1`（不写 `localhost`）避免 IPv6 `[::1]` 问题，详见 [HANDOFF §6.12](../../HANDOFF.md) / [§3.15](#315-vite-ipv6-localhost-连不上)。
+
+### 1.9.2 开发模式 vs 生产模式
+
+| 维度 | 开发模式（dev） | 生产模式（prod） |
+|---|---|---|
+| 启动命令 | `cd frontend && npm run dev` + `python start.py` | `cd frontend && npm run build` + `python start.py` |
+| 浏览器访问 | `http://127.0.0.1:5173/` | `http://127.0.0.1:5000/` |
+| 谁服务前端 | Vite dev server（HMR + 源码） | FastAPI（服务 `static/dist/index.html` + SPA fallback） |
+| 谁服务 API | FastAPI :5000（经 Vite proxy） | FastAPI :5000（直连） |
+| 改 .vue 后 | 浏览器自动热更新 | 必须重新 `npm run build` |
+| 适用场景 | 日常开发 | 部署上线 / 真机测试 |
+
+### 1.9.3 dev proxy 配置（[frontend/vite.config.js](../../frontend/vite.config.js)）
+
+Vite dev server 把以下路径 proxy 到 FastAPI :5000，**无跨域**：
+
+| 前端请求路径 | proxy 到 | 用途 |
+|---|---|---|
+| `/api/*` | `http://127.0.0.1:5000/api/*` | 所有 JSON API（axios `baseURL=/api`） |
+| `/static/*` | `http://127.0.0.1:5000/static/*` | 静态资源（音频、图片、旧 CSS/JS） |
+| `/admin/*` | `http://127.0.0.1:5000/admin/*` | 秘密后台 SSR（Jinja2） |
+
+> axios 实例（[frontend/src/api/index.js](../../frontend/src/api/index.js)）配置 `baseURL='/api'` + `withCredentials=true`，cookie 自动带，401 自动跳 `/login`。
+
+> **dev proxy 不要改**：4 项配置（`/api` / `/static` / `/admin` / host=127.0.0.1）是项目最稳定的部分之一。改了必然破东西。
+
+### 1.9.4 文件结构（[`frontend/src/`](../../frontend/src/)）
+
+```
+frontend/
+├── package.json              ← 依赖 + 脚本（npm install / dev / build）
+├── vite.config.js            ← Vite 配置（dev proxy + build outDir + base）
+├── tailwind.config.js        ← Tailwind 色彩 token + 动画
+├── postcss.config.js
+├── index.html                ← Vite 入口 HTML（<div id="app">）
+└── src/
+    ├── main.js               ← Vue 入口（createApp + Pinia + Router + MotionPlugin）
+    ├── App.vue               ← 根组件（AppLayout + router-view + transition）
+    ├── router/
+    │   └── index.js          ← 13 条路由 + requiresAuth 守卫 + 404 catch-all
+    ├── stores/
+    │   └── user.js           ← Pinia user store（cookie session 模式，不存 token）
+    ├── api/
+    │   └── index.js          ← axios 实例（baseURL=/api，withCredentials，401 拦截）
+    ├── components/
+    │   └── AppLayout.vue     ← 桌面顶部导航 + 移动端底部 tabbar（768px 断点）
+    ├── views/                ← 【一个视图一个 .vue 文件】
+    │   ├── HomeView.vue
+    │   ├── NotFoundView.vue
+    │   ├── auth/
+    │   │   ├── LoginView.vue
+    │   │   └── RegisterView.vue
+    │   ├── music/
+    │   │   ├── MusicListView.vue
+    │   │   └── MusicDetailView.vue
+    │   ├── diary/
+    │   │   ├── DiaryListView.vue
+    │   │   ├── DiaryWriteView.vue
+    │   │   └── PickBottleView.vue
+    │   ├── mood/
+    │   │   └── MoodCalendarView.vue
+    │   ├── ai/
+    │   │   └── AIChatView.vue
+    │   └── garden/
+    │       ├── GardenView.vue
+    │       └── ShopView.vue
+    └── assets/
+        └── styles/
+            └── main.css      ← Tailwind 入口 + 系统字体栈（无 Google Fonts）
+```
+
+**约定**：
+- **一个视图一个 `.vue` 文件**：视图文件名 = 路由名 + `View.vue`（如 `/diary/write` → `DiaryWriteView.vue`）
+- 视图按模块分目录：`auth/` / `music/` / `diary/` / `mood/` / `ai/` / `garden/`
+- 复用组件放 `components/`（如 `AppLayout.vue`）；视图不放 `components/`
+- 路由表 `router/index.js` 用 `meta.requiresAuth: true` 标记需登录的视图，router 守卫统一处理 401 跳转
+
+### 1.9.5 加新视图（Vue 3 SPA 模式，替代旧 §2.1 Jinja2 模式）
+
+> **2026-07-19 v2.0 后**：加新前台页面走 Vue 3 SPA 模式（本节），**不再**走 §2.1 Jinja2 模式。§2.1 仅适用于 `/admin/*` 后台 SSR 页面。
+
+1. 在 `frontend/src/views/<module>/` 加 `XxxView.vue`（一个视图一个文件）
+2. 在 [frontend/src/router/index.js](../../frontend/src/router/index.js) 加路由：
+   ```js
+   {
+     path: '/xxx',
+     name: 'xxx',
+     component: () => import('@/views/<module>/XxxView.vue'),
+     meta: { requiresAuth: true }   // 或 false
+   }
+   ```
+3. 视图里用 axios 调 API：
+   ```vue
+   <script setup>
+   import { ref, onMounted } from 'vue'
+   import api from '@/api'
+   import { useUserStore } from '@/stores/user'
+
+   const userStore = useUserStore()
+   const data = ref(null)
+
+   onMounted(async () => {
+     const res = await api.get('/xxx')   // baseURL=/api 自动拼
+     data.value = res.data
+   })
+   </script>
+
+   <template>
+     <div>{{ data }}</div>
+   </template>
+   ```
+4. 同步更新 [README.md](../../README.md) §2 目录树 + [PROJECT_STATE.md](../PROJECT_STATE.md) §3.3 前端文件列表（Iron Rule）
+
+> **后台页面**仍走 §2.1 Jinja2 模式（继承 `admin/_base.html`），不要混用。
+
+### 1.9.6 常用 npm 脚本
+
+| 命令 | 用途 |
+|---|---|
+| `npm install` | 装依赖（首次约 7 分钟，含 three.js 大包） |
+| `npm run dev` | 启动 Vite dev server :5173（HMR + proxy） |
+| `npm run build` | 构建生产产物到 `../static/dist/` |
+| `npm run preview` | 本地预览 build 产物（不常用，生产走 FastAPI SPA fallback） |
+
+### 1.9.7 调试技巧
+
+- **Vue DevTools**：浏览器装 [Vue.js devtools](https://devtools.vuejs.org/) 扩展，看组件树 / Pinia state / Router
+- **Vite 启动慢 / HMR 不生效**：检查 [frontend/vite.config.js](../../frontend/vite.config.js) 的 `host: '127.0.0.1'`（不要写 `localhost`，IPv6 `[::1]` 会连不上，详见 [HANDOFF §6.12](../../HANDOFF.md)）
+- **API 401 不跳登录**：检查 [frontend/src/api/index.js](../../frontend/src/api/index.js) 的 axios 拦截器
+- **404 不显示**：检查 `router/index.js` 末尾的 `/:pathMatch(.*)*` catch-all 路由
+- **dist 未构建提示页**：访问 :5000 看到「dist 未构建」→ `cd frontend && npm run build`
+
+---
+
 ## 2. 常见改动流程
 
-### 2.1 加新页面
-1. `templates/your_page.html` 继承 `base.html`
-2. [app/routers/pages.py](../../app/routers/pages.py) 加路由（**新 API**：传 `request` 作第一参数）
-3. `static/js/pages/your_page.js` 写逻辑
-4. 模板底部 `<script defer src="/static/js/pages/your_page.js"></script>`
+### 2.1 加新页面（Jinja2 SSR 模式，v2.0 后仅用于 `/admin/*` 后台）
+
+> **2026-07-19 v2.0 Vue 3 重构后**：加新**前台**页面走 [§1.9.5 Vue 3 SPA 模式](#195-加新视图vue-3-spa-模式替代旧-21-jinja2-模式)。本节仅适用于 `/admin/*` 后台 SSR 页面（继承 `admin/_base.html`）。
+
+1. `templates/admin/your_page.html` 继承 `admin/_base.html`
+2. [app/routers/admin_pages.py](../../app/routers/admin_pages.py) 加路由（**新 API**：传 `request` 作第一参数）
+3. `static/js/pages/admin_your_page.js` 写逻辑
+4. 模板底部 `<script defer src="/static/js/pages/admin_your_page.js"></script>`
 5. 同步更新 [README.md](../../README.md) §2 目录树
 
 模板示例：

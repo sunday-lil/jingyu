@@ -4,57 +4,213 @@
 
 > 🔒 **改了本文件涉及的代码，必须同步更新 [HANDOFF §12](../../HANDOFF.md) / [PROJECT_STATE §8](../PROJECT_STATE.md) / [DEVELOPMENT §1.8](DEVELOPMENT.md) 列出的对应文档。** 改代码不改文档 = 改了一半。
 
+> 🔒 **2026-07-19 v2.0 Vue 3 重构**：本文件 §1 架构图、§1.1 前端架构、§1.2 开发/生产模式切换为新加内容；§7.7 文档 Iron Rule 引用已确认对 Vue 重构（6 份文档同步）仍然适用。关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）中都要出现。
+
 ---
 
 ## 1. 总体架构
 
+> **2026-07-19 v2.0 全站 Vue 3 重构**：前端从 Jinja2 SSR + 原生 JS 迁移到 Vue 3 SPA + Vite 工程化，后端 FastAPI 简化为纯 API + SPA fallback。
+
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                       浏览器（前端）                          │
-│                                                              │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │
-│  │ HTML 模板渲染  │  │  CSS 模块化样式 │  │ 原生 JS 交互   │  │
-│  │ (Jinja2 SSR)  │  │ (8 个 .css)   │  │ (一页一个 .js) │  │
-│  └────────────────┘  └────────────────┘  └────────────────┘  │
-│         ↑                  ↓                  ↓              │
-│         │           显示页面骨架         fetch /api/...     │
-│         │                                     ↓              │
-└─────────┼─────────────────────────────────────┼──────────────┘
-          │                                     │
-          │         HTTP (Jinja2 HTML)          │  HTTP JSON
-          │                                     ↓
-┌─────────┼─────────────────────────────────────────────────────┐
-│         │            FastAPI（uvicorn）                       │
-│         │                                                     │
-│  ┌──────┴──────┐  ┌──────────────┐  ┌──────────────────────┐ │
-│  │  pages.py  │  │  routers/*   │  │  staticfiles mount   │ │
-│  │ (返回HTML) │  │  (返回JSON)  │  │  /static/*           │ │
-│  │            │  │  + admin     │  │                      │ │
-│  │ admin_     │  │  + admin     │  │                      │ │
-│  │  pages.py  │  │              │  │                      │ │
-│  └──────┬─────┘  └──────┬───────┘  └──────────────────────┘ │
-│         │               │                                   │
-│         │       ┌───────┴────────┐                          │
-│         │       │  services/*    │  ← 业务逻辑层             │
-│         │       └────────┬───────┘                          │
-│         │                ↓                                   │
-│         │       ┌─────────────────┐                          │
-│         │       │  models/*      │  ← ORM                   │
-│         │       └────────┬────────┘                          │
-│         │                ↓                                   │
-│         │       ┌─────────────────┐                          │
-│         │       │  SQLite        │                          │
-│         │       │  data/healing.db│                          │
-│         │       └─────────────────┘                          │
-│         │                                                     │
-│         └─ [admin] → admin_pages.py → templates/admin/*     │
-│              → admin.py → /api/admin/* → services/models    │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                       浏览器（前端）                              │
+│                                                                  │
+│  开发模式：http://127.0.0.1:5173/                                │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │  Vite dev server (:5173)                                   │  │
+│  │  ├─ Vue 3 SPA 热更新（<script setup> + HMR）              │  │
+│  │  ├─ Vue Router 4 客户端路由                                │  │
+│  │  ├─ Pinia 状态管理                                         │  │
+│  │  ├─ Tailwind CSS + GSAP + @vueuse/motion + Three.js        │  │
+│  │  └─ axios → proxy /api、/static、/admin → :5000            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  生产模式：http://127.0.0.1:5000/                                │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │  FastAPI 直接服务 static/dist/                              │  │
+│  │  ├─ index.html + JS/CSS chunk（Vue 3 build 产物）          │  │
+│  │  └─ SPA fallback 兜底未匹配 GET → index.html               │  │
+│  └────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
+                                  ↑
+                                  │ HTTP JSON（/api/*）+ cookie session
+                                  ↓
+┌──────────────────────────────────────────────────────────────────┐
+│                  FastAPI（uvicorn :5000）                         │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │ routers/api* │  │ SPA fallback │  │  StaticFiles mount     │  │
+│  │ (返回 JSON)  │  │ (返回 HTML)  │  │  /static/*             │  │
+│  │  + admin     │  │  排除 /api/  │  │  含 dist/index.html    │  │
+│  │  + ai        │  │  /static/    │  │                        │  │
+│  │              │  │  /admin      │  │                        │  │
+│  │              │  │  /docs       │  │                        │  │
+│  └──────┬───────┘  └──────────────┘  └────────────────────────┘  │
+│         │                                                        │
+│         │       ┌────────────────┐                               │
+│         │       │  services/*    │  ← 业务逻辑层                  │
+│         │       └────────┬───────┘                               │
+│         │                ↓                                        │
+│         │       ┌─────────────────┐                               │
+│         │       │  models/*      │  ← ORM                         │
+│         │       └────────┬────────┘                               │
+│         │                ↓                                        │
+│         │       ┌─────────────────┐                               │
+│         │       │  SQLite        │                               │
+│         │       │  data/healing.db│                               │
+│         │       └─────────────────┘                               │
+│         │                                                        │
+│         │  ┌─────────────────────────────────────────────────┐   │
+│         │  │ pages.py（4 个 302 重定向，兼容旧书签）          │   │
+│         │  │  /mood→/calendar、/mood-calendar→/calendar       │   │
+│         │  │  /my-bottles→/diary、/pick→/diary/pick           │   │
+│         │  └─────────────────────────────────────────────────┘   │
+│         │                                                        │
+│         └─ [admin] → admin_pages.py → templates/admin/* (SSR)   │
+│              → admin.py → /api/admin/* → services/models         │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-**单一进程承担 3 个角色**：API + 页面 + 静态资源。这是有意为之的简化（见 [HANDOFF §2](../../HANDOFF.md)）。
+**单一进程承担 3 个角色**：API + SPA fallback + 静态资源。这是有意为之的简化（见 [HANDOFF §2](../../HANDOFF.md) + [HANDOFF §5.8](../../HANDOFF.md) 前端选型决策）。
 
-**秘密后台**（[app/routers/admin.py](../../app/routers/admin.py) + [app/routers/admin_pages.py](../../app/routers/admin_pages.py)）挂在 `QI_ADMIN_PATH_PREFIX`（默认 `/admin`）下，**完全独立于前台**：不共享 base.html，不共享 nav，不放任何前台链接（见 [§6.5](#65-秘密后台架构)）。
+**前台 = Vue 3 SPA**（[`frontend/`](../../frontend/)），**后台 = Jinja2 SSR**（[templates/admin/](../../templates/admin/)）：后台仍用 SSR 是有意为之（独立样式、独立隔离、管理工具不需要 SPA 体验，详见 [HANDOFF §5.8](../../HANDOFF.md)）。
+
+**秘密后台**（[app/routers/admin.py](../../app/routers/admin.py) + [app/routers/admin_pages.py](../../app/routers/admin_pages.py)）挂在 `QI_ADMIN_PATH_PREFIX`（默认 `/admin`）下，**完全独立于前台 Vue SPA**：不共享 AppLayout，不共享 Tailwind 样式，不放任何前台链接（见 [§6.5](#65-秘密后台架构)）。
+
+---
+
+## 1.1 前端架构（Vue 3 SPA，2026-07-19 v2.0 加）
+
+> 设计原则：**「组件化复用 + 客户端路由 + 集中状态 + 工程化构建」** —— 从原生 HTML/CSS/JS + Jinja2 SSR 迁移到 Vue 3 SPA，解决「一页一个 JS、状态散落、路由靠后端 302」的膨胀问题。
+
+### 1.1.1 技术栈
+
+| 层 | 选型 | 文件 | 说明 |
+|---|---|---|---|
+| 框架 | Vue 3 `<script setup>` | [frontend/package.json](../../frontend/package.json) | ^3.4，组合式 API |
+| 构建 | Vite 5 | [frontend/vite.config.js](../../frontend/vite.config.js) | dev HMR + build Rollup；dev proxy /api、/static、/admin → :5000 |
+| 路由 | Vue Router 4 | [frontend/src/router/index.js](../../frontend/src/router/index.js) | 13 条路由，`meta.requiresAuth` 守卫，404 catch-all |
+| 状态 | Pinia 2 | [frontend/src/stores/user.js](../../frontend/src/stores/user.js) | user store；cookie session 模式，**不存 token**，只缓存 user 对象到 localStorage |
+| 样式 | Tailwind CSS 3.4 | [frontend/tailwind.config.js](../../frontend/tailwind.config.js) | 治愈系色彩 token（mist/ink/五音色/accent）+ 动画（breathe/float/fade-up） |
+| 动效 | GSAP 3.12 + @vueuse/motion 2.2 | 各 .vue 视图 | 入场 stagger + 呼吸动效；`prefers-reduced-motion` 自动降级 |
+| 3D | Three.js 0.168 | 装饰性 3D 元素 | 装饰性使用，不引入复杂 3D 场景 |
+| HTTP | axios 1.7 | [frontend/src/api/index.js](../../frontend/src/api/index.js) | `baseURL=/api`，`withCredentials=true`，401 自动跳 `/login` |
+
+### 1.1.2 13 个路由（[frontend/src/router/index.js](../../frontend/src/router/index.js)）
+
+| 路径 | 视图 | requiresAuth | 说明 |
+|---|---|---|---|
+| `/` | HomeView.vue | 否 | 首页：Hero + 五音入口 + 模块卡 + GSAP 入场 |
+| `/login` | auth/LoginView.vue | 否 | 登录（nickname + 密码 + 密码切换显示） |
+| `/register` | auth/RegisterView.vue | 否 | 注册 |
+| `/music` | music/MusicListView.vue | 否 | 5 音列表 + AI 帮我选音 |
+| `/music/:yin` | music/MusicDetailView.vue | 否 | 单音曲目 + 底部播放器 + 听完 90% 调 /api/music/listen-complete |
+| `/diary` | diary/DiaryListView.vue | 是 | 时间线 + Web Crypto 解密 |
+| `/diary/write` | diary/DiaryWriteView.vue | 是 | 写日记 + 心情 emoji + 加密 |
+| `/diary/pick` | diary/PickBottleView.vue | 是 | 拾瓶 + AI 鼓励语 |
+| `/calendar` | mood/MoodCalendarView.vue | 是 | 日历网格 + 30 天趋势 + AI 治愈语 |
+| `/ai-chat` | ai/AIChatView.vue | 是 | 多轮对话，历史只在内存 |
+| `/garden` | garden/GardenView.vue | 是 | 能量/来源/物品/流水 |
+| `/shop` | garden/ShopView.vue | 是 | 按 item_type 分组 + 兑换 |
+| `/:pathMatch(.*)*` | NotFoundView.vue | 否 | 404 catch-all |
+
+### 1.1.3 调用流（登录 → 写日记）
+
+```
+浏览器                                FastAPI
+  │                                      │
+  │ POST /api/auth/login                 │
+  │ {nickname, password}                 │
+  │ Cookie: (none)                       │
+  ├─────────────────────────────────────→│
+  │                                      │ 1. bcrypt.verify(password, hash)
+  │                                      │ 2. 签 qi_session cookie
+  │                                      │ 3. 返回 user 对象（不是 {access_token, user}）
+  │ ←─ 200 + Set-Cookie + {user}         │
+  │                                      │
+  │ Pinia userStore.setUser(user)        │
+  │ localStorage.setItem('user', user)   │
+  │                                      │
+  │ POST /api/diary                      │
+  │ Cookie: qi_session=...               │
+  │ {content_encrypted, mood_type, ...}  │
+  ├─────────────────────────────────────→│
+  │                                      │ 1. get_current_user 鉴权
+  │                                      │ 2. 写入 diaries 表（密文）
+  │                                      │ 3. 能量 +2 阳光（write_diary）
+  │ ←─ 201 {id, ...}                     │
+```
+
+**关键点**：
+1. cookie session（不是 JWT token）—— Vue 3 重构**不变**鉴权机制
+2. 前端 userStore 只缓存 user 对象到 localStorage，**不存 token**——避免 XSS 拿 token 的风险
+3. axios `withCredentials=true` 让浏览器自动带 cookie
+4. 401 响应由 axios 拦截器自动跳 `/login`
+
+### 1.1.4 Web Crypto 日记加密（与旧 SSR 模式一致）
+
+```
+浏览器（Vue 3 视图）              FastAPI
+  │                                  │
+  │ 用户输入密码 + 日记明文           │
+  │                                  │
+  │ 1. 从 userStore 取 encryption_salt│
+  │ 2. PBKDF2(password + salt)       │
+  │    → Fernet 密钥                  │
+  │ 3. Fernet 加密明文 → 密文         │
+  │                                  │
+  │ POST /api/diary                  │
+  │ {content_encrypted: "gAAAAA..."} │
+  ├─────────────────────────────────→│
+  │                                  │ 直接存密文，不接触明文
+  │ ←─ 201                           │
+```
+
+服务端**永不接触明文日记**——这条端到端加密边界 Vue 3 重构后**依然成立**（[HANDOFF §5.1](../../HANDOFF.md)）。
+
+---
+
+## 1.2 开发/生产模式切换（2026-07-19 v2.0 加）
+
+### 1.2.1 开发模式（Vite dev server :5173 + FastAPI :5000）
+
+```
+浏览器 → http://127.0.0.1:5173/ → Vite dev server
+                                  ├─ 服务 Vue 3 源码（HMR 热更新）
+                                  └─ proxy /api、/static、/admin → FastAPI :5000
+```
+
+- `cd frontend && npm install && npm run dev` 启动 Vite
+- `python start.py` 启动 FastAPI
+- 浏览器访问 :5173，前端调 API 走 proxy 无跨域
+- Vite host 显式设 `127.0.0.1`（不写 `localhost`，避免 IPv6 `[::1]` 问题，详见 [HANDOFF §6.12](../../HANDOFF.md)）
+
+### 1.2.2 生产模式（FastAPI :5000 + SPA fallback）
+
+```
+浏览器 → http://127.0.0.1:5000/ → FastAPI
+                                  ├─ /api/* → JSON API
+                                  ├─ /static/* → 静态资源（含 dist/）
+                                  ├─ /admin/* → 后台 SSR（Jinja2）
+                                  └─ 其他 GET → SPA fallback → static/dist/index.html
+```
+
+- `cd frontend && npm run build` 输出到 `static/dist/`
+- `python start.py` 启动 FastAPI
+- 浏览器访问 :5000，FastAPI 兜底返回 `index.html`，Vue Router 接管客户端路由
+- dist 未构建时返回提示页引导访问 Vite dev server
+
+### 1.2.3 SPA fallback 路径排除（必读）
+
+[app/main.py](../../app/main.py) 末尾的通配路由 `@app.get("/{path:path}")` **必须**排除以下路径（详见 [HANDOFF §6.15](../../HANDOFF.md)）：
+
+| 路径前缀 | 用途 | 排除原因 |
+|---|---|---|
+| `/api/` | JSON API | 让 API 返回 HTML 会破坏 axios |
+| `/static/` | 静态资源 | StaticFiles 已挂载，不应被 fallback 拦截 |
+| `/admin` | 后台 SSR | 后台是 Jinja2 渲染，不是 Vue SPA |
+| `/docs`、`/redoc`、`/openapi` | FastAPI 自动文档 | Swagger UI 等 |
 
 ---
 
@@ -164,7 +320,16 @@ DAILY_LIMITS = {
 
 ---
 
-## 5. 前端架构
+## 5. 前端架构（旧 Jinja2 SSR 模式，2026-07-19 v2.0 起仅 `/admin/*` 后台保留）
+
+> **2026-07-19 v2.0 Vue 3 重构后**：本节描述的 Jinja2 SSR + 原生 HTML/CSS/JS 模式**仅保留用于 `/admin/*` 秘密后台**（有意为之的独立隔离，详见 [§6.5](#65-秘密后台架构) / [HANDOFF §5.8](../../HANDOFF.md)）。前台 13 个页面已全部迁移到 Vue 3 SPA，**新前端架构看 [§1.1 前端架构（Vue 3 SPA）](#11-前端架构vue-3-spa2026-07-19-v20-加)**。
+>
+> 本节内容仍适用：
+> - 后台 `/admin/*` 7 个页面（继承 `admin/_base.html`，见 [§5.1 模板继承](#51-模板继承)）
+> - 后台 CSS（[static/css/07-admin.css](../../static/css/07-admin.css)，见 [§5.2 CSS 模块化](#52-css-模块化)）
+> - 后台 JS（`static/js/pages/admin_*.js`，见 [§5.3 JS 模式](#53-js-模式)）
+>
+> ⚠️ 前台模板 [templates/](../../templates/) 与 [static/css/](../../static/css/)、[static/js/](../../static/js/) 在 v2.0 后**仅作历史参考保留**，不再被生产路径加载（生产走 `static/dist/index.html` Vue 3 SPA）。改动前台请走 [`frontend/src/`](../../frontend/src/)，本节规则不再适用。
 
 ### 5.1 模板继承
 
@@ -520,6 +685,11 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 - 改 `to_public_dict()` 字段 → **同一 commit** 改所有对应 `*Out` schema
 - 改完**立即**在浏览器 DevTools Network 标签看 Response body
 - 详见 [HANDOFF §6.11](../../HANDOFF.md) / [DEVELOPMENT §3.10](DEVELOPMENT.md)
+
+> 🔒 **2026-07-19 v2.0 Vue 3 重构后文档 Iron Rule 仍然适用**（6 份文档同步）：
+> 完整规则见 [HANDOFF §12](../../HANDOFF.md)；本文件相关引用点 — 顶部提醒 + 本节 + [§1.1 前端架构](#11-前端架构vue-3-spa2026-07-19-v20-加) + [§1.2 开发/生产模式切换](#12-开发生产模式切换2026-07-19-v20-加) + [§5 旧 SSR 模式](#5-前端架构旧-jinja2-ssr-模式2026-07-19-v20-起仅-admin后台保留)。
+> **改 Vue 3 前端代码（[`frontend/src/`](../../frontend/src/)）+ 后端 SPA fallback（[app/main.py](../../app/main.py)）= 同一 commit 同步更新 6 份文档**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档中都要出现。**改代码不改文档 = 改了一半。**
+> 同步点速查：[README §9](../../README.md) / [HANDOFF §12](../../HANDOFF.md) / [PROJECT_STATE §8](../PROJECT_STATE.md) / 本节 / [DEPLOYMENT 顶部](../DEPLOYMENT.md) / [DEVELOPMENT §1.8](DEVELOPMENT.md)。
 
 ### 7.8 AI 隐私边界（2026-07-17 加）
 > AI 接入必须**不破坏**日记端到端加密的隐私承诺。

@@ -15,7 +15,9 @@
 
 ## 0. 一句话速览
 
-**FastAPI + SQLite + Jinja2 + 原生 JS** 的中文治愈系 Web 应用。完整 4 阶段功能：古琴五音疗愈、漂流瓶日记、情绪日历、精神花园。约 2 000 行 Python + 1 500 行 CSS + 600 行 JS。无商业元素、无广告、无内购。
+**FastAPI（纯 API 后端）+ Vue 3 SPA + SQLite** 的中文治愈系 Web 应用。完整 4 阶段功能：古琴五音疗愈、漂流瓶日记、情绪日历、精神花园。前端 Vue 3 `<script setup>` + Vite 5 + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios，后端约 2 000 行 Python。无商业元素、无广告、无内购。
+
+> 📌 **2026-07-19 全站 Vue 3 重构**：前端从「Jinja2 SSR + 原生 HTML/CSS/JS」迁移到「Vue 3 SPA + Vite 工程化」。FastAPI 后端简化为纯 API + SPA fallback，所有页面逻辑迁入 `frontend/src/views/` 13 个 .vue 视图。详见 [HANDOFF.md](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) 元信息。
 
 **强隐私承诺**：用户日记内容使用对称加密存储，密钥与用户密码派生。即便数据库泄露也无法直接读取明文（端到端加密）。
 
@@ -57,6 +59,20 @@ python -m uvicorn app.main:app --reload --port 5000
 
 启动入口是 [app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py)。`--reload` 模式适合本地改代码热重启，**不要**在生产用。
 
+### 1.3 前端开发模式（Vue 3 + Vite 热更新）
+
+2026-07-19 全站 Vue 3 重构后，前端代码独立到 [`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/) 目录，开发时用 Vite dev server 跑 SPA，热更新：
+
+```bash
+cd frontend
+npm install     # 首次：装 vue / vue-router / pinia / axios / gsap / three / @vueuse/motion / tailwindcss / vite 等（含 three.js 大包，约 7 分钟）
+npm run dev     # 启动 Vite dev server，访问 http://127.0.0.1:5173/
+```
+
+**dev proxy**：[frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) 把 `/api` / `/static` / `/admin` 反代到 FastAPI `:5000`，所以 Vite 跑 :5173、FastAPI 跑 :5000 同时开着，前端调 API 走代理无跨域。**注意** Vite host 显式设为 `127.0.0.1`（默认监听 IPv6 `[::1]` 会导致 127.0.0.1 连不上，详见 [HANDOFF.md](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) 踩坑清单）。
+
+**生产模式**：见 §1.1，`cd frontend && npm run build` 输出到 `static/dist/`，再 `python start.py` 走 FastAPI SPA fallback（详见 [docs/ARCHITECTURE.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/ARCHITECTURE.md)「开发/生产模式切换」节）。
+
 ---
 
 ## 2. 完整目录树
@@ -94,7 +110,7 @@ webwrold/
 │   │   └── ai.py                 # AI 4 场景入参/出参（2026-07-17 加）
 │   ├── routers/
 │   │   ├── __init__.py
-│   │   ├── pages.py              # SSR 页面路由（返回 HTML）
+│   │   ├── pages.py              # SPA 兼容重定向（4 个 302：/mood→/calendar、/mood-calendar→/calendar、/my-bottles→/diary、/pick→/diary/pick）
 │   │   ├── auth.py               # /api/auth/*
 │   │   ├── music.py              # /api/music/*
 │   │   ├── diary.py              # /api/diary/*
@@ -128,6 +144,46 @@ webwrold/
 │   ├── garden.html               #   精神花园（已种植物 + 装扮）
 │   ├── shop.html                 #   兑换商店（花种 / 装扮 / 徽章）
 │   └── ai_chat.html              #   AI 树洞对话页（2026-07-17 加，需登录，多轮对话仅存浏览器）
+│
+├── frontend/                     # Vue 3 SPA 源码（2026-07-19 全站重构加）
+│   ├── package.json              #   依赖：vue ^3.4 / vue-router ^4.4 / pinia ^2.2 / axios ^1.7 / gsap ^3.12 / @vueuse/motion ^2.2 / three ^0.168；devDeps：vite ^5.4 / @vitejs/plugin-vue ^5.1 / tailwindcss ^3.4 / postcss / autoprefixer
+│   ├── vite.config.js            #   dev proxy /api、/static、/admin → :5000；build outDir ../static/dist；base 仅 build 时为 /static/dist/；host 127.0.0.1，strictPort
+│   ├── tailwind.config.js        #   治愈系色彩 token（mist/ink/五音色/accent）+ 动画（breathe/float/fade-up）
+│   ├── postcss.config.js
+│   ├── index.html                #   HTML 壳
+│   └── src/
+│       ├── main.js               #   入口（createApp + Pinia + Router + MotionPlugin）
+│       ├── App.vue               #   根组件（AppLayout + router-view + transition）
+│       ├── assets/
+│       │   └── styles/main.css   #   Tailwind 指令 + 全局 CSS 变量 + 通用组件类（.btn/.card/.form-input）+ 系统字体（PingFang SC/Microsoft YaHei，零网络请求）
+│       ├── router/
+│       │   └── index.js          #   路由：/ /login /register /music /music/:yin /diary /diary/write /diary/pick /calendar /ai-chat /garden /shop /404；requiresAuth 守卫
+│       ├── api/
+│       │   └── index.js          #   axios 实例，baseURL=/api，withCredentials=true，401 自动跳登录
+│       ├── stores/
+│       │   └── user.js           #   Pinia user store（cookie session 模式，不存 token，只缓存 user 对象到 localStorage）
+│       ├── components/
+│       │   └── AppLayout.vue     #   桌面顶部导航 + 移动端底部 tabbar（768px 断点）
+│       └── views/                #   13 个视图（一个功能一个 .vue）
+│           ├── HomeView.vue              # 首页：Hero + 五音入口 + 模块卡 + GSAP 入场
+│           ├── auth/
+│           │   ├── LoginView.vue
+│           │   └── RegisterView.vue
+│           ├── music/
+│           │   ├── MusicListView.vue     # 含 AI 帮我选音
+│           │   └── MusicDetailView.vue   # 含底部播放器 + 听完 90% 调 /api/music/listen-complete
+│           ├── diary/
+│           │   ├── DiaryListView.vue     # 时间线 + Web Crypto 解密
+│           │   ├── DiaryWriteView.vue    # 心情 emoji + 加密
+│           │   └── PickBottleView.vue    # 拾瓶 + AI 鼓励语
+│           ├── mood/
+│           │   └── MoodCalendarView.vue  # 日历网格 + 30 天趋势 + AI 治愈语
+│           ├── ai/
+│           │   └── AIChatView.vue        # 多轮对话，历史只在内存
+│           ├── garden/
+│           │   ├── GardenView.vue        # 能量/来源/物品/流水
+│           │   └── ShopView.vue          # 按 item_type 分组 + 兑换
+│           └── NotFoundView.vue
 │
 ├── static/
 │   ├── css/
@@ -169,9 +225,19 @@ webwrold/
 
 ### 3.1 应用入口（[app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py)）
 
-`FastAPI()` 实例 → 挂载静态文件 → 注册 5 个 API router + 1 个 page router → 注册 `startup` 事件初始化数据库 + 种子数据。
+`FastAPI()` 实例 → 挂载静态文件 → 注册 API router（auth/music/diary/mood/energy/garden/ai + admin）+ 1 个 SPA 兼容重定向 router（[pages.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/pages.py)）→ 注册 `startup` 事件初始化数据库 + 种子数据 → **SPA fallback**。
 
-所有页面通过 SSR（Jinja2）返回 HTML；交互通过 `fetch('/api/...')` 调用后端 API，JS 更新 DOM。
+**前后端分离 + SPA fallback**（2026-07-19 全站 Vue 3 重构后）：
+- **前端**：Vue 3 SPA 工程化在 [`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/)，`npm run build` 输出到 `static/dist/`，含 `index.html` + JS/CSS chunk
+- **后端**：FastAPI 只提供 `/api/*` JSON 接口 + SPA fallback；前台不再用 Jinja2 渲染（仅 `/admin/*` 后台仍保留 SSR）
+- **SPA fallback**：所有未匹配的 GET 请求（排除 `/api/`、`/static/`、`/admin`、`/docs`）返回 `static/dist/index.html`；若 `dist` 未构建返回提示页引导访问 Vite dev server
+- **路由兼容层**：[app/routers/pages.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/pages.py) 简化为 4 个 302 重定向（`/mood`→`/calendar`、`/mood-calendar`→`/calendar`、`/my-bottles`→`/diary`、`/pick`→`/diary/pick`），兼容旧书签
+- **认证机制（不变）**：cookie session（不是 JWT token），登录用 nickname（不是 username），登录/注册直接返回 user 对象（不是 `{access_token, user}`），前端 userStore 只缓存 user 对象到 localStorage，不存 token
+- **配置修复**：[app/config.py](file:///c:/Users/Administrator/Desktop/webwrold/app/config.py) 加 `env_prefix="qi_"`，让 `.env` 里 `QI_*` 变量正确加载
+- **AI 调整**：[app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) 超时 30s→60s；模型链 `nvidia/llama-3.1-nemotron-70b-instruct` → `meta/llama-3.3-70b-instruct` → `meta/llama-3.1-8b-instruct`
+- **删除的旧页面**：showcase 动效页（`templates/showcase.html`、`static/js/pages/showcase.js`、`static/css/08-showcase.css`）已删
+
+> 改代码 + 改文档 = 同一个 commit（详见 [HANDOFF §12](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) 文档自动同步铁律）。本次 Vue 3 重构同步更新 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），互链保持一致。
 
 ### 3.2 数据访问层（`app/models/`）
 
@@ -210,23 +276,28 @@ webwrold/
 
 每次能量变动都写一条 `EnergyRecord`，用户主页能看历史。所有「+x」单日上限：露水 20、阳光 10、养分 5（防刷）。
 
-### 3.5 模板与前端
+### 3.5 前端架构（Vue 3 SPA，2026-07-19 重构）
 
-- **所有页面** 顶行 `{% extends "base.html" %}`，然后 `{% block content %}...{% endblock %}`。
-- **导航**：统一用 `_nav.html` 的 `render_nav(current_user)` 宏。传 `current_user`（dict-like 或 ORM 对象）。
-- **Toast**：基模板已经 `{% include "_toast.html" %}`，JS 里直接 `QI.toast('已收好', 'success')`。
-- **动效**：漂流瓶投掷用 `static/css/05-animations.css` 的 `@keyframes bottle-throw`，触发后 1.8s 完成。
-- **交互增强（参考 Netflix / Spotify 动效语言，适配治愈系）**：`app.js` 在 `DOMContentLoaded` 自动初始化（`QI.initAll()`），全部遵守 `prefers-reduced-motion`：
-  - 滚动渐显 `.reveal`（IntersectionObserver；给容器加，不要给有 hover transform 的卡片加，避免覆盖 hover）
-  - 按钮涟漪 `.btn`（事件委托，动态插入的按钮也生效）
-  - 密码可见性切换 `.password-toggle`（事件委托，动态生成的日记解锁 modal 也生效；👁 ↔ 🙈 切换图标 + aria-label）
-  - 数字计数 `[data-countup]`（进入视口时从 0 缓动到目标值）
-  - 卡片光泽扫过（`.module-card / .shop-item / .song-item` 的 `::after` sheen，悬浮触发）
-  - 首页环境花瓣 `.petal-layer`（仅含 `.hero` 的页面生成）
-  - 播放器音频频谱 `.eq-bars`（播放时 `.is-active`，由 `music.js` 切换）
-  - 成功反馈 `QI.confetti(fromEl, opts)`（兑换 / 打卡成功撒花瓣）
-  - 页面进入过渡 `<main class="page-transition">`、标题流光 `.title-shimmer`
-- **字体加载（国内镜像）**：模板通过 `fonts.loli.net` / `gstatic.loli.net`（Google Fonts 国内镜像）加载 Noto Sans/Serif SC，国内可访问（原 `fonts.googleapis.com` 被墙会 ERR_CONNECTION_REFUSED）；CSS 变量 `--font-sans` / `--font-serif` 里有 `"PingFang SC", "Microsoft YaHei"` 等系统字体兜底，镜像挂了也不会变方块字
+**前台 = Vue 3 SPA**（[`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/)）：
+
+- **技术栈**：Vue 3 `<script setup>` + Vite 5 + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios
+- **入口**：[frontend/src/main.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/main.js) `createApp(App).use(pinia).use(router).use(MotionPlugin).mount('#app')`
+- **根组件**：[frontend/src/App.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/App.vue) = `AppLayout`（导航/tabbar）+ `<router-view>` + `<transition>`
+- **路由**：[frontend/src/router/index.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/router/index.js) 13 条路由（`/` / `/login` / `/register` / `/music` / `/music/:yin` / `/diary` / `/diary/write` / `/diary/pick` / `/calendar` / `/ai-chat` / `/garden` / `/shop` / `/:pathMatch(.*)*` 404），`meta.requiresAuth` 守卫
+- **API 客户端**：[frontend/src/api/index.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/api/index.js) axios 实例，`baseURL=/api` + `withCredentials=true` + 401 自动跳 `/login`
+- **状态管理**：[frontend/src/stores/user.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/stores/user.js) Pinia user store；cookie session 模式，**不存 token**，只缓存 user 对象到 localStorage
+- **布局**：[frontend/src/components/AppLayout.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AppLayout.vue) 桌面顶部导航 + 移动端底部 tabbar（768px 断点）
+- **样式**：Tailwind CSS + [frontend/src/assets/styles/main.css](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/assets/styles/main.css) 全局 CSS 变量 + 通用组件类（`.btn` / `.card` / `.form-input`）+ 系统字体（`PingFang SC` / `Microsoft YaHei`，**零网络请求**，不再依赖 Google Fonts 国内镜像）
+- **治愈系配色**（[frontend/tailwind.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/tailwind.config.js)）：米白 `#F9F6F0` + 茶褐 `#8B7B5E` + 雾粉 / 雾蓝 / 青绿点缀；动画 token `breathe` / `float` / `fade-up`
+- **动效**：GSAP 入场 stagger 浮入 + 呼吸动效；`prefers-reduced-motion` 自动降级
+- **日记加密**：浏览器 Web Crypto API（PBKDF2 + Fernet 等价 AES-128-CBC），前端加密后只发密文给服务端
+- **响应式**：桌面顶部导航 + 移动端底部 tabbar，768px 断点切换
+
+**后台 = Jinja2 SSR**（保留）：`/admin/*` 仍用 [templates/admin/](file:///c:/Users/Administrator/Desktop/webwrold/templates/admin/) + [static/css/07-admin.css](file:///c:/Users/Administrator/Desktop/webwrold/static/css/07-admin.css) + `static/js/pages/admin_*.js`，与前台 Vue SPA 完全隔离。
+
+**旧 Jinja2 前台模板**（`templates/base.html` / `_nav.html` / `index.html` 等）仍保留在仓库，但 Vue 3 重构后**不再被路由引用**，仅作历史参考。新功能一律加在 `frontend/src/views/`。
+
+> 想知道前端架构为什么这么分，看 [docs/ARCHITECTURE.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/ARCHITECTURE.md)「前端架构」节；想本地起前端热更新，看 §1.3；想构建生产包，看 [docs/DEPLOYMENT.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEPLOYMENT.md)「前端构建」。
 
 ### 3.6 5 音定义（[app/utils/constants.py](file:///c:/Users/Administrator/Desktop/webwrold/app/utils/constants.py)）
 
@@ -383,6 +454,12 @@ tail -n 50 logs/healing.log        # Linux/macOS
 | AI API 端点 | [app/routers/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/ai.py) |
 | AI Schema | [app/schemas/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/ai.py) |
 | AI 树洞对话页 | [templates/ai_chat.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/ai_chat.html) |
+| **前端 Vue SPA 入口** | [frontend/src/main.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/main.js) |
+| **前端路由表** | [frontend/src/router/index.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/router/index.js) |
+| **前端 API 客户端** | [frontend/src/api/index.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/api/index.js) |
+| **前端 user store** | [frontend/src/stores/user.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/stores/user.js) |
+| **前端 Vite 配置** | [frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) |
+| **前端 Tailwind 配置** | [frontend/tailwind.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/tailwind.config.js) |
 | API 文档（自动） | http://127.0.0.1:5000/docs |
 | **AI 交接** | [HANDOFF.md](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) |
 | 详细文档 | [docs/](file:///c:/Users/Administrator/Desktop/webwrold/docs/) |
@@ -408,6 +485,9 @@ tail -n 50 logs/healing.log        # Linux/macOS
 | **Pydantic schema 字段** | 对应 `*Out` schema + [HANDOFF §6.11](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) |
 | 端口/启动方式变动 | §1 + [.env.example](file:///c:/Users/Administrator/Desktop/webwrold/.env.example) + [docs/DEPLOYMENT.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEPLOYMENT.md) |
 | 新增后台功能 | [HANDOFF §5.6](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) + [docs/ARCHITECTURE.md §6.5](file:///c:/Users/Administrator/Desktop/webwrold/docs/ARCHITECTURE.md) + [docs/PROJECT_STATE.md §5.3](file:///c:/Users/Administrator/Desktop/webwrold/docs/PROJECT_STATE.md) |
+| **前端 Vue 视图 / 路由 / store 改动** | §2 目录树 frontend/ 子树 + §3.5 前端架构 + [docs/ARCHITECTURE.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/ARCHITECTURE.md)「前端架构」 + [docs/DEVELOPMENT.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEVELOPMENT.md)「前端开发」 |
+| **Vite / Tailwind / 依赖改动** | §1.3 + [frontend/package.json](file:///c:/Users/Administrator/Desktop/webwrold/frontend/package.json) + [HANDOFF §2](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) + [docs/DEPLOYMENT.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEPLOYMENT.md)「前端构建」 |
+| **6 份文档同步**（Iron Rule） | 本次 Vue 3 重构涉及 README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT 6 份文档，必须同一 commit 一起更新 |
 
 ### 9.3 提交前自检 5 件事
 

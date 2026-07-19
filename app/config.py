@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     log_dir: Path = BASE_DIR / "logs"
 
     model_config = SettingsConfigDict(
+        env_prefix="qi_",
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,

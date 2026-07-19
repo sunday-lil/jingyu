@@ -2,7 +2,93 @@
 
 > 三种部署方式：**宝塔面板**（最简单，私人项目首选）、**systemd**（VPS 标准）、**手动 nohup**（临时调试）。
 
-> 🔒 **改了本文件涉及的部署配置（端口 / Nginx / systemd / HTTPS / 反代），必须同步更新**：[README §1](../../README.md) / [HANDOFF §1](../../HANDOFF.md) / [PROJECT_STATE §4](../PROJECT_STATE.md)。详见 [HANDOFF §12](../../HANDOFF.md) 文档自动同步铁律。
+> 🔒 **改了本文件涉及的部署配置（端口 / Nginx / systemd / HTTPS / 反代 / 前端构建），必须同步更新**：[README §1](../../README.md) / [HANDOFF §1](../../HANDOFF.md) / [PROJECT_STATE §4](../PROJECT_STATE.md)。详见 [HANDOFF §12](../../HANDOFF.md) 文档自动同步铁律。
+
+> 🔒 **2026-07-19 v2.0 Vue 3 重构**：部署前**必须**先 `cd frontend && npm install && npm run build` 输出 `static/dist/`，否则 `python start.py` 后访问 :5000 只会看到「dist 未构建」提示页。关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）中都要出现。
+
+---
+
+## 前端构建（v2.0 Vue 3 重构后必做，所有部署方式通用）
+
+> 2026-07-19 v2.0 全站 Vue 3 重构后，前台从 Jinja2 SSR 迁移到 Vue 3 SPA。**部署前必须先构建前端**，否则访问 :5000 只看到「dist 未构建」提示页。
+
+### 构建步骤
+
+```bash
+# 1. 确保已装 Node.js 18+（推荐 20 LTS）
+node --version    # 应 >= v18
+
+# 2. 进入前端目录
+cd frontend
+
+# 3. 安装依赖（首次：含 three.js 等大包，约 7 分钟，详见 [HANDOFF §6.14](../../HANDOFF.md)）
+npm install
+
+# 4. 构建（Vite 5 + Rollup，输出到 ../static/dist/）
+npm run build
+```
+
+构建成功后会看到：
+```
+vite v5.x.x building for production...
+✓ N modules transformed.
+dist/index.html                  ← ../static/dist/index.html
+dist/assets/index-xxxxxx.js      ← Vue 3 + 依赖 chunk
+dist/assets/index-xxxxxx.css     ← Tailwind CSS
+✓ built in Xs
+```
+
+### 构建产物去向
+
+| 文件 | 路径 | 由谁服务 |
+|---|---|---|
+| `index.html` | [static/dist/index.html](../../static/dist/) | FastAPI SPA fallback 兜底返回 |
+| JS chunk | [static/dist/assets/index-*.js](../../static/dist/) | FastAPI StaticFiles `/static/dist/*` |
+| CSS chunk | [static/dist/assets/index-*.css](../../static/dist/) | FastAPI StaticFiles `/static/dist/*` |
+
+### 为什么必须先构建再启动
+
+[app/main.py](../../app/main.py) 末尾的 SPA fallback 通配路由会检查 `static/dist/index.html` 是否存在：
+- **存在** → 返回 `index.html`，Vue Router 接管客户端路由（生产模式）
+- **不存在** → 返回提示页引导访问 Vite dev server（开发模式，详见 [DEVELOPMENT 前端开发](DEVELOPMENT.md)）
+
+### 重新构建时机
+
+| 改动 | 是否需要 `npm run build` |
+|---|---|
+| 改 [`frontend/src/`](../../frontend/src/) 下任何 `.vue` / `.js` / `.ts` / `.css` | ✅ 必须 |
+| 改 [`frontend/tailwind.config.js`](../../frontend/tailwind.config.js) | ✅ 必须 |
+| 改 [`frontend/vite.config.js`](../../frontend/vite.config.js) | ✅ 必须 |
+| 改 [`app/`](../../app/) 下 Python 代码 | ❌ 不需要（重启 `python start.py restart` 即可） |
+| 改 [`templates/admin/`](../../templates/admin/) 后台 SSR 模板 | ❌ 不需要（Jinja2 模板运行时渲染） |
+| 改 [`.env`](../../.env.example) | ❌ 不需要（重启即可） |
+
+### 部署流程（生产）
+
+```bash
+# 1. 拉代码
+git pull
+
+# 2. 构建前端（如果 frontend/src/ 有改动）
+cd frontend && npm install && npm run build && cd ..
+
+# 3. 装/更新 Python 依赖（如果 requirements.txt 有改动）
+pip install -r requirements.txt
+
+# 4. 启动 / 重启后端
+python start.py restart
+```
+
+> ⚠️ **顺序很重要**：先 `npm run build`，后 `python start.py`。否则 FastAPI 起来后还是返回旧 dist（或提示页）。
+
+### 关于开发模式（不需要构建）
+
+开发时不用每次改前端都 `npm run build`，直接跑 Vite dev server：
+```bash
+cd frontend && npm run dev    # http://127.0.0.1:5173/
+python start.py                # http://127.0.0.1:5000/
+```
+Vite dev server 提供 HMR 热更新 + 自动 proxy `/api`、`/static`、`/admin` 到 FastAPI :5000，详见 [DEVELOPMENT 前端开发](DEVELOPMENT.md)。
 
 ---
 
@@ -66,15 +152,23 @@ QI_DEBUG=false
 # 详见下方「AI 接入（可选）」章节
 ```
 
-### 1.5 安装依赖
+### 1.5 安装依赖 + 构建前端
 
-SSH：
+**5a. Python 依赖**（SSH 或宝塔「一键依赖」）：
 ```bash
 cd /www/wwwroot/healing
 python3 -m pip install -r requirements.txt
 ```
 
-或直接在宝塔「项目」页面点「一键依赖」。
+**5b. 前端构建**（2026-07-19 v2.0 Vue 3 重构后必做，详见 [前端构建](#前端构建v20-vue-3-重构后必做所有部署方式通用)）：
+```bash
+# 服务器需先装 Node.js 18+（宝塔软件商店 → Node.js 版本管理器）
+cd /www/wwwroot/healing/frontend
+npm install        # 首次约 7 分钟（含 three.js 大包）
+npm run build      # 输出到 ../static/dist/
+```
+
+> ⚠️ **顺序**：5b 必须在 §1.6 启动前完成。否则 `python start.py` 起来后访问 :5000 只看到「dist 未构建」提示页。
 
 ### 1.6 启动
 
@@ -122,7 +216,8 @@ python start.py
 | 看日志 | `tail -f logs/healing.log` |
 | 重启服务 | `python start.py restart` |
 | 备份数据库 | `cp data/healing.db backup/healing-$(date +%Y%m%d).db` |
-| 更新代码 | `git pull && python start.py restart` |
+| 更新代码（仅后端改动） | `git pull && python start.py restart` |
+| 更新代码（含前端改动） | `git pull && cd frontend && npm install && npm run build && cd .. && python start.py restart` |
 
 > 🔒 **改了部署相关配置（端口 / Nginx / systemd / HTTPS）必须同步更新**：[README §1](../../README.md) / [HANDOFF §1](../../HANDOFF.md) / 本文件对应章节。改代码不改文档 = 改了一半（详见 [HANDOFF §12](../../HANDOFF.md)）。
 
@@ -154,13 +249,27 @@ git clone <your-repo> .
 # 或 scp 上传
 ```
 
-### 2.3 安装依赖
+### 2.3 安装依赖 + 构建前端
 
+**3a. Python 依赖**：
 ```bash
 python3.11 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
+
+**3b. 前端构建**（2026-07-19 v2.0 Vue 3 重构后必做，详见 [前端构建](#前端构建v20-vue-3-重构后必做所有部署方式通用)）：
+```bash
+# 服务器需先装 Node.js 18+
+sudo apt install nodejs npm     # Ubuntu/Debian
+# 或: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs
+
+cd /home/healing/app/frontend
+npm install        # 首次约 7 分钟（含 three.js 大包）
+npm run build      # 输出到 ../static/dist/
+```
+
+> ⚠️ **顺序**：3b 必须在 §2.5 systemd 启动前完成。否则 `systemctl start healing` 后访问 :5000 只看到「dist 未构建」提示页。
 
 ### 2.4 配置 .env
 
@@ -319,6 +428,11 @@ python start.py start
 ```bash
 # 1. 服务在跑
 curl -I http://127.0.0.1:5000/                        # 200
+
+# 1b. 前端 dist 已构建（v2.0 Vue 3 重构后必查）
+curl http://127.0.0.1:5000/ | grep -E "Vue|<div id=\"app\">"   # 命中 = dist 已构建并返回 Vue 3 SPA
+curl -I http://127.0.0.1:5000/static/dist/index.html           # 200
+# 若返回「dist 未构建」提示页 → 回 [前端构建](#前端构建v20-vue-3-重构后必做所有部署方式通用) 跑 npm run build
 
 # 2. 静态资源
 curl -I http://127.0.0.1:5000/static/css/style.css    # 200

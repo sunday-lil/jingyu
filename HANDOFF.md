@@ -10,8 +10,8 @@
 **项目名**：静屿（代号，可改）
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 强隐私 / 轻运营
-**代码体量**：约 2 500 行 Python + 1 800 行 CSS + 900 行 JS
-**当前阶段**：4 个 Phase 全部实现 + 秘密后台 + 端到端通过
+**代码体量**：约 2 500 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
+**当前阶段**：v2.0 — 2026-07-19 全站 Vue 3 重构完成（4 个 Phase 全部实现 + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）
 
 ---
 
@@ -43,29 +43,45 @@ python start.py --init-db # 启动前重置数据库
 
 **GitHub**：`https://github.com/sunday-lil/jingyu`（public, MIT 友好，私有项目只发了一次）
 
+**前端开发模式**（2026-07-19 Vue 3 重构后）：
+```bash
+cd frontend
+npm install         # 首次：含 three.js 大包，约 7 分钟
+npm run dev         # Vite dev server，访问 http://127.0.0.1:5173/
+```
+- dev proxy `/api` / `/static` / `/admin` → FastAPI `:5000`（[frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js)）
+- 生产：`npm run build` → 输出到 `static/dist/` → `python start.py` → FastAPI SPA fallback（详见 [docs/DEPLOYMENT.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEPLOYMENT.md)「前端构建」）
+
 ---
 
 ## 2. 技术栈（已定，不要再讨论）
 
 | 层 | 选型 | 备注 |
 |---|---|---|
-| 后端 | **FastAPI 0.115+** | 路由 + Pydantic + lifespan |
+| 后端 | **FastAPI 0.115+** | 纯 API + SPA fallback（2026-07-19 重构后不再渲染前台页面，仅 `/admin/*` 后台保留 SSR） |
 | ORM | **SQLAlchemy 2.0** | `Base` + `Session`，不用 Alembic |
 | DB | **SQLite** | 单文件 `data/healing.db`，将来可换 MySQL |
-| 模板 | **Jinja2** | SSR，所有页面 `{% extends "base.html" %}` |
-| 静态 | **FastAPI StaticFiles** | `/static/*` 一条命令挂载 |
-| 前端 | **原生 HTML/CSS/JS** | 无框架、无打包器 |
+| 模板 | **Jinja2**（仅后台 `/admin/*`） | 2026-07-19 Vue 3 重构后，前台不再用 Jinja2，仅后台 SSR 保留 |
+| 静态 | **FastAPI StaticFiles** | `/static/*` 一条命令挂载；Vue 构建产物在 `/static/dist/` |
+| 前端 | **Vue 3 `<script setup>` + Vite 5** | 2026-07-19 全站重构，从原生 HTML/CSS/JS 迁移到 Vue 3 SPA |
+| 前端路由 | **Vue Router 4** | 13 条路由，`requiresAuth` 守卫 |
+| 前端状态 | **Pinia** | user store（cookie session 模式，不存 token） |
+| 前端样式 | **Tailwind CSS 3.4** | 治愈系色彩 token + 动画（breathe/float/fade-up） |
+| 前端动效 | **GSAP 3.12 + @vueuse/motion 2.2** | 入场 stagger + 呼吸动效，`prefers-reduced-motion` 降级 |
+| 前端 3D | **Three.js 0.168** | 装饰性 3D 元素 |
+| 前端 HTTP | **axios 1.7** | `baseURL=/api`，`withCredentials=true`，401 自动跳登录 |
 | 密码哈希 | **bcrypt 4.x**（直接用，不用 passlib） | passlib 与 4.x 不兼容 |
-| 日记加密 | **Fernet (AES-128-CBC + HMAC)** | 客户端 PBKDF2 派生密钥 |
+| 日记加密 | **Fernet (AES-128-CBC + HMAC)** | 客户端 Web Crypto PBKDF2 派生密钥 |
 | 会话 | **itsdangerous URLSafeTimedSerializer** | 签名 cookie，HttpOnly + SameSite=Lax |
 | 启动 | **uvicorn** | `app.main:app` |
 
-**前端字体依赖**：[templates/base.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/base.html) + [templates/admin/_base.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/admin/_base.html) 通过 `fonts.loli.net` / `gstatic.loli.net`（Google Fonts 国内镜像）加载 Noto Sans/Serif SC，国内可访问（原 `fonts.googleapis.com` / `fonts.gstatic.com` 被墙会 ERR_CONNECTION_REFUSED）；CSS 变量 `--font-sans` / `--font-serif` 有 `"PingFang SC", "Microsoft YaHei"` 等系统字体兜底，镜像挂了也不影响显示。
+**前端字体依赖**（2026-07-19 重构后）：Vue 3 SPA 用 [frontend/src/assets/styles/main.css](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/assets/styles/main.css) 的系统字体栈 `"PingFang SC", "Microsoft YaHei"`，**零网络请求**，不再依赖任何 Google Fonts 镜像。后台 `/admin/*` SSR 仍走旧 [templates/admin/_base.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/admin/_base.html) 的 `fonts.loli.net` 镜像 + 系统字体兜底。
 
 **不要做的事**：
-- ❌ 引入 React / Vue / Tailwind / Vite —— 项目刻意保持轻量
+- ❌ 引入 React / Angular / Svelte —— Vue 3 已选定，不要再讨论
 - ❌ 引入 Alembic —— 改完模型重启即可，`init_db()` 自动建表
 - ❌ 把 `passlib` 拉回来 —— 用 `app/utils/crypto.py` 里直接调 bcrypt 的版本
+- ❌ 在 Vue SPA 之外另起前端框架 —— 后台 `/admin/*` 保留 Jinja2 SSR 是有意为之（独立隔离）
 
 ---
 
@@ -312,6 +328,19 @@ webwrold/
 
 详见 [app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) 顶部的 4 个系统提示词常量。
 
+### 5.8 为什么前端选 Vue 3 + Vite + Pinia + Tailwind + GSAP（2026-07-19 加）
+- **为什么换掉「原生 HTML/CSS/JS + Jinja2 SSR」**：项目迭代到 4 Phase + 后台 + AI 后，前端逻辑膨胀（13 个页面 × 一页一个 JS），状态管理散落在各 `static/js/pages/*.js`，路由靠后端 302 + 浏览器刷新，新增页面要改 4 处（HTML + JS + pages.py + 速查表）。Vue 3 SPA 一次解决：组件化复用、Pinia 集中状态、Vue Router 客户端路由、Vite HMR 热更新
+- **为什么选 Vue 3 而不是 React**：① Vue 3 `<script setup>` 语法对单人项目最简洁；② Tailwind + Vue 单文件组件天然契合治愈系「样式与模板同视图」的写法；③ Pinia 是 Vue 官方推荐 store，比 Redux 心智负担低；④ 国内 Vue 生态成熟，文档中文友好
+- **为什么选 Vite 5**：① dev server 启动 < 1s（vs webpack 10s+）；② HMR 真正热更新（改 .vue 即刻生效，不刷新页面）；③ build 用 Rollup，产物体积小；④ 配置极简（`vite.config.js` 不到 30 行）
+- **为什么选 Pinia 而不是 Vuex**：Pinia 是 Vue 3 官方推荐，TypeScript 友好，API 更简洁（无 mutations），tree-shaking 友好
+- **为什么选 Tailwind CSS**：① 治愈系配色用 `tailwind.config.js` token 化（mist/ink/五音色/accent），改色改一处全局生效；② 不用写自定义 CSS 类，组件样式内联在 `<template>` 里，与 Vue SFC 同视图；③ purge 后 CSS 体积 < 20KB
+- **为什么选 GSAP**：① Netflix/Spotify 级动效（stagger / scrub / timeline）原生 CSS 做不到；② Vue 3 `<script setup>` 里 `gsap.from()` 配合 `onMounted` 自然；③ 自动检测 `prefers-reduced-motion` 降级；④ `@vueuse/motion` 补充轻量入场动效
+- **为什么保留 Jinja2 后台 SSR**：① 后台是「管理工具」不需要 SPA 体验；② 后台样式完全独立（`07-admin.css` 暗色侧栏），与前台治愈系调性冲突；③ Vue 3 重构范围聚焦前台用户体验，后台保留 SSR 减少改动面
+- **cookie session 不变**：Vue 3 重构只动前端，后端鉴权机制（cookie session + nickname 登录 + 直接返回 user 对象）保持不变，前端 userStore 只缓存 user 对象到 localStorage，**不存 token**——这是与「JWT + localStorage」模式的关键差异，避免 XSS 拿 token 的风险
+- **SPA fallback 而非双服务器**：生产模式只跑 FastAPI :5000，Vue 构建产物放 `static/dist/`，FastAPI 兜底返回 `index.html`。不引入 Nginx 双服务器或 Node.js 生产环境，保持「单进程三角色（API + 静态 + SPA fallback）」简化
+
+详见 [frontend/](file:///c:/Users/Administrator/Desktop/webwrold/frontend/) + [docs/ARCHITECTURE.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/ARCHITECTURE.md)「前端架构」节。
+
 ---
 
 ## 6. 已知坑（必读！）
@@ -456,6 +485,73 @@ class AuthOut(BaseModel):
 **铁律**：Pydantic 出参 schema 必须是 `to_public_dict()` 字段的**超集**。每加一个 `to_public_dict()` 字段，**必须**同时在对应 Out schema 声明。
 
 **如何自查**：浏览器 DevTools → Network → 调一次接口 → 看 Response body 里少了哪些字段 → 补 schema。
+
+### 6.12 Vite 默认监听 IPv6 `[::1]` 导致 127.0.0.1 连不上（2026-07-19 加）
+**症状**：`npm run dev` 启动后，浏览器访问 `http://127.0.0.1:5173/` 报 `ERR_CONNECTION_REFUSED`，但 `http://localhost:5173/` 能访问。
+
+**根因**：Vite 5 默认 `host: 'localhost'`，Node.js 把 `localhost` 解析为 IPv6 `[::1]` 而非 IPv4 `127.0.0.1`。Windows / 部分浏览器访问 `127.0.0.1` 时只查 IPv4，连不上 IPv6 监听端口。
+
+**修复**：[frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) 显式设 `server.host: '127.0.0.1'`：
+```javascript
+server: {
+  host: '127.0.0.1',     // ← 显式 IPv4，不写 'localhost'（会被解析为 [::1]）
+  port: 5173,
+  strictPort: true,      // 端口被占直接报错，不自动 +1
+  proxy: { ... }
+}
+```
+
+**铁律**：Vite dev server 的 `host` 永远写 `'127.0.0.1'`，不写 `'localhost'`。
+
+### 6.13 Vite `base` 在 dev 模式也会应用（2026-07-19 加）
+**症状**：dev 模式下浏览器访问 `http://127.0.0.1:5173/` 返回空白页，Console 报 `Failed to load module script: Expected a JavaScript module script but the server responded with a MIME type of "text/html"`，资源 404。
+
+**根因**：[frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) 为了让 build 产物在 `/static/dist/` 子路径下正确加载，设了 `base: '/static/dist/'`。但 Vite **dev 模式也读 `base`**，导致 dev 模式下 index.html 引用 `/static/dist/src/main.js`，而 Vite dev server 实际服务在 `/src/main.js`，404 后 fallback 返回 index.html，浏览器把 HTML 当 JS 解析报错。
+
+**修复**：用 `command === 'build'` 条件设置 `base`：
+```javascript
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/static/dist/' : '/',   // ← dev 用 '/'，build 用 '/static/dist/'
+  // ...其他配置
+}));
+```
+
+**铁律**：Vite `base` 是 dev 和 build 都会应用的配置，dev 期路径不匹配时一定要用 `command` 条件判断。
+
+### 6.14 npm install 拉 three.js 等大包耗时极长（2026-07-19 加）
+**症状**：`cd frontend && npm install` 跑了 7 分钟还没完，以为卡死。
+
+**根因**：[frontend/package.json](file:///c:/Users/Administrator/Desktop/webwrold/frontend/package.json) 依赖里 `three ^0.168`（约 30MB，含大量 .js 文件）+ `gsap ^3.12` + `@vueuse/motion ^2.2`，首次安装时 npm 要下载 + 解压 + 写入 node_modules，磁盘 IO 是瓶颈。
+
+**修复**：① 用 `npm install --no-audit --no-fund` 跳过审计 + 资助检查，省 30s；② 用 `npm install --prefer-offline` 优先用本地缓存；③ 接受首次 5-7 分钟的耗时，后续 `npm install` 增量更新只需 10s。
+
+**铁律**：首次安装大依赖（three / gsap / @vueuse/motion）耗时正常，**不要**中途 Ctrl+C，跑完一次后续就快了。CI/CD 里建议 `npm ci`（用 lockfile，更快更稳定）。
+
+### 6.15 FastAPI SPA fallback 必须排除 /api/、/static/、/admin、/docs 路径（2026-07-19 加）
+**症状**：Vue 3 重构后，浏览器访问 `/api/music` 返回 `index.html`（HTML），前端 axios 拿到 HTML 解析 JSON 报错；访问 `/admin` 返回 Vue SPA 而非后台 SSR 页面。
+
+**根因**：[app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py) 的 SPA fallback 用通配路由 `@app.get("/{path:path}")` 兜底所有 GET 请求，但**没有排除**已注册的路径。FastAPI 路由匹配是「先注册先匹配」，但通配路由如果顺序不对会拦截掉其他路由。
+
+**修复**：在 [app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py) 末尾注册 SPA fallback 时显式排除 4 类路径：
+```python
+@app.get("/{path:path}")
+async def spa_fallback(path: str):
+    # 排除 API / 静态 / 后台 / 文档
+    if (path.startswith("api/")
+        or path.startswith("static/")
+        or path.startswith("admin")
+        or path.startswith("docs")
+        or path.startswith("redoc")
+        or path.startswith("openapi")):
+        raise HTTPException(404)
+    # dist 未构建时返回提示页
+    dist_index = STATIC_DIR / "dist" / "index.html"
+    if not dist_index.exists():
+        return HTMLResponse("<h1>前端未构建</h1><p>请先 cd frontend && npm run build，或访问 Vite dev server :5173</p>")
+    return FileResponse(dist_index)
+```
+
+**铁律**：SPA fallback 通配路由**必须**排除：① `/api/*`（JSON API）；② `/static/*`（静态资源）；③ `/admin*`（后台 SSR）；④ `/docs`、`/redoc`、`/openapi`（FastAPI 自动文档）。否则会让 API 返回 HTML、后台被 SPA 接管。
 
 ---
 
@@ -627,6 +723,8 @@ assert r.status_code in (200, 201)
 
 > 改代码不改文档 = 改了一半。下一任接手的人会被你的旧文档带进沟里。
 
+> 🔒 **2026-07-19 全站 Vue 3 重构特别约定**：本次重构涉及 **6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），必须**同一个 commit** 一起更新。互链保持一致，关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档中都要出现。
+
 ### 12.2 触发条件：什么时候必须改文档
 
 | 改动类型 | 必须更新的文档 | 章节 |
@@ -635,12 +733,14 @@ assert r.status_code in (200, 201)
 | 加 / 删 / 改 Pydantic schema 字段 | README + HANDOFF | README §3.3 / HANDOFF §6.11 |
 | 加 / 删 / 改 API 端点 | README + HANDOFF | README §3.2 / HANDOFF §7.2 |
 | 加 / 删 / 改 SSR 页面 | README + PROJECT_STATE | README §2 / PROJECT_STATE §3.3 |
+| **加 / 删 / 改 Vue 视图 / 路由 / store** | README + HANDOFF + ARCHITECTURE + DEVELOPMENT | README §2 frontend/ 子树 + §3.5 / HANDOFF §2 + §5.8 / ARCHITECTURE「前端架构」 / DEVELOPMENT「前端开发」 |
+| **加 / 删 / 改 Vite / Tailwind / 前端依赖** | README + HANDOFF + DEPLOYMENT | README §1.3 / HANDOFF §2 / DEPLOYMENT「前端构建」 |
 | 加 / 删 / 改能量规则 / 单日上限 | README + HANDOFF + ARCHITECTURE | README §3.4 / HANDOFF §5.3 / ARCHITECTURE §4.3 |
 | 加 / 删 / 改业务常量 | README + PROJECT_STATE | README §3.6 / PROJECT_STATE §5.2 |
-| 加 / 改 / 删依赖 | requirements.txt + HANDOFF | requirements.txt / HANDOFF §2 |
+| 加 / 改 / 删依赖 | requirements.txt + HANDOFF + frontend/package.json | requirements.txt / HANDOFF §2 / frontend/package.json |
 | 加 / 改 / 删 .env 配置项 | .env.example + HANDOFF + PROJECT_STATE | .env.example / HANDOFF §1 / PROJECT_STATE §4 |
 | 改端口 / 启动命令 | README + DEPLOYMENT + HANDOFF | README §1 / DEPLOYMENT 全文 / HANDOFF §1 |
-| 改 CSS 变量 / 配色 | PROJECT_STATE | PROJECT_STATE §5 |
+| 改 CSS 变量 / 配色 | PROJECT_STATE + frontend/tailwind.config.js | PROJECT_STATE §5 / tailwind.config.js token |
 | 改后台入口路径 / 新后台 API | HANDOFF + ARCHITECTURE + PROJECT_STATE | HANDOFF §5.6 / ARCHITECTURE §6.5 / PROJECT_STATE §5.3 |
 | 修 Bug（任何） | HANDOFF + DEVELOPMENT | HANDOFF §6 / DEVELOPMENT §3 |
 | 引入新的「踩坑」 | HANDOFF + DEVELOPMENT | HANDOFF §6 / DEVELOPMENT §3 |
@@ -813,3 +913,5 @@ Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yello
 > 末次更新 2026-07-17（会话 8）：AI 全面接入（Phase 6）—— NVIDIA NIM API 4 个场景（树洞对话 / 漂流瓶鼓励语 / 情绪日历治愈语 / 音乐推荐），新增 [app/schemas/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/ai.py) + [app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) + [app/routers/ai.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/ai.py) + [templates/ai_chat.html](file:///c:/Users/Administrator/Desktop/webwrold/templates/ai_chat.html) + 4 个前端集成点；§4 加 Phase 6、§5.7 加 NVIDIA NIM 选型理由、§7.9 加「加 AI 场景」指南；可选功能，未配 key 时优雅降级。
 >
 > 末次更新 2026-07-17（会话 8 后续修复）：① AI 模型默认值 `nvidia/llama-3.1-nemotron-70b-instruct` → `meta/llama-3.1-8b-instruct`（70B 在用户 NVIDIA 账户下 404 不可用，换 8B 兼顾速度与质量）；② `_call_nvidia` 超时 30s → 60s 兜底；③ 模板字体引用换国内镜像 `fonts.loli.net` / `gstatic.loli.net`（原 `fonts.googleapis.com` 被墙 ERR_CONNECTION_REFUSED），CSS 变量有系统字体兜底。同步更新 README / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。
+>
+> 末次更新 2026-07-19（v2.0 全站 Vue 3 重构）：前端从「Jinja2 SSR + 原生 HTML/CSS/JS」迁移到「Vue 3 SPA + Vite 5 工程化」。新增 [`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/) 目录（Vue 3 `<script setup>` + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios），13 个视图迁入 `frontend/src/views/`。后端 [app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py) 加 SPA fallback（排除 /api//static//admin/ 路径），[app/routers/pages.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/pages.py) 简化为 4 个 302 重定向，[app/config.py](file:///c:/Users/Administrator/Desktop/webwrold/app/config.py) 修复 env_prefix bug（加 `env_prefix="qi_"`），[app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) 超时 30s→60s，AI 模型链 `nvidia/llama-3.1-nemotron-70b-instruct` → `meta/llama-3.3-70b-instruct` → `meta/llama-3.1-8b-instruct`。删除 showcase 动效页。§2 技术栈表大改、§5.8 加前端选型决策、§6.12-6.15 加 4 条 Vue/Vite 踩坑（IPv6 [::1] / base dev 模式 / npm install 大包耗时 / SPA fallback 排除路径）、§12.2 同步表加 Vue 相关行。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），Iron Rule §12 仍然适用（地位高于任何具体技术决策）。

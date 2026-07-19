@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-17（会话 8 后续修复 — AI 模型换 `meta/llama-3.1-8b-instruct` + `_call_nvidia` 超时 60s + Google Fonts 换 `fonts.loli.net` 国内镜像）
+**最后更新**：2026-07-19（v2.0 全站 Vue 3 重构完成 — 前端从 Jinja2 SSR + 原生 JS 迁移到 Vue 3 SPA + Vite 5 + Pinia + Tailwind + GSAP，后端加 SPA fallback）
 
 ---
 
@@ -11,13 +11,15 @@
 
 | 维度 | 状态 | 备注 |
 |---|---|---|
-| **可运行** | ✅ | `python start.py` 即可起，端口 5000 |
+| **可运行** | ✅ | 开发：`cd frontend && npm run dev` → :5173 + `python start.py` → :5000；生产：`npm run build` + `python start.py` → :5000 |
+| **v2.0 Vue 3 重构** | ✅ 完成 | 2026-07-19，前端独立 `frontend/`，13 个视图迁入 `frontend/src/views/`，详见 §2 |
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
+| **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 — 全部 ✅ |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
-| **秘密后台** | ✅ | `/admin` 入口，6 个页面 + `/api/admin/*` |
+| **秘密后台** | ✅ | `/admin` 入口，6 个页面 + `/api/admin/*`（保留 Jinja2 SSR，与 Vue SPA 隔离） |
 | **AI 全面接入** | ✅ 可选 | NVIDIA NIM API（`meta/llama-3.1-8b-instruct`），4 个场景；未配 `QI_NVIDIA_API_KEY` 时优雅降级，业务不中断 |
 | **种子数据** | ✅ | 5 音 × 3-4 首 = 16 首古琴曲 + 11 件商店物品 + 首个管理员 |
-| **文档** | ✅ | README + HANDOFF + 4 个 docs/ |
+| **文档** | ✅ | README + HANDOFF + 4 个 docs/，6 份文档同步（Iron Rule） |
 | **单元测试** | ❌ | 没有 pytest 套件（next agent 可加） |
 | **HTTPS** | ❌ | 本地 HTTP，生产需 Nginx 反代 |
 | **MySQL** | ❌ | 用 SQLite，将来可换 |
@@ -25,6 +27,60 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-19（v2.0）— 全站 Vue 3 重构（前端独立工程化 + 后端 SPA fallback）
+
+- [x] 起因：项目迭代到 4 Phase + 后台 + AI 后，原生 HTML/CSS/JS + Jinja2 SSR 模式前端逻辑膨胀，状态散落、路由靠后端 302、新增页面要改 4 处。决定全站迁 Vue 3 SPA 工程化
+- [x] **技术栈变更**：
+  - 旧：FastAPI + Jinja2 SSR + 原生 HTML/CSS/JS
+  - 新：FastAPI（纯 API 后端）+ Vue 3 SPA（`<script setup>`）+ Vite 5 + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios
+- [x] **新增 `frontend/` 目录**（Vue 3 SPA 源码）：
+  - [frontend/package.json](../../frontend/package.json)：依赖 vue ^3.4 / vue-router ^4.4 / pinia ^2.2 / axios ^1.7 / gsap ^3.12 / @vueuse/motion ^2.2 / three ^0.168；devDeps vite ^5.4 / @vitejs/plugin-vue ^5.1 / tailwindcss ^3.4 / postcss / autoprefixer
+  - [frontend/vite.config.js](../../frontend/vite.config.js)：dev proxy `/api`、`/static`、`/admin` → :5000；build outDir `../static/dist`；base 仅 build 时为 `/static/dist/`（用 `command === 'build'` 条件判断）；host `127.0.0.1`，strictPort
+  - [frontend/tailwind.config.js](../../frontend/tailwind.config.js)：治愈系色彩 token（mist/ink/五音色/accent）+ 动画（breathe/float/fade-up）
+  - [frontend/src/main.js](../../frontend/src/main.js)：入口（createApp + Pinia + Router + MotionPlugin）
+  - [frontend/src/App.vue](../../frontend/src/App.vue)：根组件（AppLayout + router-view + transition）
+  - [frontend/src/router/index.js](../../frontend/src/router/index.js)：13 条路由 + requiresAuth 守卫
+  - [frontend/src/api/index.js](../../frontend/src/api/index.js)：axios 实例，baseURL=/api，withCredentials=true，401 自动跳登录
+  - [frontend/src/stores/user.js](../../frontend/src/stores/user.js)：Pinia user store（cookie session 模式，**不存 token**，只缓存 user 对象到 localStorage）
+  - [frontend/src/components/AppLayout.vue](../../frontend/src/components/AppLayout.vue)：桌面顶部导航 + 移动端底部 tabbar（768px 断点）
+  - [frontend/src/views/](../../frontend/src/views/)：13 个视图（HomeView / auth/LoginView+RegisterView / music/MusicListView+MusicDetailView / diary/DiaryListView+DiaryWriteView+PickBottleView / mood/MoodCalendarView / ai/AIChatView / garden/GardenView+ShopView / NotFoundView）
+- [x] **后端变更**：
+  - [app/main.py](../../app/main.py)：加 SPA fallback — 所有未匹配的 GET 请求（排除 `/api/`、`/static/`、`/admin`、`/docs`）返回 `static/dist/index.html`；若 dist 未构建返回提示页引导访问 Vite dev server
+  - [app/routers/pages.py](../../app/routers/pages.py)：简化为 4 个 302 重定向（`/mood`→`/calendar`、`/mood-calendar`→`/calendar`、`/my-bottles`→`/diary`、`/pick`→`/diary/pick`），兼容旧书签
+  - [app/config.py](../../app/config.py)：修复 env_prefix bug（加 `env_prefix="qi_"` 让 .env 里 QI_* 变量正确加载）
+  - [app/services/ai_service.py](../../app/services/ai_service.py)：超时 30s→60s
+  - AI 模型链：`nvidia/llama-3.1-nemotron-70b-instruct` → `meta/llama-3.3-70b-instruct` → `meta/llama-3.1-8b-instruct`
+  - 删除 showcase 动效页（`templates/showcase.html`、`static/js/pages/showcase.js`、`static/css/08-showcase.css`）
+- [x] **认证机制（不变）**：
+  - cookie session（不是 JWT token）
+  - 登录用 nickname（不是 username）
+  - 登录/注册直接返回 user 对象（不是 `{access_token, user}`）
+  - 前端 userStore 只缓存 user 对象到 localStorage，不存 token
+- [x] **功能完整性（一个功能都不丢）**：
+  - ✅ 古琴五音疗愈（5 音列表 + 单音曲目 + 沉浸式播放器 + 听完 90% +1 露水）
+  - ✅ AI 帮我选音（输入描述 → POST /api/ai/recommend-music → 跳转）
+  - ✅ 漂流瓶日记（写日记 + Web Crypto 加密 + 时间线 + 解密查看）
+  - ✅ 拾漂流瓶（拾陌生人瓶子 + 解密 + 写鼓励语 + AI 鼓励语降级）
+  - ✅ 情绪日历（emoji 打卡 + 月历网格 + 30 天趋势 + AI 治愈语）
+  - ✅ AI 树洞（多轮对话 + 历史只在内存 + available=false 降级）
+  - ✅ 精神花园（能量卡 + 来源分布 + 物品分组 + 能量流水）
+  - ✅ 露水商店（按 item_type 分组 + 兑换 + 已持有/能量不足状态）
+  - ✅ 鉴权（登录 + 注册 + 密码切换显示 + 401 自动跳登录）
+  - ✅ 404 页面
+  - ✅ 响应式（桌面顶部导航 + 移动端底部 tabbar）
+  - ✅ GSAP 入场动效（stagger 浮入 + 呼吸动效）
+  - ✅ 治愈系配色（米白 #F9F6F0 + 茶褐 #8B7B5E + 雾粉/雾蓝/青绿点缀）
+- [x] **开发/生产模式**：
+  - 开发：`cd frontend && npm install && npm run dev` → http://127.0.0.1:5173/（Vite dev server，proxy /api 到 FastAPI :5000）
+  - 生产：`cd frontend && npm run build` → 输出到 `static/dist/` → `python start.py` → http://127.0.0.1:5000（FastAPI 提供 SPA fallback）
+- [x] **踩坑 4 条**（详见 [HANDOFF §6.12-6.15](../../HANDOFF.md)）：
+  1. Vite 默认监听 IPv6 `[::1]` 导致 127.0.0.1 连不上 → 显式设 `host: '127.0.0.1'`
+  2. Vite `base` 在 dev 模式也会应用 → 用 `command === 'build'` 条件设置
+  3. `npm install` 拉 three.js 等大包耗时 7 分钟 → 接受首次耗时，后续增量快
+  4. FastAPI SPA fallback 必须排除 `/api/`、`/static/`、`/admin`、`/docs` 路径
+- [x] 文档同步（Iron Rule）：6 份文档同步更新 — README §0/§1.3/§2/§3/§8/§9、HANDOFF §0/§1/§2/§5.8/§6.12-6.15/§12、PROJECT_STATE §1/§2（本条）/§3/§8、ARCHITECTURE 架构图+前端架构+开发/生产模式+§7.7、DEPLOYMENT 前端构建+部署步骤+顶部 Iron Rule、DEVELOPMENT 前端开发+dev proxy+文件结构+§1.8
+- [x] 验证：① `npm run dev` 启动 :5173 + `python start.py` 启动 :5000，前端调 API 走 proxy 正常；② `npm run build` 输出 `static/dist/`，`python start.py` 起后访问 :5000 走 SPA fallback 正常；③ 13 个视图全部加载，路由跳转、requiresAuth 守卫、401 自动跳登录、Web Crypto 加密、GSAP 动效、Tailwind 治愈系配色、响应式断点 — 全部通过
 
 ### 2026-07-17（会话 8 后续修复）— AI 模型默认值更换 + Google Fonts 国内镜像
 
@@ -200,17 +256,32 @@
 - [docs/PROJECT_STATE.md](PROJECT_STATE.md) — 现状快照（本文件）
 
 ### 3.2 后端（[app/](../../app/)）
-- `__init__.py` / `main.py` / `config.py` / `database.py` / `deps.py` / `security.py` / `seed.py`
+- `__init__.py` / `main.py`（v2.0 加 SPA fallback）/ `config.py`（v2.0 修复 env_prefix bug）/ `database.py` / `deps.py` / `security.py` / `seed.py`
 - `models/` — 7 张表 + `__init__.py`（users 含 `is_admin`）
 - `schemas/` — **7 个** Pydantic 模块（auth/diary/mood/music/energy/**admin**/**ai**）+ `__init__.py`
-- `routers/` — **10 个** router（pages + 6 业务 + **admin + admin_pages** + **ai**）
-- `services/` — **4 个**业务服务（energy / diary / mood / **ai_service**）
+- `routers/` — **10 个** router（**pages（v2.0 简化为 4 个 302 重定向）** + 6 业务 + **admin + admin_pages** + **ai**）
+- `services/` — **4 个**业务服务（energy / diary / mood / **ai_service**（v2.0 超时 30s→60s））
 - `utils/` — 加密 + 常量
 
 ### 3.3 前端
-- `templates/` — **14 个**前台 .html（含 **ai_chat.html**）+ **6 个后台 .html**（`templates/admin/`）+ 宏
-- `static/css/` — 8 个 .css（含 **07-admin.css**）
-- `static/js/` — 1 个 app.js + **17 个** pages/（11 个前台：含 **ai_chat.js** + **home.js**；6 个后台）
+
+**v2.0 Vue 3 SPA**（[frontend/](../../frontend/)，2026-07-19 加）：
+- `package.json` — 依赖 vue ^3.4 / vue-router ^4.4 / pinia ^2.2 / axios ^1.7 / gsap ^3.12 / @vueuse/motion ^2.2 / three ^0.168；devDeps vite ^5.4 / @vitejs/plugin-vue ^5.1 / tailwindcss ^3.4 / postcss / autoprefixer
+- `vite.config.js` / `tailwind.config.js` / `postcss.config.js` / `index.html`
+- `src/main.js` — 入口（createApp + Pinia + Router + MotionPlugin）
+- `src/App.vue` — 根组件（AppLayout + router-view + transition）
+- `src/router/index.js` — 13 条路由 + requiresAuth 守卫
+- `src/api/index.js` — axios 实例（baseURL=/api，withCredentials=true，401 自动跳登录）
+- `src/stores/user.js` — Pinia user store（cookie session 模式，不存 token）
+- `src/components/AppLayout.vue` — 桌面顶部导航 + 移动端底部 tabbar（768px 断点）
+- `src/views/` — **13 个视图**（HomeView / auth/LoginView+RegisterView / music/MusicListView+MusicDetailView / diary/DiaryListView+DiaryWriteView+PickBottleView / mood/MoodCalendarView / ai/AIChatView / garden/GardenView+ShopView / NotFoundView）
+- `src/assets/styles/main.css` — Tailwind 指令 + 全局 CSS 变量 + 通用组件类 + 系统字体
+
+**旧 Jinja2 SSR 模板**（[templates/](../../templates/)，v2.0 后仅后台 `/admin/*` 仍使用）：
+- `templates/` — **14 个**前台 .html（v2.0 后保留作历史参考，不再被路由引用）+ **6 个后台 .html**（`templates/admin/`，**仍活跃**）+ 宏
+- `static/css/` — 8 个 .css（含 **07-admin.css**，**仍活跃**；其他前台 CSS v2.0 后保留作历史参考）
+- `static/js/` — 1 个 app.js + **17 个** pages/（11 个前台：v2.0 后保留作历史参考；6 个后台：**仍活跃**）
+- `static/dist/` — **v2.0 新增**，Vue 3 build 产物（`index.html` + JS/CSS chunk），由 `npm run build` 生成，FastAPI SPA fallback 兜底服务
 
 ### 3.4 脚本
 - [start.py](../../start.py) — 服务管理（核心）
@@ -227,7 +298,9 @@
 
 | 场景 | 地址 |
 |---|---|
-| 本机开发 | http://127.0.0.1:5000 |
+| 本机开发（前端 Vite dev server） | http://127.0.0.1:5173/（v2.0 加，proxy /api、/static、/admin → :5000） |
+| 本机开发（后端 FastAPI） | http://127.0.0.1:5000 |
+| 生产（FastAPI SPA fallback） | http://127.0.0.1:5000（v2.0 后由 SPA fallback 兜底返回 `static/dist/index.html`） |
 | API 文档 | http://127.0.0.1:5000/docs |
 | 健康检查 | http://127.0.0.1:5000/ |
 | **秘密后台** | **http://127.0.0.1:5000/admin**（可在 `.env` 改 `QI_ADMIN_PATH_PREFIX`） |
@@ -342,6 +415,8 @@ curl -b c.txt http://127.0.0.1:5000/api/admin/stats     # 200 + {"is_admin":true
 
 **改代码 + 改对应文档 = 同一个 commit，**绝不允许**「代码先上，文档之后补」。**
 
+> 🔒 **2026-07-19 v2.0 Vue 3 重构特别约定**：本次涉及 **6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档中都要出现。
+
 ### 8.2 改了 → 同步更新
 
 | 改了 | 更新（必须在 commit 前完成） |
@@ -358,6 +433,9 @@ curl -b c.txt http://127.0.0.1:5000/api/admin/stats     # 200 + {"is_admin":true
 | **大改** | 本文件 [docs/PROJECT_STATE.md](PROJECT_STATE.md) §2「最近改动」 |
 | **任何 Pydantic schema 字段** | 对应 Out schema + [HANDOFF.md](../../HANDOFF.md) §6.11 铁律提醒 |
 | **任何 User 字段** | [HANDOFF.md](../../HANDOFF.md) §1（首管/账号说明） |
+| **Vue 视图 / 路由 / store 改动**（v2.0 加） | [README.md](../../README.md) §2 frontend/ 子树 + §3.5 + [ARCHITECTURE.md](ARCHITECTURE.md)「前端架构」 + [DEVELOPMENT.md](DEVELOPMENT.md)「前端开发」 |
+| **Vite / Tailwind / 前端依赖改动**（v2.0 加） | [README.md](../../README.md) §1.3 + [frontend/package.json](../../frontend/package.json) + [HANDOFF.md](../../HANDOFF.md) §2 + [DEPLOYMENT.md](DEPLOYMENT.md)「前端构建」 |
+| **6 份文档同步**（Iron Rule，v2.0 强调） | README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT 必须同一 commit 一起更新 |
 
 ### 8.3 提交前自检清单
 

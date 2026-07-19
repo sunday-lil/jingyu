@@ -21,7 +21,7 @@ except Exception:
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
@@ -94,6 +94,50 @@ def create_app() -> FastAPI:
     app.include_router(admin.router)
     app.include_router(admin_pages.router)
 
+    # ─────────────────────────────────────────────────────────────
+    # Vue 3 SPA fallback
+    # 前台已由 Vue 3 SPA 接管，所有未匹配的 GET 请求（且不是 /api、/static、
+    # /admin、/docs）都返回 frontend/dist/index.html，让 Vue Router 处理。
+    # 若 dist 还未构建（开发态），返回提示页引导用户访问 Vite dev server。
+    # ─────────────────────────────────────────────────────────────
+    spa_index_path = settings.static_dir / "dist" / "index.html"
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(request: Request, full_path: str):
+        # 排除 API / 静态 / 后台 / 文档
+        if (
+            full_path.startswith("api/")
+            or full_path.startswith("static/")
+            or full_path.startswith(settings.admin_path_prefix.lstrip("/") + "/")
+            or full_path == settings.admin_path_prefix.lstrip("/")
+            or full_path.startswith("docs")
+            or full_path.startswith("openapi.json")
+            or full_path.startswith("redoc")
+        ):
+            return JSONResponse({"error": "Not Found"}, status_code=404)
+        # 只对浏览器（Accept: text/html）返回 SPA，否则 404
+        accept = request.headers.get("accept", "")
+        if "text/html" not in accept:
+            return JSONResponse({"error": "Not Found"}, status_code=404)
+        # 若 dist 已构建，返回 index.html
+        if spa_index_path.exists():
+            return HTMLResponse(spa_index_path.read_text(encoding="utf-8"))
+        # 开发态：dist 未构建，引导用户访问 Vite dev server
+        return HTMLResponse(
+            "<!DOCTYPE html><html lang='zh-CN'><head><meta charset='UTF-8'>"
+            "<title>静屿 · 前端未构建</title></head>"
+            "<body style='font-family:PingFang SC,Microsoft YaHei,sans-serif;"
+            "background:#F9F6F0;color:#4A4438;text-align:center;padding:80px 24px;'>"
+            "<h1 style='font-weight:500;letter-spacing:0.1em;'>🌿 前端尚未构建</h1>"
+            "<p style='color:#8B7B5E;margin-top:12px;'>开发模式请访问 "
+            "<a href='http://127.0.0.1:5173' style='color:#A8C5A0;'>"
+            "http://127.0.0.1:5173</a>（Vite dev server）</p>"
+            "<p style='color:#8B7B5E;margin-top:8px;font-size:13px;'>"
+            "生产模式请先在 frontend/ 目录执行 <code>npm run build</code></p>"
+            "</body></html>",
+            status_code=200,
+        )
+
     # 全局异常
     @app.exception_handler(RequestValidationError)
     async def validation_handler(request: Request, exc: RequestValidationError):
@@ -108,7 +152,6 @@ def create_app() -> FastAPI:
         # 页面请求 → 友好错误页
         accept = request.headers.get("accept", "")
         if "text/html" in accept:
-            from fastapi.responses import HTMLResponse
             return HTMLResponse(
                 "<h1>海风停了一下，请稍后再试</h1><p>静屿正在深呼吸…</p>",
                 status_code=500,
