@@ -4,7 +4,9 @@
 
 > 🔒 **改了本文件涉及的部署配置（端口 / Nginx / systemd / HTTPS / 反代 / 前端构建），必须同步更新**：[README §1](../../README.md) / [HANDOFF §1](../../HANDOFF.md) / [PROJECT_STATE §4](../PROJECT_STATE.md)。详见 [HANDOFF §12](../../HANDOFF.md) 文档自动同步铁律。
 
-> 🔒 **2026-07-19 v2.0 Vue 3 重构**：部署前**必须**先 `cd frontend && npm install && npm run build` 输出 `static/dist/`，否则 `python start.py` 后访问 :5000 只会看到「dist 未构建」提示页。关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）中都要出现。
+> 🔒 **2026-07-19 v2.0 Vue 3 重构**：部署前**必须**先 `cd frontend && npm install && npm run build`（或 `python start.py build` 一键构建）输出 `static/dist/`，否则 `python start.py` 后访问 :5000 只会看到「dist 未构建」提示页。关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）中都要出现。
+
+> 🔒 **2026-07-19 v2.0.1 端口策略调整**：生产模式 FastAPI 监听 :5000（默认，从 `.env` 读 `QI_PORT`），Vite 不运行——**用户始终访问 :5000**；开发模式（不部署时）Vite 占 :5000，FastAPI 退到 :5001。**部署到服务器永远是生产模式**，无需关心 :5001，只需确保 `static/dist/` 已构建。关键词 `5001` / `FlowerField` / `Vite :5000` 在 6 份文档中都要出现。
 
 ---
 
@@ -12,7 +14,23 @@
 
 > 2026-07-19 v2.0 全站 Vue 3 重构后，前台从 Jinja2 SSR 迁移到 Vue 3 SPA。**部署前必须先构建前端**，否则访问 :5000 只看到「dist 未构建」提示页。
 
+> 2026-07-19 v2.0.1 起 [start.py](../../start.py) 新增 `build` 子命令：`python start.py build` 一键执行 `npm install && npm run build`（自动检测 Node 是否装好 + 自动 cd frontend + 输出到 ../static/dist/），推荐用此方式。
+
 ### 构建步骤
+
+#### 方式 A：一键构建（推荐 ⭐）
+
+```bash
+# 一键执行 npm install + npm run build，输出到 static/dist/
+python start.py build
+```
+
+[start.py](../../start.py) 的 `build` 子命令内部做了 3 件事：
+1. 检查 `frontend/node_modules/` 是否存在，不存在自动 `npm install`
+2. 执行 `npm run build`（Vite 5 + Rollup）
+3. 输出到 `../static/dist/`（即 [static/dist/](../../static/dist/)）
+
+#### 方式 B：手动两步
 
 ```bash
 # 1. 确保已装 Node.js 18+（推荐 20 LTS）
@@ -34,9 +52,13 @@ vite v5.x.x building for production...
 ✓ N modules transformed.
 dist/index.html                  ← ../static/dist/index.html
 dist/assets/index-xxxxxx.js      ← Vue 3 + 依赖 chunk
+dist/assets/three-vendor-*.js    ← Three.js 单独 chunk（仅花园页按需加载）
+dist/assets/gsap-vendor-*.js     ← GSAP 单独 chunk
 dist/assets/index-xxxxxx.css     ← Tailwind CSS
 ✓ built in Xs
 ```
+
+> 💡 **Three.js chunk**：[FlowerField.vue](../../frontend/src/components/FlowerField.vue) 用 `defineAsyncComponent` 异步导入 `three`，所以 Three.js (~600KB) 被打成单独的 `three-vendor-*.js` chunk，**首屏不加载**，只在用户访问 `/garden` 精神花园页时按需拉取。
 
 ### 构建产物去向
 
@@ -85,10 +107,23 @@ python start.py restart
 
 开发时不用每次改前端都 `npm run build`，直接跑 Vite dev server：
 ```bash
-cd frontend && npm run dev    # http://127.0.0.1:5173/
-python start.py                # http://127.0.0.1:5000/
+python start.py                # 自动检测 dist 是否构建：
+                               #   未构建 → dev 模式（Vite :5000 + FastAPI :5001）
+                               #   已构建 → prod 模式（FastAPI :5000）
 ```
-Vite dev server 提供 HMR 热更新 + 自动 proxy `/api`、`/static`、`/admin` 到 FastAPI :5000，详见 [DEVELOPMENT 前端开发](DEVELOPMENT.md)。
+
+或手动两终端（v2.0.1 端口策略）：
+```bash
+# 终端 1：Vite dev server（用户访问 :5000）
+cd frontend && npm run dev     # http://127.0.0.1:5000/
+
+# 终端 2：FastAPI（API 退到 :5001）
+set QI_PORT=5001 && python start.py    # http://127.0.0.1:5001/
+```
+
+> ⚠️ **v2.0.1 端口策略调整**：开发模式 Vite 占 :5000（用户入口 + HMR），FastAPI 退到 :5001（API）；不再是 v2.0 的 Vite :5173 + FastAPI :5000。理由：让 FastAPI 反代 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 会因 null 字节转义 + 冒号失败（详见 [HANDOFF §6.16](../../HANDOFF.md)）。**用户始终访问 :5000**。
+
+Vite dev server 提供 HMR 热更新 + 自动 proxy `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 到 FastAPI :5001，详见 [DEVELOPMENT 前端开发](DEVELOPMENT.md)。
 
 ---
 
@@ -426,13 +461,21 @@ python start.py start
 部署完成后**必须**跑一遍：
 
 ```bash
-# 1. 服务在跑
+# 1. 服务在跑（v2.0.1 端口策略：生产模式 :5000 必须是 FastAPI）
 curl -I http://127.0.0.1:5000/                        # 200
+# 验证 :5000 是 FastAPI 而不是 Vite：
+#   - 看响应头 Server: uvicorn（FastAPI）而非 Server: Vite
+#   - 或 curl -s http://127.0.0.1:5000/ | grep -i "vite"  应无命中
+#   - 若命中 Vite → 说明 dev 模式没切到 prod，检查 static/dist/ 是否已构建
 
 # 1b. 前端 dist 已构建（v2.0 Vue 3 重构后必查）
 curl http://127.0.0.1:5000/ | grep -E "Vue|<div id=\"app\">"   # 命中 = dist 已构建并返回 Vue 3 SPA
 curl -I http://127.0.0.1:5000/static/dist/index.html           # 200
-# 若返回「dist 未构建」提示页 → 回 [前端构建](#前端构建v20-vue-3-重构后必做所有部署方式通用) 跑 npm run build
+# 若返回「dist 未构建」提示页 → 回 [前端构建](#前端构建v20-vue-3-重构后必做所有部署方式通用) 跑 python start.py build
+
+# 1c. 3D 花田 chunk 存在（v2.0.1 FlowerField.vue 加）
+curl -I http://127.0.0.1:5000/static/dist/assets/three-vendor-*.js   # 200（Three.js chunk）
+# 浏览器访问 /garden 应能看到 3D 花田场景
 
 # 2. 静态资源
 curl -I http://127.0.0.1:5000/static/css/style.css    # 200
@@ -451,6 +494,7 @@ curl -X POST http://127.0.0.1:5000/api/auth/register \
 # 5. （可选）用浏览器访问
 # http://yourdomain.com
 # 注册 → 听歌 → 写日记 → 打卡 → 兑换
+# 访问 /garden 确认 3D 花田场景加载正常
 ```
 
 **全部通过 = 部署完成。**

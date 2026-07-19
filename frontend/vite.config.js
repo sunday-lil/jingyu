@@ -17,19 +17,29 @@ export default defineConfig(({ command }) => ({
   },
   server: {
     host: '127.0.0.1',
-    port: 5173,
+    // 开发模式 Vite 监听 :5000（用户统一访问入口）
+    // FastAPI 在开发模式改到 :5001（由 start.py 设置 QI_PORT=5001）
+    port: 5000,
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://127.0.0.1:5001',
         changeOrigin: true,
       },
       '/static': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://127.0.0.1:5001',
         changeOrigin: true,
       },
       '/admin': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://127.0.0.1:5001',
+        changeOrigin: true,
+      },
+      '/docs': {
+        target: 'http://127.0.0.1:5001',
+        changeOrigin: true,
+      },
+      '/openapi.json': {
+        target: 'http://127.0.0.1:5001',
         changeOrigin: true,
       },
     },

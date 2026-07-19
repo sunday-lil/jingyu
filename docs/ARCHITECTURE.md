@@ -4,32 +4,37 @@
 
 > 🔒 **改了本文件涉及的代码，必须同步更新 [HANDOFF §12](../../HANDOFF.md) / [PROJECT_STATE §8](../PROJECT_STATE.md) / [DEVELOPMENT §1.8](DEVELOPMENT.md) 列出的对应文档。** 改代码不改文档 = 改了一半。
 
-> 🔒 **2026-07-19 v2.0 Vue 3 重构**：本文件 §1 架构图、§1.1 前端架构、§1.2 开发/生产模式切换为新加内容；§7.7 文档 Iron Rule 引用已确认对 Vue 重构（6 份文档同步）仍然适用。关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）中都要出现。
+> 🔒 **2026-07-19 v2.0.1 端口策略 + Three.js 花田更新**：① §1 架构图改为 Vite :5000 / FastAPI :5001（开发）+ FastAPI :5000（生产）；② §1.1 前端架构加 `FlowerField.vue` 3D 花田组件说明；③ §1.2 开发/生产模式切换的端口策略更新（Vite 占 :5000，FastAPI 改 :5001）。关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` / `FlowerField` / `5001` 在 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）中都要出现。
 
 ---
 
 ## 1. 总体架构
 
 > **2026-07-19 v2.0 全站 Vue 3 重构**：前端从 Jinja2 SSR + 原生 JS 迁移到 Vue 3 SPA + Vite 工程化，后端 FastAPI 简化为纯 API + SPA fallback。
+>
+> **2026-07-19 v2.0.1 端口策略调整**：开发模式 Vite 占 :5000（用户入口）+ FastAPI 改 :5001（API），避免 FastAPI 反代 Vite 内部路径含特殊字符失败（详见 [HANDOFF §6.16](../../HANDOFF.md)）。**用户始终访问 :5000**，由 [start.py](../../start.py) 自动切换。
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                       浏览器（前端）                              │
 │                                                                  │
-│  开发模式：http://127.0.0.1:5173/                                │
+│  开发模式：http://127.0.0.1:5000/  ← 用户始终访问 :5000           │
 │  ┌────────────────────────────────────────────────────────────┐  │
-│  │  Vite dev server (:5173)                                   │  │
+│  │  Vite dev server (:5000)  ← 用户入口，HMR 热更新            │  │
 │  │  ├─ Vue 3 SPA 热更新（<script setup> + HMR）              │  │
 │  │  ├─ Vue Router 4 客户端路由                                │  │
 │  │  ├─ Pinia 状态管理                                         │  │
 │  │  ├─ Tailwind CSS + GSAP + @vueuse/motion + Three.js        │  │
-│  │  └─ axios → proxy /api、/static、/admin → :5000            │  │
+│  │  │  └─ FlowerField.vue（异步加载，3D 花田）                │  │
+│  │  └─ axios → proxy /api、/static、/admin、/docs、           │  │
+│  │            /openapi.json → FastAPI :5001                   │  │
 │  └────────────────────────────────────────────────────────────┘  │
 │                                                                  │
-│  生产模式：http://127.0.0.1:5000/                                │
+│  生产模式：http://127.0.0.1:5000/  ← 用户始终访问 :5000           │
 │  ┌────────────────────────────────────────────────────────────┐  │
-│  │  FastAPI 直接服务 static/dist/                              │  │
+│  │  FastAPI 直接服务 static/dist/  ← Vite 不运行                │  │
 │  │  ├─ index.html + JS/CSS chunk（Vue 3 build 产物）          │  │
+│  │  ├─ 静态资源走 EXT_TO_MIME 映射（.js/.css/.woff2 等）       │  │
 │  │  └─ SPA fallback 兜底未匹配 GET → index.html               │  │
 │  └────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────┘
@@ -37,7 +42,8 @@
                                   │ HTTP JSON（/api/*）+ cookie session
                                   ↓
 ┌──────────────────────────────────────────────────────────────────┐
-│                  FastAPI（uvicorn :5000）                         │
+│  开发模式：FastAPI（uvicorn :5001，由 start.py 设 QI_PORT=5001）  │
+│  生产模式：FastAPI（uvicorn :5000，从 .env 读 QI_PORT）            │
 │                                                                  │
 │  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
 │  │ routers/api* │  │ SPA fallback │  │  StaticFiles mount     │  │
@@ -46,6 +52,10 @@
 │  │  + ai        │  │  /static/    │  │                        │  │
 │  │              │  │  /admin      │  │                        │  │
 │  │              │  │  /docs       │  │                        │  │
+│  │              │  │  /openapi    │  │                        │  │
+│  │              │  │  开发态返回  │  │                        │  │
+│  │              │  │  提示页引导  │  │                        │  │
+│  │              │  │  访问 Vite   │  │                        │  │
 │  └──────┬───────┘  └──────────────┘  └────────────────────────┘  │
 │         │                                                        │
 │         │       ┌────────────────┐                               │
@@ -72,7 +82,9 @@
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-**单一进程承担 3 个角色**：API + SPA fallback + 静态资源。这是有意为之的简化（见 [HANDOFF §2](../../HANDOFF.md) + [HANDOFF §5.8](../../HANDOFF.md) 前端选型决策）。
+**单一进程承担 3 个角色**（生产模式）：API + SPA fallback + 静态资源。这是有意为之的简化（见 [HANDOFF §2](../../HANDOFF.md) + [HANDOFF §5.8](../../HANDOFF.md) 前端选型决策）。
+
+**开发模式 = 双进程**：Vite :5000（前端 + HMR）+ FastAPI :5001（API），由 [start.py](../../start.py) 自动起两个；用户**只**访问 :5000，Vite proxy 转发 API 请求到 :5001。详见 [§1.2 开发/生产模式切换](#12-开发生产模式切换2026-07-19-v20-加)。
 
 **前台 = Vue 3 SPA**（[`frontend/`](../../frontend/)），**后台 = Jinja2 SSR**（[templates/admin/](../../templates/admin/)）：后台仍用 SSR 是有意为之（独立样式、独立隔离、管理工具不需要 SPA 体验，详见 [HANDOFF §5.8](../../HANDOFF.md)）。
 
@@ -89,12 +101,12 @@
 | 层 | 选型 | 文件 | 说明 |
 |---|---|---|---|
 | 框架 | Vue 3 `<script setup>` | [frontend/package.json](../../frontend/package.json) | ^3.4，组合式 API |
-| 构建 | Vite 5 | [frontend/vite.config.js](../../frontend/vite.config.js) | dev HMR + build Rollup；dev proxy /api、/static、/admin → :5000 |
+| 构建 | Vite 5 | [frontend/vite.config.js](../../frontend/vite.config.js) | dev HMR + build Rollup；dev 监听 :5000（用户入口）；dev proxy /api、/static、/admin、/docs、/openapi.json → FastAPI :5001（详见 [§1.2](#12-开发生产模式切换2026-07-19-v20-加)） |
 | 路由 | Vue Router 4 | [frontend/src/router/index.js](../../frontend/src/router/index.js) | 13 条路由，`meta.requiresAuth` 守卫，404 catch-all |
 | 状态 | Pinia 2 | [frontend/src/stores/user.js](../../frontend/src/stores/user.js) | user store；cookie session 模式，**不存 token**，只缓存 user 对象到 localStorage |
 | 样式 | Tailwind CSS 3.4 | [frontend/tailwind.config.js](../../frontend/tailwind.config.js) | 治愈系色彩 token（mist/ink/五音色/accent）+ 动画（breathe/float/fade-up） |
 | 动效 | GSAP 3.12 + @vueuse/motion 2.2 | 各 .vue 视图 | 入场 stagger + 呼吸动效；`prefers-reduced-motion` 自动降级 |
-| 3D | Three.js 0.168 | 装饰性 3D 元素 | 装饰性使用，不引入复杂 3D 场景 |
+| 3D | Three.js 0.168 | [frontend/src/components/FlowerField.vue](../../frontend/src/components/FlowerField.vue) | 治愈系 3D 花田场景（60 朵花 × 5 瓣 = 300 InstancedMesh），异步加载（详见 [§1.1.5](#115-3d-花田组件-flowerfieldvue2026-07-19-v201-加)） |
 | HTTP | axios 1.7 | [frontend/src/api/index.js](../../frontend/src/api/index.js) | `baseURL=/api`，`withCredentials=true`，401 自动跳 `/login` |
 
 ### 1.1.2 13 个路由（[frontend/src/router/index.js](../../frontend/src/router/index.js)）
@@ -167,41 +179,110 @@
   │ ←─ 201                           │
 ```
 
-服务端**永不接触明文日记**——这条端到端加密边界 Vue 3 重构后**依然成立**（[HANDOFF §5.1](../../HANDOFF.md)）。
+服务端**永不**接触明文日记——这条端到端加密边界 Vue 3 重构后**依然成立**（[HANDOFF §5.1](../../HANDOFF.md)）。
+
+### 1.1.5 3D 花田组件（FlowerField.vue，2026-07-19 v2.0.1 加）
+
+> 设计原则：**「治愈系视觉冲击 + 性能可控 + 按需加载」** —— 在精神花园页顶部用 Three.js 渲染一片真 3D 花田，弥补 v2.0 首屏「装饰性 emoji 平铺」的视觉单薄问题；同时通过 InstancedMesh + 异步导入把性能开销压到最小。
+
+**文件**：[frontend/src/components/FlowerField.vue](../../frontend/src/components/FlowerField.vue)
+
+**嵌入位置**：[frontend/src/views/garden/GardenView.vue](../../frontend/src/views/garden/GardenView.vue) 顶部 hero 区，高 380px，圆角 + 阴影包裹，下方叠加「移动鼠标，看花田随风摆动」提示文案。
+
+```vue
+// GardenView.vue
+import { defineAsyncComponent } from 'vue'
+const FlowerField = defineAsyncComponent(() =>
+  import('@/components/FlowerField.vue')
+)
+```
+
+**核心实现要点**：
+
+| 维度 | 实现 | 说明 |
+|---|---|---|
+| 性能 | `THREE.InstancedMesh` 单次 draw call 渲染全部花瓣 | 60 朵花 × 5 瓣 = 300 个 instance，性能与视觉平衡点 |
+| 加载策略 | `defineAsyncComponent(() => import('three'))` | Three.js (~600KB) 按需加载，不进首屏包；加载中显示「🌿 花田正在生长…」占位 |
+| Vue 响应式 | Three.js 对象用 `shallowRef` 持有 | 避免被 Vue 深度代理拖累性能 |
+| 配色 | 5 种治愈系色：藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2` | 与全站 CSS token 一致 |
+| 花瓣几何 | `THREE.Shape` + bezierCurveTo 自定义圆润花瓣形 + `ShapeGeometry` | 5 片花瓣绕花蕊均匀分布（72° 间隔） |
+| 花蕊 | `THREE.Points` 单独渲染 60 个暖黄小点 | 比 InstancedMesh 更轻 |
+| 氛围 | `THREE.Fog(0xF9F6F0, 8, 28)` + 远处 80 个漂浮光点（`Points`） | 远处花朵融入雾色，光点缓缓上升 |
+| 动画 | 绽放（错峰从地面升起 + 缩放）+ 风摆动（`sin(elapsed * 1.2 + phase)`）+ 摄影机自动呼吸 + 鼠标跟随 | `requestAnimationFrame` 循环 |
+| 资源释放 | `onBeforeUnmount` 释放 geometry / material / renderer + 移除 DOM | 避免切走后 WebGL 上下文泄漏 |
+
+**为什么不用 CSS 3D / 简单 emoji 平铺**：
+- CSS 3D 无法做 InstancedMesh 级别的实例化，300 个 DOM 节点会拖累首屏
+- emoji 平铺缺乏景深和光影层次，被用户明确反馈「视觉单薄」
+- Three.js 一次注入 + 异步加载，**首屏不增加 JS 体积**（Three.js 走单独 chunk，仅花园页加载）
+
+**降级**：`onMounted` 异步 `import('three')` 失败时，`isLoading=true` 占位文案一直显示，不阻塞页面其他模块（能量卡 / 物品列表 / 流水正常渲染）。
+
+**为什么 Three.js 0.168**：选择当时社区稳定版本；vite.config.js 的 `manualChunks` 把 `three` 单独打成 `three-vendor` chunk，避免和 vue/gsap 混在一起。
 
 ---
 
-## 1.2 开发/生产模式切换（2026-07-19 v2.0 加）
+## 1.2 开发/生产模式切换（2026-07-19 v2.0 加，v2.0.1 端口策略调整）
 
-### 1.2.1 开发模式（Vite dev server :5173 + FastAPI :5000）
+> **2026-07-19 v2.0.1 端口策略调整**：开发模式从「Vite :5173 + FastAPI :5000」改为「**Vite :5000 + FastAPI :5001**」——用户**始终**访问 :5000，由 [start.py](../../start.py) 自动检测 dist 是否构建来切换端口策略。理由：原方案让 FastAPI :5000 反代 Vite :5173，但 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含 null 字节转义 + 冒号，httpx 转发时被破坏，浏览器报 `SyntaxError: Unexpected token '.'`（详见 [HANDOFF §6.16](../../HANDOFF.md)）。
+
+### 1.2.1 开发模式（Vite dev server :5000 + FastAPI :5001）
 
 ```
-浏览器 → http://127.0.0.1:5173/ → Vite dev server
+浏览器 → http://127.0.0.1:5000/  ← 用户始终访问 :5000
+                                  │
+                                  ↓
+                            Vite dev server (:5000)
                                   ├─ 服务 Vue 3 源码（HMR 热更新）
-                                  └─ proxy /api、/static、/admin → FastAPI :5000
+                                  └─ proxy /api、/static、/admin、/docs、
+                                      /openapi.json → FastAPI :5001
+                                                │
+                                                ↓
+                                       FastAPI (uvicorn :5001)
+                                          ├─ /api/* → JSON API
+                                          ├─ /static/* → 静态资源
+                                          ├─ /admin/* → 后台 SSR
+                                          └─ /docs、/openapi.json → Swagger
 ```
 
-- `cd frontend && npm install && npm run dev` 启动 Vite
-- `python start.py` 启动 FastAPI
-- 浏览器访问 :5173，前端调 API 走 proxy 无跨域
+- **推荐**：`python start.py`（自动起 Vite :5000 + FastAPI :5001 双进程，dev 模式由 `is_dist_built()` 检测自动切换）
+- **备选**（手动两终端）：
+  - 终端 1：`cd frontend && npm install && npm run dev`（Vite 监听 :5000）
+  - 终端 2：`set QI_PORT=5001 && python start.py`（FastAPI 监听 :5001）
+- 浏览器访问 **:5000**（即 Vite），前端调 API 走 proxy 无跨域
+- start.py 在 dev 模式会设置环境变量 `QI_PORT=5001` 让 FastAPI 改听 5001（默认是 5000）
 - Vite host 显式设 `127.0.0.1`（不写 `localhost`，避免 IPv6 `[::1]` 问题，详见 [HANDOFF §6.12](../../HANDOFF.md)）
+- Vite `strictPort: true` 防止 5000 被占用时自动跳到 5001（会和 FastAPI 撞）
 
-### 1.2.2 生产模式（FastAPI :5000 + SPA fallback）
+### 1.2.2 生产模式（FastAPI :5000 + SPA fallback，Vite 不运行）
 
 ```
-浏览器 → http://127.0.0.1:5000/ → FastAPI
+浏览器 → http://127.0.0.1:5000/  ← 用户始终访问 :5000
+                                  │
+                                  ↓
+                            FastAPI (uvicorn :5000，从 .env 读 QI_PORT)
                                   ├─ /api/* → JSON API
                                   ├─ /static/* → 静态资源（含 dist/）
                                   ├─ /admin/* → 后台 SSR（Jinja2）
                                   └─ 其他 GET → SPA fallback → static/dist/index.html
+                                                              + EXT_TO_MIME 映射静态资源
 ```
 
-- `cd frontend && npm run build` 输出到 `static/dist/`
-- `python start.py` 启动 FastAPI
-- 浏览器访问 :5000，FastAPI 兜底返回 `index.html`，Vue Router 接管客户端路由
-- dist 未构建时返回提示页引导访问 Vite dev server
+- **推荐**：`python start.py build`（一键构建前端到 `static/dist/`）+ `python start.py`（启动 FastAPI）
+- 备选：`cd frontend && npm run build` 输出到 `static/dist/`，然后 `python start.py`
+- 浏览器访问 **:5000**（这次是 FastAPI），FastAPI 兜底返回 `index.html`，Vue Router 接管客户端路由
+- dist 未构建时（仍走生产模式）返回治愈系提示页，引导用户访问 Vite dev server :5000 或运行 `python start.py build`
 
-### 1.2.3 SPA fallback 路径排除（必读）
+### 1.2.3 端口策略对照表
+
+| 模式 | 用户访问 | Vite | FastAPI | 启动方式 |
+|---|---|---|---|---|
+| 开发（dist 未构建） | :5000 | :5000（用户入口 + HMR） | :5001（API） | `python start.py` |
+| 生产（dist 已构建） | :5000 | 不运行 | :5000（API + SPA + 静态） | `python start.py`（自动检测 dist） |
+
+**为什么 dev 让 Vite 占 :5000 而不是 FastAPI**：见 [HANDOFF §5.9](../../HANDOFF.md)（决策）/ [HANDOFF §6.16](../../HANDOFF.md)（踩坑）。核心：让 FastAPI 反代 Vite 内部路径会失败，所以让 Vite 直接占住用户入口，FastAPI 退到 :5001 专做 API。
+
+### 1.2.4 SPA fallback 路径排除（必读）
 
 [app/main.py](../../app/main.py) 末尾的通配路由 `@app.get("/{path:path}")` **必须**排除以下路径（详见 [HANDOFF §6.15](../../HANDOFF.md)）：
 

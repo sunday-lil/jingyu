@@ -26,13 +26,19 @@ python start.py
 
 服务管理：
 ```bash
-python start.py start     # 后台启动（默认）
-python start.py stop      # 停止
+python start.py start     # 后台启动（默认，自动检测 dist 切换端口策略）
+python start.py stop      # 停止（同时停 FastAPI + Vite）
 python start.py restart   # 重启
-python start.py status    # 查 PID
-python start.py fg        # 前台（systemd / 调试）
+python start.py status    # 查 PID + 端口（显示 FastAPI / Vite 两个进程状态）
+python start.py fg        # 前台运行 FastAPI（systemd / 调试，不自动起 Vite）
+python start.py build     # 构建前端到 static/dist/（自动 npm install + npm run build）
 python start.py --init-db # 启动前重置数据库
 ```
+
+> 📌 **端口策略**（用户始终访问 :5000，由 `start.py` 自动切换）：
+> - **生产模式**（dist 已构建）：FastAPI 监听 :5000（从 `.env` 读 `QI_PORT`），Vite 不运行
+> - **开发模式**（dist 未构建）：Vite 监听 :5000（用户入口，HMR 热更新）+ FastAPI 改听 :5001（API 后端，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001
+> - 详见 [HANDOFF §5.9](#59-为什么开发模式让-vite-占5000-fastapi-改50012026-07-19-加) 决策 + [§6.16](#616-fastapi-代理转发-vite-内部路径含特殊字符失败2026-07-19-加) 踩坑
 
 **秘密后台**：`http://127.0.0.1:5000/admin`（默认入口）
 - 首次启动会自动创建管理员 `admin`，密码**随机生成并写入 `logs/healing.log`**（看 `[ADMIN] password :` 一行）
@@ -44,13 +50,26 @@ python start.py --init-db # 启动前重置数据库
 **GitHub**：`https://github.com/sunday-lil/jingyu`（public, MIT 友好，私有项目只发了一次）
 
 **前端开发模式**（2026-07-19 Vue 3 重构后）：
+
+**推荐：`python start.py` 一键起**（自动检测 dist 未构建 → 启动 Vite :5000 + FastAPI :5001）
 ```bash
+python start.py         # 自动起 Vite :5000（用户入口）+ FastAPI :5001（API）
+# 浏览器打开 http://127.0.0.1:5000（Vite dev server，HMR 热更新）
+```
+
+**备选：手动分两个终端**（调试时方便看各自日志）
+```bash
+# 终端 1：FastAPI（开发模式手动设置 QI_PORT=5001）
+$env:QI_PORT="5001"; python start.py fg       # Windows PowerShell
+# 或：QI_PORT=5001 python start.py fg          # Linux/macOS
+
+# 终端 2：Vite dev server
 cd frontend
 npm install         # 首次：含 three.js 大包，约 7 分钟
-npm run dev         # Vite dev server，访问 http://127.0.0.1:5173/
+npm run dev         # Vite dev server :5000
 ```
-- dev proxy `/api` / `/static` / `/admin` → FastAPI `:5000`（[frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js)）
-- 生产：`npm run build` → 输出到 `static/dist/` → `python start.py` → FastAPI SPA fallback（详见 [docs/DEPLOYMENT.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEPLOYMENT.md)「前端构建」）
+- dev proxy `/api` / `/static` / `/admin` / `/docs` / `/openapi.json` → FastAPI `:5001`（[frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js)）
+- 生产：`python start.py build`（或手动 `cd frontend && npm run build`）→ 输出到 `static/dist/` → `python start.py` → FastAPI :5000 SPA fallback（详见 [docs/DEPLOYMENT.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEPLOYMENT.md)「前端构建」）
 
 ---
 
@@ -68,7 +87,7 @@ npm run dev         # Vite dev server，访问 http://127.0.0.1:5173/
 | 前端状态 | **Pinia** | user store（cookie session 模式，不存 token） |
 | 前端样式 | **Tailwind CSS 3.4** | 治愈系色彩 token + 动画（breathe/float/fade-up） |
 | 前端动效 | **GSAP 3.12 + @vueuse/motion 2.2** | 入场 stagger + 呼吸动效，`prefers-reduced-motion` 降级 |
-| 前端 3D | **Three.js 0.168** | 装饰性 3D 元素 |
+| 前端 3D | **Three.js 0.168** | 3D 花田场景（[FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue)，60 朵花 × 5 瓣 = 300 `InstancedMesh`；治愈系 5 色；异步加载按需引入减小首屏包） |
 | 前端 HTTP | **axios 1.7** | `baseURL=/api`，`withCredentials=true`，401 自动跳登录 |
 | 密码哈希 | **bcrypt 4.x**（直接用，不用 passlib） | passlib 与 4.x 不兼容 |
 | 日记加密 | **Fernet (AES-128-CBC + HMAC)** | 客户端 Web Crypto PBKDF2 派生密钥 |
@@ -89,7 +108,7 @@ npm run dev         # Vite dev server，访问 http://127.0.0.1:5173/
 
 ```
 webwrold/
-├── start.py                  ← 服务管理脚本（start/stop/restart/status/fg）
+├── start.py                  ← 服务管理脚本（start/stop/restart/status/fg/build；自动检测 dist 切换端口策略）
 ├── README.md                 ← 用户主文档
 ├── HANDOFF.md                ← 【当前文件】AI 交接说明
 ├── .env.example              ← 环境变量模板
@@ -341,6 +360,18 @@ webwrold/
 
 详见 [frontend/](file:///c:/Users/Administrator/Desktop/webwrold/frontend/) + [docs/ARCHITECTURE.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/ARCHITECTURE.md)「前端架构」节。
 
+### 5.9 为什么开发模式让 Vite 占 :5000，FastAPI 改 :5001（2026-07-19 加）
+- **背景**：v2.0 Vue 3 重构初版用「FastAPI :5000 + Vite :5173 + FastAPI 反代 Vite」方案，但实际跑起来浏览器报 `SyntaxError: Unexpected token '.'`，定位到是 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含 null 字符转义（`__x00__`）+ 冒号（`plugin-vue:export-helper`），httpx 转发时这些特殊字符被破坏，返回的 JS 文件首行变成 `<` 开头的 HTML 错误页，浏览器当 JS 解析就报错。详见 [§6.16](#616-fastapi-代理转发-vite-内部路径含特殊字符失败2026-07-19-加) 踩坑
+- **决策**：开发模式让 **Vite 直接占 :5000**（用户访问入口），**FastAPI 改听 :5001**（API 后端，由 [start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 设置 `QI_PORT=5001`），Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001
+- **为什么不让 Vite 仍占 :5173 + FastAPI :5000**：① 用户要记两个端口（:5173 看前端 / :5000 看 API），心智负担大；② Vite proxy 转发到 FastAPI 的方向是稳定的（FastAPI 是普通 HTTP JSON，无特殊字符），但反过来 FastAPI 转发到 Vite 就会踩坑
+- **生产模式不变**：dist 已构建时 FastAPI 监听 :5000（从 `.env` 读 `QI_PORT`），Vite 不运行，FastAPI 提供 SPA fallback + API + 静态资源
+- **用户体验**：用户始终访问 `http://127.0.0.1:5000`，无需关心是开发还是生产模式，[start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 自动检测 `static/dist/index.html` 是否存在来切换
+- **start.py 改动**：① `start` 子命令自动检测 dist，未构建时设置 `QI_PORT=5001` 启动 FastAPI + 启动 Vite :5000；② `stop` 同时停 FastAPI 和 Vite；③ `status` 显示两个进程状态 + 端口；④ 新增 `build` 子命令一键构建前端到 `static/dist/`（自动 `npm install` + `npm run build`）；⑤ `fg` 子命令只前台运行 FastAPI（生产模式用，不自动起 Vite）
+- **vite.config.js 改动**：① dev server port 5173 → 5000；② proxy target :5000 → :5001；③ 移除 `hmr.clientPort`（Vite 直接占 :5000 后 HMR 走本地不需要）；④ 新增 `/docs` 和 `/openapi.json` 代理
+- **main.py 改动**：① SPA fallback 移除回退代理到 Vite 的逻辑（开发态不再转发，返回提示页引导用户访问 Vite :5000）；② 新增 `EXT_TO_MIME` 映射（`.js` / `.css` / `.woff2` 等正确设置 `Content-Type`），生产态从 dist 读取静态资源时不再被 Starlette 默认当成 `application/octet-stream` 让浏览器拒绝执行
+
+详见 [start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) + [frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) + [app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py)。
+
 ---
 
 ## 6. 已知坑（必读！）
@@ -552,6 +583,25 @@ async def spa_fallback(path: str):
 ```
 
 **铁律**：SPA fallback 通配路由**必须**排除：① `/api/*`（JSON API）；② `/static/*`（静态资源）；③ `/admin*`（后台 SSR）；④ `/docs`、`/redoc`、`/openapi`（FastAPI 自动文档）。否则会让 API 返回 HTML、后台被 SPA 接管。
+
+### 6.16 FastAPI 代理转发 Vite 内部路径含特殊字符失败（2026-07-19 加）
+**症状**：v2.0 Vue 3 重构初版用「FastAPI :5000 + Vite :5173 + FastAPI 反代 Vite」方案，浏览器访问 `http://127.0.0.1:5000/` 报 `SyntaxError: Unexpected token '.'`（或 `Unexpected token '<'`），控制台 Network 标签看到 Vite 内部模块请求（如 `/@id/__x00__plugin-vue:export-helper`）返回 200 但内容是 HTML 错误页（首行 `<`），浏览器把 HTML 当 JS 解析就炸了。
+
+**根因**：Vite 5 dev server 的内部模块路径含特殊字符：
+- `/@id/__x00__plugin-vue:export-helper` — `__x00__` 是 null 字符 `\x00` 的转义形式（Vite 用它表示 `@rollup/plugin-vue` 注入的 export-helper 模块），`:export-helper` 含冒号
+- httpx / aiohttp / requests 转发时这些特殊字符会被 URL 编码或破坏（null 字符在某些 HTTP 客户端实现里会截断请求路径，冒号在 URL path 段需要编码）
+- 转发后的路径 Vite dev server 自己也认不出，fallback 返回 index.html（HTML），浏览器拿到 HTML 当 JS 解析就报 `SyntaxError`
+
+**为什么 FastAPI 反代 Vite 不可行**：
+- Vite dev server 不是普通 HTTP 服务，它服务的是「源码模块图」，路径含大量内部约定（`/@id/`、`/@fs/`、`?import`、`?t=timestamp` 等），这些都是 Vite 自己解析的，HTTP 客户端转发时会破坏
+- 反过来 Vite proxy 转发到 FastAPI 是稳定的（FastAPI 是普通 HTTP JSON API，路径不含特殊字符）
+
+**修复**：让 **Vite 直接占 :5000**（用户访问入口），**FastAPI 改听 :5001**（API 后端）：
+- [start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 开发模式（dist 未构建）自动设置 `QI_PORT=5001` 启动 FastAPI + 启动 Vite :5000
+- [frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) dev server port 5173 → 5000，proxy target :5000 → :5001，移除 `hmr.clientPort`（HMR 走本地），新增 `/docs` 和 `/openapi.json` 代理
+- [app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py) SPA fallback 移除回退代理到 Vite 的逻辑，开发态（dist 未构建）返回提示页引导用户访问 Vite :5000
+
+**铁律**：永远**不要**让后端 HTTP 框架（FastAPI / Flask / Express）反向代理 Vite dev server 的内部模块路径。要么让 Vite 直接占用户访问端口，要么用 Nginx 这种能透传任意字符的反向代理（生产环境也不需要 Vite，所以只影响开发模式）。详见 [§5.9](#59-为什么开发模式让-vite-占5000-fastapi-改50012026-07-19-加) 决策。
 
 ---
 
@@ -915,3 +965,5 @@ Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yello
 > 末次更新 2026-07-17（会话 8 后续修复）：① AI 模型默认值 `nvidia/llama-3.1-nemotron-70b-instruct` → `meta/llama-3.1-8b-instruct`（70B 在用户 NVIDIA 账户下 404 不可用，换 8B 兼顾速度与质量）；② `_call_nvidia` 超时 30s → 60s 兜底；③ 模板字体引用换国内镜像 `fonts.loli.net` / `gstatic.loli.net`（原 `fonts.googleapis.com` 被墙 ERR_CONNECTION_REFUSED），CSS 变量有系统字体兜底。同步更新 README / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。
 >
 > 末次更新 2026-07-19（v2.0 全站 Vue 3 重构）：前端从「Jinja2 SSR + 原生 HTML/CSS/JS」迁移到「Vue 3 SPA + Vite 5 工程化」。新增 [`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/) 目录（Vue 3 `<script setup>` + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios），13 个视图迁入 `frontend/src/views/`。后端 [app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py) 加 SPA fallback（排除 /api//static//admin/ 路径），[app/routers/pages.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/pages.py) 简化为 4 个 302 重定向，[app/config.py](file:///c:/Users/Administrator/Desktop/webwrold/app/config.py) 修复 env_prefix bug（加 `env_prefix="qi_"`），[app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) 超时 30s→60s，AI 模型链 `nvidia/llama-3.1-nemotron-70b-instruct` → `meta/llama-3.3-70b-instruct` → `meta/llama-3.1-8b-instruct`。删除 showcase 动效页。§2 技术栈表大改、§5.8 加前端选型决策、§6.12-6.15 加 4 条 Vue/Vite 踩坑（IPv6 [::1] / base dev 模式 / npm install 大包耗时 / SPA fallback 排除路径）、§12.2 同步表加 Vue 相关行。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），Iron Rule §12 仍然适用（地位高于任何具体技术决策）。
+>
+> 末次更新 2026-07-19（v2.0.1 端口策略 + Three.js 花田）：① **端口策略调整** — 开发模式让 Vite 占 :5000（用户入口），FastAPI 改听 :5001（API，由 [start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 设置 `QI_PORT=5001`），Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001；生产模式不变（FastAPI :5000 + SPA fallback）。原因：FastAPI :5000 反代 Vite :5173 时，Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含 null 字符 + 冒号被 httpx 转发破坏，浏览器报 `SyntaxError`。② **start.py 增强** — `start` 自动检测 dist 切换端口策略、`stop` 同时停 FastAPI + Vite、`status` 显示两进程状态、新增 `build` 子命令一键构建前端、`fg` 只起 FastAPI 不起 Vite。③ **vite.config.js** — dev server port 5173 → 5000，proxy target :5000 → :5001，移除 `hmr.clientPort`，新增 `/docs` 和 `/openapi.json` 代理。④ **app/main.py** — SPA fallback 移除回退代理到 Vite 逻辑，开发态返回提示页引导访问 Vite :5000；新增 `EXT_TO_MIME` 映射（`.js` / `.css` / `.woff2` 等正确设置 `Content-Type`）。⑤ **Three.js 3D 花田场景** — 新增 [frontend/src/components/FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue)：60 朵花 × 5 瓣 = 300 `InstancedMesh`，5 种治愈色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`），绽放动效 + 风摆动 + 雾效 + 飘浮光点，摄影机自动呼吸 + 鼠标跟随，用 `defineAsyncComponent` 异步加载减小首屏包；[GardenView.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/garden/GardenView.vue) 顶部嵌入 380px 高 + 圆角阴影包裹 + 底部提示文案。§5.9 加端口策略决策、§6.16 加 FastAPI 反代 Vite 踩坑。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。

@@ -33,23 +33,28 @@
 # 安装依赖
 pip install -r requirements.txt
 
-# 启动（后台运行，端口默认 5000）
+# 启动（自动检测 dist：已构建走生产，未构建走开发）
 python start.py
 
 # 浏览器打开 http://127.0.0.1:5000
 ```
 
+> 📌 **用户始终访问 :5000**，开发 / 生产模式由 `start.py` 自动切换：
+> - **生产模式**（dist 已构建）：FastAPI 监听 :5000，提供 SPA + API + 静态资源（Vite 不运行）
+> - **开发模式**（dist 未构建）：Vite 监听 :5000（用户入口，HMR 热更新）+ FastAPI 改听 :5001（API 后端，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001
+
 **服务管理：**
 ```bash
-python start.py start     # 后台启动（默认）
-python start.py stop      # 停止
+python start.py start     # 后台启动（默认，自动检测 dist 切换端口策略）
+python start.py stop      # 停止（同时停 FastAPI + Vite）
 python start.py restart   # 重启
-python start.py status    # 查 PID
-python start.py fg        # 前台（systemd / 调试用）
+python start.py status    # 查 PID + 端口（显示 FastAPI / Vite 两个进程状态）
+python start.py fg        # 前台运行 FastAPI（systemd / 调试用，不自动起 Vite）
+python start.py build     # 构建前端到 static/dist/（自动 npm install + npm run build）
 python start.py --init-db # 启动前重置数据库
 ```
 
-PID 写入 `run/healing.pid`，日志写入 `logs/healing.log`。
+PID 写入 `run/healing.pid`（FastAPI）+ `run/vite.pid`（Vite），日志写入 `logs/healing.log` + `logs/vite.log`。
 
 ### 1.2 备选：直接 uvicorn
 
@@ -61,17 +66,34 @@ python -m uvicorn app.main:app --reload --port 5000
 
 ### 1.3 前端开发模式（Vue 3 + Vite 热更新）
 
-2026-07-19 全站 Vue 3 重构后，前端代码独立到 [`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/) 目录，开发时用 Vite dev server 跑 SPA，热更新：
+2026-07-19 全站 Vue 3 重构后，前端代码独立到 [`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/) 目录，开发时用 Vite dev server 跑 SPA，热更新。
+
+**推荐方式：`python start.py` 一键起**（自动检测 dist 未构建 → 启动 Vite :5000 + FastAPI :5001）
 
 ```bash
-cd frontend
-npm install     # 首次：装 vue / vue-router / pinia / axios / gsap / three / @vueuse/motion / tailwindcss / vite 等（含 three.js 大包，约 7 分钟）
-npm run dev     # 启动 Vite dev server，访问 http://127.0.0.1:5173/
+python start.py         # 自动起 Vite :5000（用户入口）+ FastAPI :5001（API）
+# 浏览器打开 http://127.0.0.1:5000（Vite dev server，HMR 热更新）
 ```
 
-**dev proxy**：[frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) 把 `/api` / `/static` / `/admin` 反代到 FastAPI `:5000`，所以 Vite 跑 :5173、FastAPI 跑 :5000 同时开着，前端调 API 走代理无跨域。**注意** Vite host 显式设为 `127.0.0.1`（默认监听 IPv6 `[::1]` 会导致 127.0.0.1 连不上，详见 [HANDOFF.md](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) 踩坑清单）。
+**备选方式：手动分两个终端起**（调试时方便看各自日志）
 
-**生产模式**：见 §1.1，`cd frontend && npm run build` 输出到 `static/dist/`，再 `python start.py` 走 FastAPI SPA fallback（详见 [docs/ARCHITECTURE.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/ARCHITECTURE.md)「开发/生产模式切换」节）。
+```bash
+# 终端 1：启动 FastAPI 后端（开发模式手动设置 QI_PORT=5001）
+cd c:\Users\Administrator\Desktop\webwrold
+$env:QI_PORT="5001"; python start.py fg       # Windows PowerShell
+# 或：QI_PORT=5001 python start.py fg          # Linux/macOS
+
+# 终端 2：启动 Vite dev server
+cd frontend
+npm install     # 首次：装 vue / vue-router / pinia / axios / gsap / three / @vueuse/motion / tailwindcss / vite 等（含 three.js 大包，约 7 分钟）
+npm run dev     # 启动 Vite dev server，访问 http://127.0.0.1:5000/
+```
+
+**dev proxy**：[frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) 把 `/api` / `/static` / `/admin` / `/docs` / `/openapi.json` 反代到 FastAPI `:5001`，所以 Vite 跑 :5000、FastAPI 跑 :5001 同时开着，前端调 API 走代理无跨域。**注意** Vite host 显式设为 `127.0.0.1`（默认监听 IPv6 `[::1]` 会导致 127.0.0.1 连不上，详见 [HANDOFF.md](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) 踩坑清单）。
+
+> 📌 **为什么 Vite 占 :5000 而不是 :5173**：之前尝试 FastAPI :5000 代理转发到 Vite :5173，但 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含特殊字符（null 字符转义 + 冒号），httpx 转发会破坏，导致浏览器报 `SyntaxError: Unexpected token '.'`。改成 Vite 直接占 :5000 后，所有 Vite 内部路径都走本地，无转发问题。详见 [HANDOFF §6.16](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) 踩坑清单。
+
+**生产模式**：见 §1.1，`python start.py build`（或手动 `cd frontend && npm run build`）输出到 `static/dist/`，再 `python start.py` 走 FastAPI :5000 SPA fallback（详见 [docs/ARCHITECTURE.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/ARCHITECTURE.md)「开发/生产模式切换」节）。
 
 ---
 
@@ -79,7 +101,7 @@ npm run dev     # 启动 Vite dev server，访问 http://127.0.0.1:5173/
 
 ```
 webwrold/
-├── start.py                      # 一键启动脚本（start/stop/restart/status/fg）
+├── start.py                      # 一键启动脚本（start/stop/restart/status/fg/build；自动检测 dist 切换端口策略）
 ├── README.md                     # 本文件
 ├── HANDOFF.md                    # AI 交接说明（必读）
 │
@@ -147,7 +169,7 @@ webwrold/
 │
 ├── frontend/                     # Vue 3 SPA 源码（2026-07-19 全站重构加）
 │   ├── package.json              #   依赖：vue ^3.4 / vue-router ^4.4 / pinia ^2.2 / axios ^1.7 / gsap ^3.12 / @vueuse/motion ^2.2 / three ^0.168；devDeps：vite ^5.4 / @vitejs/plugin-vue ^5.1 / tailwindcss ^3.4 / postcss / autoprefixer
-│   ├── vite.config.js            #   dev proxy /api、/static、/admin → :5000；build outDir ../static/dist；base 仅 build 时为 /static/dist/；host 127.0.0.1，strictPort
+│   ├── vite.config.js            #   dev proxy /api、/static、/admin、/docs、/openapi.json → :5001；dev server 监听 :5000；build outDir ../static/dist/；base 仅 build 时为 /static/dist/；host 127.0.0.1，strictPort
 │   ├── tailwind.config.js        #   治愈系色彩 token（mist/ink/五音色/accent）+ 动画（breathe/float/fade-up）
 │   ├── postcss.config.js
 │   ├── index.html                #   HTML 壳
@@ -163,7 +185,8 @@ webwrold/
 │       ├── stores/
 │       │   └── user.js           #   Pinia user store（cookie session 模式，不存 token，只缓存 user 对象到 localStorage）
 │       ├── components/
-│       │   └── AppLayout.vue     #   桌面顶部导航 + 移动端底部 tabbar（768px 断点）
+│       │   ├── AppLayout.vue     #   桌面顶部导航 + 移动端底部 tabbar（768px 断点）
+│       │   └── FlowerField.vue   #   Three.js 3D 花田场景（60 朵花 × 5 瓣 = 300 InstancedMesh；治愈系 5 色；异步加载）
 │       └── views/                #   13 个视图（一个功能一个 .vue）
 │           ├── HomeView.vue              # 首页：Hero + 五音入口 + 模块卡 + GSAP 入场
 │           ├── auth/
@@ -230,7 +253,12 @@ webwrold/
 **前后端分离 + SPA fallback**（2026-07-19 全站 Vue 3 重构后）：
 - **前端**：Vue 3 SPA 工程化在 [`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/)，`npm run build` 输出到 `static/dist/`，含 `index.html` + JS/CSS chunk
 - **后端**：FastAPI 只提供 `/api/*` JSON 接口 + SPA fallback；前台不再用 Jinja2 渲染（仅 `/admin/*` 后台仍保留 SSR）
-- **SPA fallback**：所有未匹配的 GET 请求（排除 `/api/`、`/static/`、`/admin`、`/docs`）返回 `static/dist/index.html`；若 `dist` 未构建返回提示页引导访问 Vite dev server
+- **端口策略**（用户始终访问 :5000，由 `start.py` 自动切换）：
+  - **生产模式**（dist 已构建）：FastAPI 监听 :5000，提供 SPA + API + 静态资源（Vite 不运行）
+  - **开发模式**（dist 未构建）：Vite 监听 :5000（用户入口，HMR）+ FastAPI 改听 :5001（API，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001
+- **SPA fallback**（[app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py)）：所有未匹配的 GET 请求（排除 `/api/`、`/static/`、`/admin`、`/docs`、`/openapi.json`）：
+  - **生产态**（dist 已构建）：从 `static/dist/` 读取对应静态文件（`.js` / `.css` / `.woff2` 等通过 `EXT_TO_MIME` 映射正确设置 `Content-Type`），未命中文件返回 `index.html` 让 Vue Router 接管
+  - **开发态**（dist 未构建）：返回提示页引导用户访问 Vite dev server :5000（**不再**反向代理到 Vite，避免内部路径含特殊字符被 httpx 转发破坏，详见 [HANDOFF §6.16](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md)）
 - **路由兼容层**：[app/routers/pages.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/pages.py) 简化为 4 个 302 重定向（`/mood`→`/calendar`、`/mood-calendar`→`/calendar`、`/my-bottles`→`/diary`、`/pick`→`/diary/pick`），兼容旧书签
 - **认证机制（不变）**：cookie session（不是 JWT token），登录用 nickname（不是 username），登录/注册直接返回 user 对象（不是 `{access_token, user}`），前端 userStore 只缓存 user 对象到 localStorage，不存 token
 - **配置修复**：[app/config.py](file:///c:/Users/Administrator/Desktop/webwrold/app/config.py) 加 `env_prefix="qi_"`，让 `.env` 里 `QI_*` 变量正确加载
@@ -287,6 +315,7 @@ webwrold/
 - **API 客户端**：[frontend/src/api/index.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/api/index.js) axios 实例，`baseURL=/api` + `withCredentials=true` + 401 自动跳 `/login`
 - **状态管理**：[frontend/src/stores/user.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/stores/user.js) Pinia user store；cookie session 模式，**不存 token**，只缓存 user 对象到 localStorage
 - **布局**：[frontend/src/components/AppLayout.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AppLayout.vue) 桌面顶部导航 + 移动端底部 tabbar（768px 断点）
+- **3D 花田**：[frontend/src/components/FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue) — Three.js `InstancedMesh` 渲染 60 朵花 × 5 瓣 = 300 个实例；5 种治愈色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）；绽放动效（错峰升起 + 缓动缩放）+ 风摆动（sin 错相位）+ 雾效 + 渐变背景 + 80 个飘浮光点 Points；摄影机自动呼吸摆动 + 鼠标跟随；用 `defineAsyncComponent` 异步加载（按需加载 Three.js，减小首屏包），加载时显示 "🌿 花田正在生长…" 提示；嵌入 `GardenView.vue` 顶部 380px 高 + 圆角阴影包裹
 - **样式**：Tailwind CSS + [frontend/src/assets/styles/main.css](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/assets/styles/main.css) 全局 CSS 变量 + 通用组件类（`.btn` / `.card` / `.form-input`）+ 系统字体（`PingFang SC` / `Microsoft YaHei`，**零网络请求**，不再依赖 Google Fonts 国内镜像）
 - **治愈系配色**（[frontend/tailwind.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/tailwind.config.js)）：米白 `#F9F6F0` + 茶褐 `#8B7B5E` + 雾粉 / 雾蓝 / 青绿点缀；动画 token `breathe` / `float` / `fade-up`
 - **动效**：GSAP 入场 stagger 浮入 + 呼吸动效；`prefers-reduced-motion` 自动降级
@@ -460,6 +489,7 @@ tail -n 50 logs/healing.log        # Linux/macOS
 | **前端 user store** | [frontend/src/stores/user.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/stores/user.js) |
 | **前端 Vite 配置** | [frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) |
 | **前端 Tailwind 配置** | [frontend/tailwind.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/tailwind.config.js) |
+| **前端 3D 花田组件** | [frontend/src/components/FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue) |
 | API 文档（自动） | http://127.0.0.1:5000/docs |
 | **AI 交接** | [HANDOFF.md](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) |
 | 详细文档 | [docs/](file:///c:/Users/Administrator/Desktop/webwrold/docs/) |

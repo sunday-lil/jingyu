@@ -2,6 +2,8 @@
 
 > 改代码前**必读**。这里汇总了 9 个真实踩过的坑 + 7 条开发铁律。
 
+> 🔒 **2026-07-19 v2.0.1 端口策略调整 + Three.js 花田**：开发模式从 Vite :5173 + FastAPI :5000 改为 **Vite :5000 + FastAPI :5001**（用户始终访问 :5000）；新增 [FlowerField.vue](../../frontend/src/components/FlowerField.vue) 3D 花田组件作为 `defineAsyncComponent` 异步加载示例。关键词 `5001` / `FlowerField` / `Vite :5000` 在 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）中都要出现。详见 [§1.9.1 启动开发模式](#191-启动开发模式vite-dev-server-5000--fastapi-50012026-07-19-v201-改) / [§1.9.5 加新视图](#195-加新视图vue-3-spa-模式替代旧-21-jinja2-模式) / [§1.9.7 调试技巧](#197-调试技巧)。
+
 ---
 
 ## 1. 开发铁律
@@ -101,54 +103,80 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1
 
 ---
 
-## 1.9 前端开发模式（Vue 3 SPA，2026-07-19 v2.0 加）
+## 1.9 前端开发模式（Vue 3 SPA，2026-07-19 v2.0 加，v2.0.1 端口策略调整）
 
 > 2026-07-19 v2.0 全站 Vue 3 重构后，前台 13 个页面迁移到 Vue 3 SPA。本节讲**怎么开发前端**，不是讲铁律。架构看 [ARCHITECTURE §1.1](../ARCHITECTURE.md)，部署看 [DEPLOYMENT 前端构建](../DEPLOYMENT.md)。
 
-### 1.9.1 启动开发模式（Vite dev server :5173 + FastAPI :5000）
+> 2026-07-19 v2.0.1 端口策略调整：开发模式 Vite 占 :5000（用户入口）+ FastAPI 退到 :5001（API），**用户始终访问 :5000**。理由见 [HANDOFF §6.16](../../HANDOFF.md)（FastAPI 反代 Vite 内部路径含 null 字节转义 + 冒号失败）。
+
+### 1.9.1 启动开发模式（Vite dev server :5000 + FastAPI :5001，2026-07-19 v2.0.1 改）
+
+#### 方式 A：一键启动（推荐 ⭐）
 
 ```bash
-# 终端 1：启动 FastAPI 后端
 cd c:\Users\Administrator\Desktop\webwrold
-python start.py                # http://127.0.0.1:5000
-
-# 终端 2：启动 Vite dev server
-cd c:\Users\Administrator\Desktop\webwrold\frontend
-npm install                    # 首次：含 three.js 大包，约 7 分钟
-npm run dev                    # http://127.0.0.1:5173
+python start.py                # 自动检测 dist 是否构建：
+                               #   未构建 → 起 Vite :5000 + FastAPI :5001（dev 模式）
+                               #   已构建 → 起 FastAPI :5000（prod 模式）
 ```
 
-浏览器访问 **http://127.0.0.1:5173/**（不是 :5000）。
+[start.py](../../start.py) 在 dev 模式会：
+1. 后台启动 Vite dev server（监听 :5000）
+2. 设置环境变量 `QI_PORT=5001` 启动 FastAPI（监听 :5001）
+3. `python start.py status` 同时显示两个进程状态
+
+#### 方式 B：手动两终端
+
+```bash
+# 终端 1：启动 Vite dev server（占 :5000，用户入口）
+cd c:\Users\Administrator\Desktop\webwrold\frontend
+npm install                    # 首次：含 three.js 大包，约 7 分钟
+npm run dev                    # http://127.0.0.1:5000
+
+# 终端 2：启动 FastAPI（退到 :5001，API 后端）
+cd c:\Users\Administrator\Desktop\webwrold
+set QI_PORT=5001
+python start.py                # http://127.0.0.1:5001
+```
+
+浏览器访问 **http://127.0.0.1:5000/**（即 Vite，不是 :5001）。
 - Vite 提供 HMR 热更新（改 `.vue` / `.js` / `.css` 浏览器自动刷新，**保留组件状态**）
-- 所有 `/api/*`、`/static/*`、`/admin/*` 请求自动 proxy 到 FastAPI :5000
-- 改前端代码 → 浏览器秒级热更新；改后端代码 → 重启 `python start.py restart`
+- 所有 `/api/*`、`/static/*`、`/admin/*`、`/docs`、`/openapi.json` 请求自动 proxy 到 FastAPI :5001
+- 改前端代码 → 浏览器秒级热更新；改后端代码 → 重启 `python start.py restart`（注意是 :5001 的进程）
 
 > ⚠️ Vite host 显式设 `127.0.0.1`（不写 `localhost`）避免 IPv6 `[::1]` 问题，详见 [HANDOFF §6.12](../../HANDOFF.md) / [§3.15](#315-vite-ipv6-localhost-连不上)。
+>
+> ⚠️ Vite `strictPort: true` 防止 :5000 被占用时自动跳到 :5001（会和 FastAPI 撞）。若启动报 `Port 5000 is in use` → 先 `python start.py stop` 关掉 FastAPI，或检查是否有别的 Vite 实例残留。
+>
+> ⚠️ **dev 模式 :5000 是 Vite，不是 FastAPI**：若用 `curl http://127.0.0.1:5000/api/...` 测试 API，会经 Vite proxy 转发到 :5001 的 FastAPI。直接打 FastAPI 用 :5001（如 `curl http://127.0.0.1:5001/docs` 看 Swagger）。
 
 ### 1.9.2 开发模式 vs 生产模式
 
-| 维度 | 开发模式（dev） | 生产模式（prod） |
+| 维度 | 开发模式（dev，v2.0.1） | 生产模式（prod） |
 |---|---|---|
-| 启动命令 | `cd frontend && npm run dev` + `python start.py` | `cd frontend && npm run build` + `python start.py` |
-| 浏览器访问 | `http://127.0.0.1:5173/` | `http://127.0.0.1:5000/` |
-| 谁服务前端 | Vite dev server（HMR + 源码） | FastAPI（服务 `static/dist/index.html` + SPA fallback） |
-| 谁服务 API | FastAPI :5000（经 Vite proxy） | FastAPI :5000（直连） |
-| 改 .vue 后 | 浏览器自动热更新 | 必须重新 `npm run build` |
+| 启动命令 | `python start.py`（自动检测 dist） | `python start.py build` + `python start.py` |
+| 浏览器访问 | `http://127.0.0.1:5000/`（**始终**） | `http://127.0.0.1:5000/`（**始终**） |
+| 谁服务 :5000 | Vite dev server（HMR + 源码） | FastAPI（服务 `static/dist/index.html` + SPA fallback） |
+| FastAPI 监听 | :5001（由 start.py 设 QI_PORT=5001） | :5000（从 .env 读 QI_PORT） |
+| Vite 是否运行 | ✅ 是 | ❌ 否（dist 已构建，不需要 Vite） |
+| 改 .vue 后 | 浏览器自动热更新 | 必须重新 `python start.py build` 或 `npm run build` |
 | 适用场景 | 日常开发 | 部署上线 / 真机测试 |
 
 ### 1.9.3 dev proxy 配置（[frontend/vite.config.js](../../frontend/vite.config.js)）
 
-Vite dev server 把以下路径 proxy 到 FastAPI :5000，**无跨域**：
+Vite dev server 把以下路径 proxy 到 FastAPI :5001，**无跨域**：
 
 | 前端请求路径 | proxy 到 | 用途 |
 |---|---|---|
-| `/api/*` | `http://127.0.0.1:5000/api/*` | 所有 JSON API（axios `baseURL=/api`） |
-| `/static/*` | `http://127.0.0.1:5000/static/*` | 静态资源（音频、图片、旧 CSS/JS） |
-| `/admin/*` | `http://127.0.0.1:5000/admin/*` | 秘密后台 SSR（Jinja2） |
+| `/api/*` | `http://127.0.0.1:5001/api/*` | 所有 JSON API（axios `baseURL=/api`） |
+| `/static/*` | `http://127.0.0.1:5001/static/*` | 静态资源（音频、图片、旧 CSS/JS） |
+| `/admin/*` | `http://127.0.0.1:5001/admin/*` | 秘密后台 SSR（Jinja2） |
+| `/docs` | `http://127.0.0.1:5001/docs` | FastAPI Swagger UI（开发调试用） |
+| `/openapi.json` | `http://127.0.0.1:5001/openapi.json` | FastAPI OpenAPI schema（Swagger 依赖） |
 
 > axios 实例（[frontend/src/api/index.js](../../frontend/src/api/index.js)）配置 `baseURL='/api'` + `withCredentials=true`，cookie 自动带，401 自动跳 `/login`。
 
-> **dev proxy 不要改**：4 项配置（`/api` / `/static` / `/admin` / host=127.0.0.1）是项目最稳定的部分之一。改了必然破东西。
+> **dev proxy 不要改**：5 项配置（`/api` / `/static` / `/admin` / `/docs` / `/openapi.json` + host=127.0.0.1）是项目最稳定的部分之一。改了必然破东西。
 
 ### 1.9.4 文件结构（[`frontend/src/`](../../frontend/src/)）
 
@@ -169,7 +197,8 @@ frontend/
     ├── api/
     │   └── index.js          ← axios 实例（baseURL=/api，withCredentials，401 拦截）
     ├── components/
-    │   └── AppLayout.vue     ← 桌面顶部导航 + 移动端底部 tabbar（768px 断点）
+    │   ├── AppLayout.vue     ← 桌面顶部导航 + 移动端底部 tabbar（768px 断点）
+    │   └── FlowerField.vue   ← 3D 花田场景（Three.js + InstancedMesh，v2.0.1 加）
     ├── views/                ← 【一个视图一个 .vue 文件】
     │   ├── HomeView.vue
     │   ├── NotFoundView.vue
@@ -239,14 +268,60 @@ frontend/
 
 > **后台页面**仍走 §2.1 Jinja2 模式（继承 `admin/_base.html`），不要混用。
 
+#### 1.9.5.1 异步加载重组件（defineAsyncComponent 示例，2026-07-19 v2.0.1 加）
+
+> **场景**：某个视图依赖体积大的库（如 Three.js ~600KB / pdf.js / monaco-editor），不想让它进首屏包。用 `defineAsyncComponent` 按需加载，**首屏只加载主 chunk，重组件单独成 chunk 在访问时才拉**。
+
+**真实案例**：[GardenView.vue](../../frontend/src/views/garden/GardenView.vue) 顶部嵌入了 3D 花田场景 [FlowerField.vue](../../frontend/src/components/FlowerField.vue)，后者动态 `import('three')` 加载 Three.js。通过 `defineAsyncComponent` 把 FlowerField.vue 整体异步化，访问 `/garden` 时才拉 Three.js chunk。
+
+```vue
+<!-- GardenView.vue -->
+<script setup>
+import { defineAsyncComponent } from 'vue'
+
+// 异步加载花田组件（首屏不拉 three.js，访问 /garden 时才按需加载）
+const FlowerField = defineAsyncComponent(() =>
+  import('@/components/FlowerField.vue')
+)
+</script>
+
+<template>
+  <!-- 用法和普通组件一样 -->
+  <FlowerField :flower-count="60" height="380px" />
+</template>
+```
+
+**配套：vite.config.js 的 manualChunks**（[frontend/vite.config.js](../../frontend/vite.config.js)）：
+```js
+build: {
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        'vue-vendor': ['vue', 'vue-router', 'pinia'],
+        'gsap-vendor': ['gsap'],
+        'three-vendor': ['three'],   // Three.js 单独 chunk
+      },
+    },
+  },
+}
+```
+
+**加载占位**：异步组件加载中默认啥也不显示，建议在组件内部用 `isLoading` ref + `<div v-if="isLoading">` 显示占位（FlowerField.vue 显示「🌿 花田正在生长…」）。
+
+**何时用 / 何时不用**：
+- ✅ 用：3D / 大图表 / 编辑器 / PDF 渲染等重组件，只在特定路由用
+- ❌ 不用：通用组件（按钮 / 卡片 / 表单 / Toast），这些就该进首屏包
+
 ### 1.9.6 常用 npm 脚本
 
 | 命令 | 用途 |
 |---|---|
 | `npm install` | 装依赖（首次约 7 分钟，含 three.js 大包） |
-| `npm run dev` | 启动 Vite dev server :5173（HMR + proxy） |
-| `npm run build` | 构建生产产物到 `../static/dist/` |
+| `npm run dev` | 启动 Vite dev server **:5000**（HMR + proxy → FastAPI :5001） |
+| `npm run build` | 构建生产产物到 `../static/dist/`（v2.0.1 起也可用 `python start.py build` 一键） |
 | `npm run preview` | 本地预览 build 产物（不常用，生产走 FastAPI SPA fallback） |
+
+> **start.py 子命令对照**：`python start.py`（dev/prod 自动切换）/ `python start.py build`（构建前端）/ `python start.py fg`（前台）/ `python start.py status`（查 Vite + FastAPI 双进程状态）/ `python start.py stop`（停双进程）/ `python start.py restart`。
 
 ### 1.9.7 调试技巧
 
@@ -254,7 +329,11 @@ frontend/
 - **Vite 启动慢 / HMR 不生效**：检查 [frontend/vite.config.js](../../frontend/vite.config.js) 的 `host: '127.0.0.1'`（不要写 `localhost`，IPv6 `[::1]` 会连不上，详见 [HANDOFF §6.12](../../HANDOFF.md)）
 - **API 401 不跳登录**：检查 [frontend/src/api/index.js](../../frontend/src/api/index.js) 的 axios 拦截器
 - **404 不显示**：检查 `router/index.js` 末尾的 `/:pathMatch(.*)*` catch-all 路由
-- **dist 未构建提示页**：访问 :5000 看到「dist 未构建」→ `cd frontend && npm run build`
+- **dist 未构建提示页**：访问 :5000 看到「dist 未构建」→ `python start.py build` 或 `cd frontend && npm run build`
+- **dev 模式 :5000 是 Vite，不是 FastAPI**（v2.0.1 加）：开发模式访问 :5000 是 Vite dev server（HMR + 源码），API 请求经 Vite proxy 转发到 :5001 的 FastAPI。要看 FastAPI Swagger 文档直接访问 :5001（`http://127.0.0.1:5001/docs`）。**生产模式 :5000 才是 FastAPI**。详见 [§1.9.1](#191-启动开发模式vite-dev-server-5000--fastapi-50012026-07-19-v201-改)。
+- **端口 5000 被占用**：`python start.py stop` 停掉旧进程；或检查是否同时跑了 Vite 和 FastAPI（v2.0.1 dev 模式 Vite 占 :5000，如果 FastAPI 没改成 :5001 就会撞）。Vite `strictPort: true` 会直接报错不自动跳端口。
+- **3D 花田不显示**：访问 `/garden` 看到「🌿 花田正在生长…」一直转 → 打开 DevTools Console 看是不是 `Failed to fetch dynamically imported module`（three-vendor chunk 没加载到，检查 `static/dist/assets/three-vendor-*.js` 是否存在 → 不存在重新 `npm run build`）
+- **proxy 没生效**：检查 [vite.config.js](../../frontend/vite.config.js) 的 `server.proxy` 是否包含 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json`（v2.0.1 起多了 `/docs` 和 `/openapi.json`，方便开发时直接在 :5000 访问 Swagger）
 
 ---
 

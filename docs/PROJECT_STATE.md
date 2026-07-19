@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-19（v2.0 全站 Vue 3 重构完成 — 前端从 Jinja2 SSR + 原生 JS 迁移到 Vue 3 SPA + Vite 5 + Pinia + Tailwind + GSAP，后端加 SPA fallback）
+**最后更新**：2026-07-19（v2.0.1 — 端口策略调整：开发模式 Vite 占 :5000 + FastAPI 改 :5001；新增 Three.js 3D 花田场景 `FlowerField.vue`；`start.py` 新增 `build` 子命令 + 自动检测 dist 切换端口策略）
 
 ---
 
@@ -11,7 +11,7 @@
 
 | 维度 | 状态 | 备注 |
 |---|---|---|
-| **可运行** | ✅ | 开发：`cd frontend && npm run dev` → :5173 + `python start.py` → :5000；生产：`npm run build` + `python start.py` → :5000 |
+| **可运行** | ✅ | 用户始终访问 `:5000`：开发模式 Vite :5000 + FastAPI :5001（`python start.py` 自动起两个）；生产模式 FastAPI :5000（`python start.py build` + `python start.py`） |
 | **v2.0 Vue 3 重构** | ✅ 完成 | 2026-07-19，前端独立 `frontend/`，13 个视图迁入 `frontend/src/views/`，详见 §2 |
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
 | **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 — 全部 ✅ |
@@ -27,6 +27,49 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-19（v2.0.1）— 端口策略调整 + Three.js 3D 花田场景
+
+- [x] 起因：① v2.0 Vue 3 重构初版用「FastAPI :5000 + Vite :5173 + FastAPI 反代 Vite」方案，但 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含 null 字符转义 + 冒号，httpx 转发破坏后浏览器报 `SyntaxError: Unexpected token '.'`；② 想给精神花园页加一个治愈系 3D 视觉锚点，提升沉浸感
+- [x] **改动 1：端口策略调整**
+  - **开发模式**（dist 未构建）：Vite 监听 **:5000**（用户访问入口，HMR 热更新）+ FastAPI 改听 **:5001**（API 后端，由 [start.py](../../start.py) 设置 `QI_PORT=5001`）
+  - **生产模式**（dist 已构建）：FastAPI 监听 **:5000**（默认，从 `.env` 读 `QI_PORT`），Vite 不运行
+  - Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001（[frontend/vite.config.js](../../frontend/vite.config.js)）
+  - **用户始终访问 :5000**，由 [start.py](../../start.py) 自动检测 `static/dist/index.html` 是否存在来切换端口策略
+- [x] **改动 2：start.py 增强**（[start.py](../../start.py)）
+  - `start` 子命令：自动检测 dist，未构建时设置 `QI_PORT=5001` 启动 FastAPI + 启动 Vite :5000
+  - `stop` 子命令：同时停 FastAPI 和 Vite
+  - `status` 子命令：显示两个进程状态 + 端口
+  - `build` 子命令（**新增**）：构建前端到 `static/dist/`（自动 `npm install` + `npm run build`）
+  - `fg` 子命令：前台运行 FastAPI（生产模式用，不自动起 Vite）
+- [x] **改动 3：vite.config.js**（[frontend/vite.config.js](../../frontend/vite.config.js)）
+  - dev server port: 5173 → **5000**
+  - proxy target: :5000 → **:5001**
+  - 移除 `hmr.clientPort`（Vite 直接占 :5000 后 HMR 走本地不需要）
+  - 新增 `/docs` 和 `/openapi.json` 代理
+- [x] **改动 4：main.py**（[app/main.py](../../app/main.py)）
+  - SPA fallback 移除回退代理到 Vite 的逻辑（开发态不再转发，避免内部路径含特殊字符被 httpx 破坏）
+  - 开发态（dist 未构建）返回提示页，引导用户访问 Vite :5000
+  - 生产态（dist 已构建）从 dist 读取静态资源 + 返回 index.html
+  - 新增 `EXT_TO_MIME` 映射，正确设置 `.js` / `.css` / `.woff2` 等 `Content-Type`（避免被 Starlette 默认当成 `application/octet-stream` 让浏览器拒绝执行）
+- [x] **改动 5：Three.js 3D 花田场景**
+  - 新增 [frontend/src/components/FlowerField.vue](../../frontend/src/components/FlowerField.vue)：
+    - Three.js `InstancedMesh` 渲染 **60 朵花 × 5 瓣 = 300 个实例**（性能与视觉的平衡点）
+    - **5 种治愈色**：藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`
+    - **绽放动效**：从地面错峰升起 + 缓动缩放（ease-in-out）
+    - **风摆动**：每朵花错相位摆动（sin 函数）
+    - **摄影机**：自动呼吸摆动 + 鼠标跟随
+    - **雾效 + 渐变背景**：远处花朵融入雾里（与背景同色 `#F9F6F0`）
+    - **飘浮光点**：80 个 `Points`，缓缓上升
+    - 用 `defineAsyncComponent` 异步加载（按需加载 Three.js，减小首屏包），加载时显示 "🌿 花田正在生长…" 提示
+  - 改 [frontend/src/views/garden/GardenView.vue](../../frontend/src/views/garden/GardenView.vue)：
+    - 顶部嵌入 FlowerField 组件（380px 高）
+    - 底部覆盖提示文案 "移动鼠标，看花田随风摆动"
+    - 圆角 + 阴影包裹
+- [x] **踩坑 1 条**（详见 [HANDOFF §6.16](../../HANDOFF.md)）：
+  - FastAPI 代理转发 Vite 内部路径含特殊字符失败 → Vite 直接占 :5000，FastAPI 改 :5001
+- [x] 文档同步（Iron Rule）：6 份文档同步更新 — README §1.1/§1.3/§2/§3.1/§3.5/§8、HANDOFF §1/§2/§3/§5.9/§6.16/末次更新、PROJECT_STATE §1/§2（本条）/§3.3/§4、ARCHITECTURE §1 架构图/§1.1/§1.2、DEPLOYMENT 前端构建/部署后验证、DEVELOPMENT §1.9.1/§1.9.2/§1.9.5/§1.9.7
+- [x] 验证：① `python start.py`（dist 未构建）→ 自动起 Vite :5000 + FastAPI :5001，浏览器访问 :5000 看到 Vue SPA + HMR 正常，调 API 走 proxy 到 :5001 正常；② `python start.py build` → 输出 `static/dist/`；③ `python start.py`（dist 已构建）→ FastAPI :5000 走 SPA fallback，访问 :5000 看到 Vue SPA + 静态资源 `Content-Type` 正确（`.js` → `application/javascript`）；④ `/garden` 页面顶部显示 3D 花田，鼠标移动摄影机跟随，花朵风摆动 + 飘浮光点动效正常
 
 ### 2026-07-19（v2.0）— 全站 Vue 3 重构（前端独立工程化 + 后端 SPA fallback）
 
@@ -274,6 +317,7 @@
 - `src/api/index.js` — axios 实例（baseURL=/api，withCredentials=true，401 自动跳登录）
 - `src/stores/user.js` — Pinia user store（cookie session 模式，不存 token）
 - `src/components/AppLayout.vue` — 桌面顶部导航 + 移动端底部 tabbar（768px 断点）
+- `src/components/FlowerField.vue` — **Three.js 3D 花田场景**（v2.0.1 加）：60 朵花 × 5 瓣 = 300 `InstancedMesh`；5 种治愈色（藕粉 / 淡黄 / 青绿 / 雾蓝 / 纯白）；绽放动效 + 风摆动 + 雾效 + 80 个飘浮光点；摄影机自动呼吸 + 鼠标跟随；`defineAsyncComponent` 异步加载；嵌入 `GardenView.vue` 顶部 380px 高
 - `src/views/` — **13 个视图**（HomeView / auth/LoginView+RegisterView / music/MusicListView+MusicDetailView / diary/DiaryListView+DiaryWriteView+PickBottleView / mood/MoodCalendarView / ai/AIChatView / garden/GardenView+ShopView / NotFoundView）
 - `src/assets/styles/main.css` — Tailwind 指令 + 全局 CSS 变量 + 通用组件类 + 系统字体
 
@@ -296,16 +340,20 @@
 
 ## 4. 端口与地址
 
+> 📌 **用户始终访问 :5000**，开发 / 生产模式由 [start.py](../../start.py) 自动检测 `static/dist/index.html` 是否存在来切换。
+
 | 场景 | 地址 |
 |---|---|
-| 本机开发（前端 Vite dev server） | http://127.0.0.1:5173/（v2.0 加，proxy /api、/static、/admin → :5000） |
-| 本机开发（后端 FastAPI） | http://127.0.0.1:5000 |
-| 生产（FastAPI SPA fallback） | http://127.0.0.1:5000（v2.0 后由 SPA fallback 兜底返回 `static/dist/index.html`） |
-| API 文档 | http://127.0.0.1:5000/docs |
+| **开发模式**（dist 未构建）— 用户访问入口 | http://127.0.0.1:5000/（**Vite dev server**，HMR 热更新） |
+| **开发模式** — FastAPI API 后端 | http://127.0.0.1:5001/（由 `start.py` 设置 `QI_PORT=5001`，Vite proxy 转发 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json`） |
+| **生产模式**（dist 已构建）— FastAPI | http://127.0.0.1:5000/（从 `.env` 读 `QI_PORT`，提供 SPA + API + 静态资源；Vite 不运行） |
+| API 文档 | http://127.0.0.1:5000/docs（生产）或 http://127.0.0.1:5001/docs（开发，经 Vite proxy） |
 | 健康检查 | http://127.0.0.1:5000/ |
 | **秘密后台** | **http://127.0.0.1:5000/admin**（可在 `.env` 改 `QI_ADMIN_PATH_PREFIX`） |
 | 生产服务器 | http://你的域名/（Nginx 80/443 → 5000） |
 
+> 💡 **为什么开发模式 Vite 占 :5000**：v2.0 重构初版用「FastAPI :5000 反代 Vite :5173」方案，但 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含 null 字符 + 冒号被 httpx 转发破坏，浏览器报 `SyntaxError`。改成 Vite 直接占 :5000 后所有内部路径走本地，无转发问题。详见 [HANDOFF §5.9](../../HANDOFF.md) 决策 + [§6.16](../../HANDOFF.md) 踩坑。
+>
 > 秘密后台不放任何前台链接，纯粹靠 URL 入口（书签/记忆）。首次启动会自动创建管理员，密码随机 → 写 `logs/healing.log`，看 `[ADMIN] password :` 一行。
 >
 > **当前真实首管密码**（2026-07-15 临时测试用）：`GKmZinzvoXQbaK2D`（由开发者直接改 SQLite 写回，便于人工测试）。生产部署前**必须**在 `.env` 设 `QI_ADMIN_PASSWORD=<强密码>` 并重启。

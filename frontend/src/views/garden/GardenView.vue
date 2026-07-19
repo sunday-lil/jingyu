@@ -1,9 +1,14 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import gsap from 'gsap'
 import api from '@/api'
 import { useUserStore } from '@/stores/user'
+
+// 异步加载 Three.js 花田组件（按需加载，减小首屏包）
+const FlowerField = defineAsyncComponent(() =>
+  import('@/components/FlowerField.vue')
+)
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -150,6 +155,14 @@ onBeforeUnmount(() => {
       <p class="garden-header__verse">"每一份静默的耕耘，都会在某处开花"</p>
     </header>
 
+    <!-- 3D 花田场景（异步加载 Three.js） -->
+    <section class="garden-hero">
+      <FlowerField :flower-count="60" height="380px" />
+      <div class="garden-hero__overlay">
+        <p class="garden-hero__hint">移动鼠标，看花田随风摆动</p>
+      </div>
+    </section>
+
     <!-- 能量卡 -->
     <section class="energy-card card">
       <div class="energy-card__head">
@@ -269,6 +282,35 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--color-text-muted, #8B7B5E);
   margin: 0;
+  letter-spacing: 0.05em;
+}
+
+/* 3D 花田场景 */
+.garden-hero {
+  position: relative;
+  margin-bottom: 28px;
+  border-radius: var(--radius-lg, 20px);
+  overflow: hidden;
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(74, 68, 56, 0.08));
+}
+.garden-hero__overlay {
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+  z-index: 3;
+}
+.garden-hero__hint {
+  display: inline-block;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  font-family: var(--font-serif, serif);
+  font-size: 12px;
+  color: var(--color-text-secondary, #5C4F3E);
   letter-spacing: 0.05em;
 }
 

@@ -21,7 +21,7 @@ except Exception:
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
@@ -96,44 +96,81 @@ def create_app() -> FastAPI:
 
     # ─────────────────────────────────────────────────────────────
     # Vue 3 SPA fallback
-    # 前台已由 Vue 3 SPA 接管，所有未匹配的 GET 请求（且不是 /api、/static、
-    # /admin、/docs）都返回 frontend/dist/index.html，让 Vue Router 处理。
-    # 若 dist 还未构建（开发态），返回提示页引导用户访问 Vite dev server。
+    # 前台已由 Vue 3 SPA 接管。
+    # - 生产态（dist 已构建）：返回 static/dist/index.html + 静态资源
+    # - 开发态（dist 未构建）：返回提示页（开发时用户访问 Vite :5000，
+    #   FastAPI 在开发模式监听 :5001，由 start.py 自动切换）
+    # 排除：/api/* /static/* /admin* /docs /openapi.json
     # ─────────────────────────────────────────────────────────────
     spa_index_path = settings.static_dir / "dist" / "index.html"
+    spa_dist_dir = settings.static_dir / "dist"
+
+    # 静态资源扩展名 → MIME 映射（生产态从 dist 读取时用）
+    EXT_TO_MIME = {
+        ".js": "application/javascript; charset=utf-8",
+        ".mjs": "application/javascript; charset=utf-8",
+        ".css": "text/css; charset=utf-8",
+        ".html": "text/html; charset=utf-8",
+        ".json": "application/json; charset=utf-8",
+        ".svg": "image/svg+xml",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".ico": "image/x-icon",
+        ".woff": "font/woff",
+        ".woff2": "font/woff2",
+        ".ttf": "font/ttf",
+        ".map": "application/json; charset=utf-8",
+    }
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(request: Request, full_path: str):
         # 排除 API / 静态 / 后台 / 文档
+        admin_prefix = settings.admin_path_prefix.lstrip("/")
         if (
             full_path.startswith("api/")
             or full_path.startswith("static/")
-            or full_path.startswith(settings.admin_path_prefix.lstrip("/") + "/")
-            or full_path == settings.admin_path_prefix.lstrip("/")
+            or full_path.startswith(admin_prefix + "/")
+            or full_path == admin_prefix
             or full_path.startswith("docs")
-            or full_path.startswith("openapi.json")
+            or full_path == "openapi.json"
             or full_path.startswith("redoc")
         ):
             return JSONResponse({"error": "Not Found"}, status_code=404)
-        # 只对浏览器（Accept: text/html）返回 SPA，否则 404
-        accept = request.headers.get("accept", "")
-        if "text/html" not in accept:
-            return JSONResponse({"error": "Not Found"}, status_code=404)
-        # 若 dist 已构建，返回 index.html
+
+        # ─── 生产态：dist 已构建 ───
         if spa_index_path.exists():
+            # 静态资源请求：尝试从 dist 读取对应文件
+            if full_path:
+                candidate = spa_dist_dir / full_path
+                try:
+                    if candidate.is_file() and ".." not in full_path:
+                        ext = candidate.suffix.lower()
+                        media_type = EXT_TO_MIME.get(ext, "application/octet-stream")
+                        return Response(
+                            candidate.read_bytes(),
+                            media_type=media_type,
+                        )
+                except (ValueError, OSError):
+                    pass  # 路径异常，fallback 到 index.html
+            # SPA 路由：返回 index.html
             return HTMLResponse(spa_index_path.read_text(encoding="utf-8"))
-        # 开发态：dist 未构建，引导用户访问 Vite dev server
+
+        # ─── 开发态：dist 未构建，返回提示页 ───
+        # 开发模式用户应访问 Vite dev server :5000（FastAPI 在 :5001）
         return HTMLResponse(
             "<!DOCTYPE html><html lang='zh-CN'><head><meta charset='UTF-8'>"
             "<title>静屿 · 前端未构建</title></head>"
             "<body style='font-family:PingFang SC,Microsoft YaHei,sans-serif;"
             "background:#F9F6F0;color:#4A4438;text-align:center;padding:80px 24px;'>"
             "<h1 style='font-weight:500;letter-spacing:0.1em;'>🌿 前端尚未构建</h1>"
-            "<p style='color:#8B7B5E;margin-top:12px;'>开发模式请访问 "
-            "<a href='http://127.0.0.1:5173' style='color:#A8C5A0;'>"
-            "http://127.0.0.1:5173</a>（Vite dev server）</p>"
+            "<p style='color:#8B7B5E;margin-top:12px;line-height:1.8;'>"
+            "开发模式：访问 Vite dev server（通常 <code>http://127.0.0.1:5000</code>）<br>"
+            "或一键启动：<code>python start.py</code>（自动起 Vite + FastAPI）"
+            "</p>"
             "<p style='color:#8B7B5E;margin-top:8px;font-size:13px;'>"
-            "生产模式请先在 frontend/ 目录执行 <code>npm run build</code></p>"
+            "生产模式：先 <code>cd frontend && npm run build</code> 再访问本页</p>"
             "</body></html>",
             status_code=200,
         )
