@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-20（v2.1 视觉增强 — 三层渐进增强视觉策略：CSS 永远启用 → Canvas2D 中量级 → Three.js 按需；新增 4 个视觉组件 [AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) / [HeroScene.vue](../../frontend/src/components/HeroScene.vue) / [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) + [utils/visual.js](../../frontend/src/utils/visual.js) 能力检测；HomeView 五音卡片 CSS 3D 倾斜；MusicDetailView 集成 5 色音波可视化；全部支持 SVG / CSS 静态降级 + `prefers-reduced-motion`）
+**最后更新**：2026-07-20（v2.2.1 start.py 自动构建 — `python start.py` 默认行为变更：dist 未构建时不再走开发模式，而是自动 `npm install + npm run build` 后走生产模式（:5000 永远是 FastAPI）；新增 `--dev` 参数显式走开发模式；服务器部署简化为 3 步：上传代码 + 装 Python + Node.js + `python start.py`）
 
 ---
 
@@ -15,6 +15,7 @@
 | **v2.0 Vue 3 重构** | ✅ 完成 | 2026-07-19，前端独立 `frontend/`，13 个视图迁入 `frontend/src/views/`，详见 §2 |
 | **v2.1 视觉增强** | ✅ 完成 | 2026-07-20，4 个视觉组件 + 三层渐进增强策略（CSS / Canvas2D / Three.js），全部支持降级，详见 §2 |
 | **v2.2 视觉重构** | ✅ 完成 | 2026-07-20，解决 v2.1 "红白机观感" + "交互不明确"两大问题：three-helpers.js PBR 工具集 + SceneHint/SceneControls 交互组件 + 4 个视觉组件 v2 重写（PBR + Bloom + OrbitControls + raycaster），详见 §2 |
+| **v2.2.1 start.py 自动构建** | ✅ 完成 | 2026-07-20，`python start.py` 默认 dist 未构建时自动 `npm install + build` 走生产模式（:5000 永远是 FastAPI）；新增 `--dev` 参数；服务器部署简化为 3 步，详见 §2 |
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
 | **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 / **3D + 伪 3D 视觉增强** — 全部 ✅ |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
@@ -29,6 +30,20 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-20（v2.2.1）— start.py 自动构建（服务器部署重大简化）
+
+- [x] 起因：用户服务器部署场景「端口代理已配好 :5000 不能动，服务端只跑 `python start.py`」，但 v2.2 行为是 dist 未构建 → 走开发模式（Vite 占 :5000），会破坏端口代理
+- [x] **改动 1：[start.py](../../start.py) 默认行为变更** — dist 未构建时不再走开发模式，而是：
+  - Node.js 可用 → 自动 `npm install + npm run build` 后走生产模式（:5000 永远是 FastAPI）
+  - Node.js 不可用 → 报错退出（不让 Vite 占 :5000 破坏端口代理）
+- [x] **改动 2：新增 `--dev` 参数** — `python start.py --dev` 显式走开发模式（Vite :5000 + FastAPI :5001），本地开发用
+- [x] **改动 3：新增 2 个辅助函数**：
+  - `_check_node_available()` — 检测 node + npm 版本，返回 (是否可用, 版本信息)
+  - `_ensure_dist_or_dev(force_dev)` — 决策启动模式：dist 已构建→prod / 未构建+force_dev→dev / 未构建+非 force_dev+Node 可用→自动构建后 prod / 未构建+非 force_dev+Node 不可用→sys.exit(1)
+- [x] **改动 4：`start_background()` 和 `run_foreground()` 都接受 `force_dev` 参数**
+- [x] **服务器部署简化为 3 步**：① 上传代码 ② 装 Python 依赖 + Node.js 18+ ③ `python start.py`（首次自动构建约 7 分钟，之后秒启）
+- [x] **6 份文档同步**：DEVELOPMENT §1.9.1 / §1.9.2 / §1.9.6 更新（开发模式现在需 `--dev`）；DEPLOYMENT §1.5 / §2.3 更新（前端构建可选，start.py 自动）；README / HANDOFF / PROJECT_STATE / ARCHITECTURE 顶部加 v2.2.1 提示
 
 ### 2026-07-20（v2.2）— 视觉重构：PBR 管线 + 交互指引 + raycaster 拾取
 

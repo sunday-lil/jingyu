@@ -10,6 +10,8 @@
 
 > 🔒 **2026-07-20 v2.2 3D 元素与动效全面重构**：① 4 个视觉组件全部升级到 PBR 渲染管线（ACESFilmicToneMapping + SRGBColorSpace + PCFSoftShadowMap + RoomEnvironment PMREM + UnrealBloomPass）；② 新增 [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 集中导出 9 个共享 PBR 工具函数；③ 新增 [SceneHint.vue](../../frontend/src/components/SceneHint.vue) 交互指引横幅 + [SceneControls.vue](../../frontend/src/components/SceneControls.vue) 视图控制工具栏，解决「用户不知道如何与 3D 元素交互」问题；④ HeroScene 改用 `LatheGeometry` 旋转曲面浮岛 + 递归樱花树 + 水面 `onBeforeCompile` 顶点位移 shader；FlowerField 改用自定义 `BufferGeometry` 立体花瓣 + `MeshPhysicalMaterial`；AudioVisualizer 升级 4 模式 + 节拍检测；AmbientBackground 升级 Canvas2D 柔光 sprite + 滚动视差；⑤ 所有 3D 场景统一 `OrbitControls`（拖拽旋转 + 滚轮缩放）+ `raycaster` 点击拾取。关键词 `PBR` / `three-helpers` / `SceneHint` / `SceneControls` / `OrbitControls` / `raycaster` / `UnrealBloomPass` / `RoomEnvironment` / `LatheGeometry` 在 6 份文档中都要出现。
 
+> 🔒 **2026-07-20 v2.2.1 start.py 自动构建**：`python start.py` 默认行为变更——dist 未构建时不再走开发模式（Vite 占 :5000），而是自动 `npm install + npm run build` 后走生产模式（**:5000 永远是 FastAPI**）。新增 `--dev` 参数显式走开发模式。§1.2 开发/生产模式切换的端口策略不变，但触发条件改为：dist 未构建 + 非 `--dev` → 自动构建后生产模式（而非开发模式）。关键词 `--dev` / `自动构建` / `:5000 永远是 FastAPI` 在 6 份文档中都要出现。
+
 ---
 
 ## 1. 总体架构

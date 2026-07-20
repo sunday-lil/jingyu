@@ -105,21 +105,22 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1
 
 ---
 
-## 1.9 前端开发模式（Vue 3 SPA，2026-07-19 v2.0 加，v2.0.1 端口策略调整）
+## 1.9 前端开发模式（Vue 3 SPA，2026-07-19 v2.0 加，v2.0.1 端口策略调整，v2.2.1 自动构建）
 
 > 2026-07-19 v2.0 全站 Vue 3 重构后，前台 13 个页面迁移到 Vue 3 SPA。本节讲**怎么开发前端**，不是讲铁律。架构看 [ARCHITECTURE §1.1](../ARCHITECTURE.md)，部署看 [DEPLOYMENT 前端构建](../DEPLOYMENT.md)。
 
 > 2026-07-19 v2.0.1 端口策略调整：开发模式 Vite 占 :5000（用户入口）+ FastAPI 退到 :5001（API），**用户始终访问 :5000**。理由见 [HANDOFF §6.16](../../HANDOFF.md)（FastAPI 反代 Vite 内部路径含 null 字节转义 + 冒号失败）。
 
-### 1.9.1 启动开发模式（Vite dev server :5000 + FastAPI :5001，2026-07-19 v2.0.1 改）
+> 🔒 **2026-07-20 v2.2.1 start.py 自动构建行为变更**：`python start.py`（无参数）默认行为从「dist 未构建 → 走开发模式」改为「dist 未构建 → 自动 `npm install + npm run build` 后走生产模式」。**开发模式现在必须显式 `python start.py --dev`**。理由：服务器端口代理已配好 :5000 指向 FastAPI，不能让 Vite 占 :5000。关键词 `--dev` / `自动构建` / `:5000 永远是 FastAPI` 在 6 份文档中都要出现。
+
+### 1.9.1 启动开发模式（Vite dev server :5000 + FastAPI :5001，v2.2.1 起需 --dev）
 
 #### 方式 A：一键启动（推荐 ⭐）
 
 ```bash
 cd c:\Users\Administrator\Desktop\webwrold
-python start.py                # 自动检测 dist 是否构建：
-                               #   未构建 → 起 Vite :5000 + FastAPI :5001（dev 模式）
-                               #   已构建 → 起 FastAPI :5000（prod 模式）
+python start.py --dev           # 强制开发模式（Vite :5000 + FastAPI :5001）
+                                # v2.2.1 起：不加 --dev 时，dist 未构建会自动 npm install + build 后走生产模式
 ```
 
 [start.py](../../start.py) 在 dev 模式会：
@@ -138,26 +139,28 @@ npm run dev                    # http://127.0.0.1:5000
 # 终端 2：启动 FastAPI（退到 :5001，API 后端）
 cd c:\Users\Administrator\Desktop\webwrold
 set QI_PORT=5001
-python start.py                # http://127.0.0.1:5001
+python start.py fg             # http://127.0.0.1:5001（fg 前台，关终端即停；或用 python start.py --dev 后台双进程）
 ```
 
 浏览器访问 **http://127.0.0.1:5000/**（即 Vite，不是 :5001）。
 - Vite 提供 HMR 热更新（改 `.vue` / `.js` / `.css` 浏览器自动刷新，**保留组件状态**）
 - 所有 `/api/*`、`/static/*`、`/admin/*`、`/docs`、`/openapi.json` 请求自动 proxy 到 FastAPI :5001
-- 改前端代码 → 浏览器秒级热更新；改后端代码 → 重启 `python start.py restart`（注意是 :5001 的进程）
+- 改前端代码 → 浏览器秒级热更新；改后端代码 → 重启 `python start.py restart --dev`（注意是 :5001 的进程）
 
 > ⚠️ Vite host 显式设 `127.0.0.1`（不写 `localhost`）避免 IPv6 `[::1]` 问题，详见 [HANDOFF §6.12](../../HANDOFF.md) / [§3.15](#315-vite-ipv6-localhost-连不上)。
 >
 > ⚠️ Vite `strictPort: true` 防止 :5000 被占用时自动跳到 :5001（会和 FastAPI 撞）。若启动报 `Port 5000 is in use` → 先 `python start.py stop` 关掉 FastAPI，或检查是否有别的 Vite 实例残留。
 >
 > ⚠️ **dev 模式 :5000 是 Vite，不是 FastAPI**：若用 `curl http://127.0.0.1:5000/api/...` 测试 API，会经 Vite proxy 转发到 :5001 的 FastAPI。直接打 FastAPI 用 :5001（如 `curl http://127.0.0.1:5001/docs` 看 Swagger）。
+>
+> ⚠️ **v2.2.1 行为变更**：`python start.py`（无 `--dev`）+ dist 未构建 → 自动 `npm install + npm run build` 后走生产模式（:5000 是 FastAPI）。只有 `python start.py --dev` 才走开发模式（:5000 是 Vite）。
 
 ### 1.9.2 开发模式 vs 生产模式
 
 | 维度 | 开发模式（dev，v2.0.1） | 生产模式（prod） |
 |---|---|---|
-| 启动命令 | `python start.py`（自动检测 dist） | `python start.py build` + `python start.py` |
-| 浏览器访问 | `http://127.0.0.1:5000/`（**始终**） | `http://127.0.0.1:5000/`（**始终**） |
+| 启动命令 | `python start.py --dev`（v2.2.1 起需显式 --dev） | `python start.py`（dist 未构建时自动 build 后走生产；v2.2.1 起） |
+| 浏览器访问 | `http://127.0.0.1:5000/`（Vite） | `http://127.0.0.1:5000/`（FastAPI） |
 | 谁服务 :5000 | Vite dev server（HMR + 源码） | FastAPI（服务 `static/dist/index.html` + SPA fallback） |
 | FastAPI 监听 | :5001（由 start.py 设 QI_PORT=5001） | :5000（从 .env 读 QI_PORT） |
 | Vite 是否运行 | ✅ 是 | ❌ 否（dist 已构建，不需要 Vite） |
@@ -331,7 +334,7 @@ build: {
 | `npm run build` | 构建生产产物到 `../static/dist/`（v2.0.1 起也可用 `python start.py build` 一键） |
 | `npm run preview` | 本地预览 build 产物（不常用，生产走 FastAPI SPA fallback） |
 
-> **start.py 子命令对照**：`python start.py`（dev/prod 自动切换）/ `python start.py build`（构建前端）/ `python start.py fg`（前台）/ `python start.py status`（查 Vite + FastAPI 双进程状态）/ `python start.py stop`（停双进程）/ `python start.py restart`。
+> **start.py 子命令对照**（v2.2.1 起）：`python start.py`（dist 已构建走生产；未构建自动 `npm install + build` 后走生产）/ `python start.py --dev`（强制开发模式，Vite :5000 + FastAPI :5001）/ `python start.py build`（仅构建前端，不启动服务）/ `python start.py fg`（前台运行，systemd 用）/ `python start.py status`（查 Vite + FastAPI 双进程状态）/ `python start.py stop`（停双进程）/ `python start.py restart`（重启，可加 `--dev`）。
 
 ### 1.9.7 调试技巧
 

@@ -12,6 +12,8 @@
 
 > 🔒 **2026-07-20 v2.2 3D 元素与动效全面重构**：4 个视觉组件全部升级到 PBR 渲染管线（`UnrealBloomPass` + `RoomEnvironment` PMREM + ACESFilmic 色调映射），新增 [utils/three-helpers.js](../frontend/src/utils/three-helpers.js) PBR 工具集 + [SceneHint.vue](../frontend/src/components/SceneHint.vue) 交互指引 + [SceneControls.vue](../frontend/src/components/SceneControls.vue) 视图控制。构建产物体积变化：HeroScene 7.5KB → 13.54KB、FlowerField 单独 chunk 9.94KB、SceneControls 4.5KB、three-vendor 175KB → 719.84KB（含 addons：OrbitControls / EffectComposer / UnrealBloomPass / RoomEnvironment）。**部署前必须重新 `npm run build`**，否则用户看不到 v2.2 PBR 升级 + 交互指引。关键词 `PBR` / `three-helpers` / `SceneHint` / `SceneControls` / `OrbitControls` / `raycaster` / `UnrealBloomPass` / `RoomEnvironment` / `LatheGeometry` 在 6 份文档中都要出现。
 
+> 🔒 **2026-07-20 v2.2.1 start.py 自动构建（服务器部署重大简化）**：`python start.py`（无参数）默认行为变更——dist 未构建时**不再走开发模式**，而是自动 `npm install + npm run build` 后走生产模式（:5000 永远是 FastAPI）。**服务器部署只需 3 步**：① 上传代码 ② 装 Python 依赖 + Node.js 18+ ③ `python start.py`（首次自动构建约 7 分钟，之后秒启）。不再需要手动 `python start.py build`。端口代理可放心指 :5000。**本地开发用 `python start.py --dev`**（强制开发模式，Vite :5000 + FastAPI :5001）。关键词 `--dev` / `自动构建` / `:5000 永远是 FastAPI` 在 6 份文档中都要出现。
+
 ---
 
 ## 前端构建（v2.0 Vue 3 重构后必做，所有部署方式通用）
@@ -204,15 +206,17 @@ cd /www/wwwroot/healing
 python3 -m pip install -r requirements.txt
 ```
 
-**5b. 前端构建**（2026-07-19 v2.0 Vue 3 重构后必做，详见 [前端构建](#前端构建v20-vue-3-重构后必做所有部署方式通用)）：
+**5b. 前端构建**（v2.2.1 起**可选**，start.py 会自动构建）：
 ```bash
 # 服务器需先装 Node.js 18+（宝塔软件商店 → Node.js 版本管理器）
+# v2.2.1 起：这一步可以跳过，python start.py 首次启动时会自动 npm install + npm run build
+# 想提前手动构建（避免首次启动等 7 分钟）：
 cd /www/wwwroot/healing/frontend
 npm install        # 首次约 7 分钟（含 three.js 大包）
 npm run build      # 输出到 ../static/dist/
 ```
 
-> ⚠️ **顺序**：5b 必须在 §1.6 启动前完成。否则 `python start.py` 起来后访问 :5000 只看到「dist 未构建」提示页。
+> 💡 **v2.2.1 新行为**：`python start.py` 检测到 `static/dist/` 未构建时，会**自动**执行 `npm install + npm run build`（首次约 7 分钟），构建完成后走生产模式。所以 5b 可省略，直接跳到 §1.6 启动。**端口代理 :5000 永远指向 FastAPI**（不会因 dist 未构建被 Vite 占用）。
 
 ### 1.6 启动
 
@@ -302,18 +306,20 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**3b. 前端构建**（2026-07-19 v2.0 Vue 3 重构后必做，详见 [前端构建](#前端构建v20-vue-3-重构后必做所有部署方式通用)）：
+**3b. 前端构建**（v2.2.1 起**可选**，start.py 会自动构建）：
 ```bash
 # 服务器需先装 Node.js 18+
 sudo apt install nodejs npm     # Ubuntu/Debian
 # 或: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs
 
+# v2.2.1 起：这一步可以跳过，python start.py fg 首次启动时会自动 npm install + npm run build
+# 想提前手动构建（避免 systemd 首次启动超时）：
 cd /home/healing/app/frontend
 npm install        # 首次约 7 分钟（含 three.js 大包）
 npm run build      # 输出到 ../static/dist/
 ```
 
-> ⚠️ **顺序**：3b 必须在 §2.5 systemd 启动前完成。否则 `systemctl start healing` 后访问 :5000 只看到「dist 未构建」提示页。
+> 💡 **v2.2.1 新行为**：`python start.py fg`（systemd 调用）检测到 `static/dist/` 未构建时，会**自动**执行 `npm install + npm run build`（首次约 7 分钟），构建完成后走生产模式。所以 3b 可省略。但 systemd 默认 `TimeoutStartSec=90` 秒，**建议提前手动跑 3b** 避免 systemd 因首次构建超时而判定启动失败。**端口代理 :5000 永远指向 FastAPI**。
 
 ### 2.4 配置 .env
 

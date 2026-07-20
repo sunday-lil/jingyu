@@ -11,6 +11,8 @@
 
 > 🤖 **AI 接手请先看 [HANDOFF.md](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md)**，那是元信息 + 关键决策 + 踩坑清单的汇总。
 
+> 🔒 **2026-07-20 v2.2.1 start.py 自动构建**：`python start.py` 默认行为变更——dist 未构建时不再走开发模式，而是自动 `npm install + npm run build` 后走生产模式（**:5000 永远是 FastAPI**，端口代理可放心指 :5000）。服务器部署 3 步：① 上传代码 ② 装 Python + Node.js 18+ ③ `python start.py`（首次自动构建约 7 分钟）。本地开发用 `python start.py --dev`（强制开发模式）。
+
 ---
 
 ## 0. 一句话速览
