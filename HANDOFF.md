@@ -603,6 +603,48 @@ async def spa_fallback(path: str):
 
 **铁律**：永远**不要**让后端 HTTP 框架（FastAPI / Flask / Express）反向代理 Vite dev server 的内部模块路径。要么让 Vite 直接占用户访问端口，要么用 Nginx 这种能透传任意字符的反向代理（生产环境也不需要 Vite，所以只影响开发模式）。详见 [§5.9](#59-为什么开发模式让-vite-占5000-fastapi-改50012026-07-19-加) 决策。
 
+### 6.17 `Depends(None)` 导致 `/openapi.json` 500（2026-07-20 加）
+**症状**：访问 `http://127.0.0.1:5000/openapi.json` 返回 500，`/docs` Swagger UI 页面能加载但 API 列表空白。FastAPI 日志报 `pydantic.errors.PydanticUserError: TypeAdapter[typing.Annotated[ForwardRef('Optional[_SessionBind]'), Query(None)]]` is not fully defined。
+
+**根因**：[app/routers/admin.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/admin.py) 的 `tail_logs` 路由签名写错：
+```python
+def tail_logs(
+    lines: int = Query(200, ...),
+    level: str = Query("all", ...),
+    db: Session = Depends(None),   # ← bug：Depends(None) 不是有效依赖
+    admin: User = Depends(get_current_admin),
+):
+```
+- `Depends(None)` 让 FastAPI 把 `None` 当成依赖工厂，返回 `None`，但 `db: Session` 的类型注解在 `from __future__ import annotations` 下变成 ForwardRef `"Session"`
+- FastAPI 生成 OpenAPI schema 时，把 `db` 当成有默认值 `None` 的查询参数（`Query(None)`），尝试为 `Session` 类型构建 JSON schema
+- Pydantic 解析 `Session` 时遇到 SQLAlchemy 内部泛型 `_SessionBind`（ForwardRef 未定义），抛 `PydanticUserError`
+- 函数体根本没用 `db`，这个参数是多余且错误的
+
+**修复**：直接删掉 `db: Session = Depends(None)` 参数（函数体没用 `db`）。`Depends(None)` 是错误写法，`Depends` 的参数必须是可调用对象（如 `get_db`）。
+
+**铁律**：路由签名里的每个参数要么是请求输入（`Query` / `Body` / `Path`），要么是依赖（`Depends(callable)`）。**绝不**写 `Depends(None)`、`Depends(0)`、`Depends("")` 这种空值依赖——要么用真实依赖工厂，要么删掉参数。
+
+### 6.18 `expire_on_commit=False` 导致 `new_total_energy` 返回旧值（2026-07-20 加）
+**症状**：用户听完一首歌（进度 ≥ 90%），前端调用 `POST /api/music/listen-complete`，返回 `{"granted": true, "amount": 1, "new_total_energy": 0}`——能量发放了（`granted: true`）但总能量没变（`new_total_energy: 0`，应该是 1）。写日记（`+2`）、兑换（`-cost`）也有同样问题。
+
+**根因**：[app/database.py](file:///c:/Users/Administrator/Desktop/webwrold/app/database.py) `SessionLocal` 配置了 `expire_on_commit=False`（line 32）：
+```python
+SessionLocal = sessionmaker(
+    bind=engine, autocommit=False, autoflush=False, future=True,
+    expire_on_commit=False,  # ← commit 后不 expire 内存对象
+)
+```
+- [app/services/energy_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/energy_service.py) 的 `grant_energy` 用 `db.query(User).filter(...).update({...})` 在 DB 层 UPDATE（符合 §6.7 铁律），但这个 UPDATE **不会同步到 session 里已加载的 `user` 对象的 `total_energy` 属性**（SQLAlchemy 的 `query.update()` 默认 `synchronize_session='auto'`，但在 `autoflush=False` + 对象已加载的边界 case 下同步可能失效）
+- `db.commit()` 后，因为 `expire_on_commit=False`，`user.total_energy` 仍是旧的内存值（0），不会触发重新查询
+- 路由层 `return {"new_total_energy": user.total_energy}` 返回旧值
+
+**修复**：所有"commit 后需要返回最新 total_energy"的路由，**必须用 `db.query(User.total_energy).filter(User.id == user.id).scalar()` 重新查 DB**，不能依赖 `user.total_energy` 内存值。已修复 3 处：
+- [app/routers/music.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/music.py) `listen_complete`
+- [app/routers/energy.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/energy.py) `exchange`
+- [app/routers/diary.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/diary.py) `create_diary` 路由
+
+**铁律**：`expire_on_commit=False` 下，**commit 后读 ORM 对象属性 = 读旧值**。凡是"修改了某字段 → commit → 返回该字段新值"的场景，必须用 `db.query(Model.field).filter(...).scalar()` 或 `db.refresh(obj)` 重新获取。不要相信内存对象。
+
 ---
 
 ## 7. 改动指南
@@ -700,10 +742,14 @@ r = s.post("http://127.0.0.1:5000/api/auth/register",
            json={"nickname": "test", "password": "hello123"})
 assert r.status_code == 201, r.text
 
-# 2. 听歌 + 能量
-r = s.post("http://127.0.0.1:5000/api/energy/grant",
-           json={"source": "listen_music", "amount": 1})
-assert r.json()["new_total_energy"] == 1
+# 2. 听歌 + 能量（v2.0 后改为 POST /api/music/listen-complete）
+#    注意：/api/energy/grant 端点已不存在，能量获取通过听歌完成
+musics = s.get("http://127.0.0.1:5000/api/music").json()
+music_id = musics[0]["id"] if musics else 1
+r = s.post("http://127.0.0.1:5000/api/music/listen-complete",
+           json={"music_id": music_id, "progress": 1.0})
+assert r.status_code == 200, r.text
+assert r.json()["new_total_energy"] == 1  # 见 §6.18：必须重新查 DB 才能拿到新值
 
 # 3. 写日记（密文）
 r = s.post("http://127.0.0.1:5000/api/diary",
@@ -714,6 +760,12 @@ assert r.status_code == 201
 r = s.post("http://127.0.0.1:5000/api/mood/checkin",
            json={"mood_emoji": "calm", "note": "测试"})
 assert r.status_code in (200, 201)
+
+# 5. 花园（可选）
+r = s.get("http://127.0.0.1:5000/api/garden/shop")
+assert r.status_code == 200
+r = s.get("http://127.0.0.1:5000/api/garden/mine")
+assert r.status_code == 200
 ```
 
 ---

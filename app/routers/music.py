@@ -77,8 +77,10 @@ def listen_complete(
     if record is None:
         return {"granted": False, "reason": "今日露水已达上限"}
     db.commit()
+    # expire_on_commit=False，user.total_energy 仍是旧值，必须重新查 DB
+    new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
     return {
         "granted": True,
         "amount": 1,
-        "new_total_energy": user.total_energy,
+        "new_total_energy": new_total,
     }

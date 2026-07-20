@@ -54,12 +54,14 @@ def create_my_diary(
     # 检查成就
     check_achievements(db, user)
     db.commit()
+    # expire_on_commit=False，user.total_energy 仍是旧值，必须重新查 DB
+    new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
 
     return {
         "id": diary.id,
         "created_at": diary.created_at.isoformat() if diary.created_at else None,
         "granted_energy": 2,
-        "new_total_energy": user.total_energy,
+        "new_total_energy": new_total,
     }
 
 

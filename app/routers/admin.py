@@ -549,7 +549,6 @@ def clear_pycaches(
 def tail_logs(
     lines: int = Query(200, ge=10, le=2000),
     level: str = Query("all", description="all | INFO | WARNING | ERROR | DEBUG"),
-    db: Session = Depends(None),
     admin: User = Depends(get_current_admin),
 ):
     """tail 最近 N 行日志。"""

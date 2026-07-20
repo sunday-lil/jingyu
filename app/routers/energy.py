@@ -70,8 +70,10 @@ def exchange(
     """兑换商店物品。"""
     gi = exchange_item(db, user, body.item_id)
     db.commit()
+    # expire_on_commit=False，user.total_energy 仍是旧值，必须重新查 DB
+    new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
     return ExchangeOut(
         success=True,
-        new_total_energy=user.total_energy or 0,
+        new_total_energy=new_total or 0,
         garden_item=gi.to_dict(),
     )
