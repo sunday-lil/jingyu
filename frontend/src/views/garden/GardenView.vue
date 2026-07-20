@@ -116,6 +116,9 @@ const fetchAll = async () => {
     if (typeof summary?.total_energy === 'number') {
       userStore.updateEnergy(summary.total_energy)
     }
+    // 数据加载完，等 DOM 更新后再触发入场动画
+    await nextTick()
+    playEnterAnimations()
   } catch (e) {
     showToast(e.message || '花园加载失败', 2500)
   } finally {
@@ -123,23 +126,31 @@ const fetchAll = async () => {
   }
 }
 
+// 入场动画：对每个选择器先检查存在再调 gsap，避免 GSAP "target not found" 警告
+const playEnterAnimations = () => {
+  gsap.from('.garden-header', { y: -20, opacity: 0, duration: 0.6, ease: 'power2.out' })
+  gsap.from('.energy-card', { y: 20, opacity: 0, duration: 0.6, ease: 'power3.out', delay: 0.1 })
+  if (document.querySelector('.source-bar')) {
+    gsap.from('.source-bar', {
+      scaleX: 0, transformOrigin: 'left', duration: 0.55, stagger: 0.06, ease: 'power2.out', delay: 0.3,
+    })
+  }
+  if (document.querySelector('.garden-item')) {
+    gsap.from('.garden-item', {
+      y: 16, opacity: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.4,
+    })
+  }
+  if (document.querySelector('.record-row')) {
+    gsap.from('.record-row', {
+      x: -10, opacity: 0, duration: 0.4, stagger: 0.04, ease: 'power2.out', delay: 0.6,
+    })
+  }
+}
+
 const goShop = () => router.push('/shop')
 
 onMounted(() => {
   fetchAll()
-  nextTick(() => {
-    gsap.from('.garden-header', { y: -20, opacity: 0, duration: 0.6, ease: 'power2.out' })
-    gsap.from('.energy-card', { y: 20, opacity: 0, duration: 0.6, ease: 'power3.out', delay: 0.1 })
-    gsap.from('.source-bar', {
-      scaleX: 0, transformOrigin: 'left', duration: 0.55, stagger: 0.06, ease: 'power2.out', delay: 0.3,
-    })
-    gsap.from('.garden-item', {
-      y: 16, opacity: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.4,
-    })
-    gsap.from('.record-row', {
-      x: -10, opacity: 0, duration: 0.4, stagger: 0.04, ease: 'power2.out', delay: 0.6,
-    })
-  })
 })
 
 onBeforeUnmount(() => {

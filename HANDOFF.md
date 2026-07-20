@@ -703,6 +703,88 @@ def exchange_item(db, user, item_id):
 
 **铁律**：**业务校验必须独立于价格分支**。"是否已持有"是物品层面的状态校验，跟"是否需要扣能量"是两个正交维度。**绝不能**把通用业务校验（持有/权限/存在性）埋进特定价格分支里。任何数据库 `UNIQUE` 约束都应该被业务层提前拦截，返回友好 4xx，而不是让 5xx 漏出去。
 
+### 6.21 FlowerField.vue 重新赋值 `three.value` 丢失 `_THREE`/`_dummy` 导致花田不渲染（2026-07-20 加）
+**症状**：访问 `/garden`，3D 花田区域只显示 CSS 渐变背景（`#F9F6F0 → #E4E9DC`），看不到任何花朵。Console 无报错，canvas 元素存在且尺寸正常（896×380），WebGL2 上下文可用，`isContextLost()=false`，但 readPixels 显示整个 canvas 都是背景色。
+
+**根因**：[frontend/src/components/FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue) `initScene()` 流程：
+```js
+const initScene = async () => {
+  const THREE = await import('three')
+  three.value._THREE = THREE                    // ① 在旧对象上设 _THREE
+  three.value._dummy = new THREE.Object3D()     // ② 在旧对象上设 _dummy
+  // ... 创建场景、相机、渲染器、InstancedMesh ...
+  three.value = {                               // ③ 重新赋值整个对象！
+    scene, renderer, camera, clock,
+    flowers, petalGeometry, petalMaterial,
+    flowerData, centers, dust,
+    // ❌ 没把 _THREE 和 _dummy 带过来！
+  }
+}
+
+const animate = () => {
+  const t = three.value
+  if (!t || !t.renderer || !t._THREE) return    // ← _THREE=undefined，第一帧就 return！
+  // ... 永远执行不到 ...
+}
+```
+
+`initScene` 开头给旧 `three.value` 对象设了 `_THREE` / `_dummy`，但末尾用 `three.value = {...}` 整体替换了对象，**新对象里没有这俩字段**。`animate()` 第一行 `if (!t._THREE) return` 直接退出，**渲染循环从未启动**，canvas 内部一直是透明的（`alpha: true`），用户看到的是 `.flower-field` 容器的 CSS 渐变背景。
+
+**修复**：把 `_THREE: THREE` 和 `_dummy: new THREE.Object3D()` 加到新 `three.value` 对象里；并清理 `initScene` 开头那两行误导性赋值（在即将被覆盖的旧对象上设值毫无意义）。
+
+**铁律**：用 `shallowRef` / `ref` 存复杂状态时，**整体替换 `.value` 一定要清点旧对象上的所有字段**（包括动态添加的、运行时才设的）。更安全的做法是用 `Object.assign(three.value, { ...newFields })` 增量更新而不是整体替换。另一个铁律：**渲染验证不能只看 DOM 元素存在性**（canvas 存在 ≠ 渲染了内容），必须用 `gl.readPixels()` 检查实际像素，否则像这种"canvas 在但没渲染"的 bug 会被漏掉。
+
+### 6.22 GSAP `target not found` 警告：v-for 异步数据 + `onMounted` 立即动画（2026-07-20 加）
+**症状**：访问 `/garden`，Console 报多条警告：
+```
+GSAP target .source-bar not found. https://gsap.com
+GSAP target .garden-item not found.
+GSAP target .record-row not found.
+```
+
+**根因**：[frontend/src/views/garden/GardenView.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/garden/GardenView.vue) `onMounted` 里**没 await** 异步的 `fetchAll()`，立即在 `nextTick` 里调 `gsap.from('.source-bar', ...)`：
+```js
+onMounted(() => {
+  fetchAll()                                    // ❌ 没 await，立即返回 Promise
+  nextTick(() => {
+    gsap.from('.source-bar', {...})             // ← 数据还没从 API 回来，v-for 没渲染
+    gsap.from('.garden-item', {...})            // ← 同上
+    gsap.from('.record-row', {...})             // ← 同上
+  })
+})
+```
+
+`.source-bar`、`.garden-item`、`.record-row` 都在 v-for 里，依赖 `myItems` / `energySummary.by_source` / `energyRecords` 这些 ref，初始值为空数组/空对象。`fetchAll()` 是异步的（`Promise.all([...api.get...])`），`onMounted` 同步执行完后立即 `nextTick` 调 GSAP 时，数据**还没从后端回来**，v-for 没渲染任何元素，GSAP 找不到目标就警告。
+
+**修复**：把入场动画从 `onMounted` 移到 `fetchAll` 完成后 + `await nextTick()` 后执行；每个选择器先 `document.querySelector` 检查存在再调 `gsap.from`（用户可能没有能量记录/物品/来源，对应元素不渲染，GSAP 警告也避免）：
+```js
+const fetchAll = async () => {
+  try {
+    const [mine, summary, records] = await Promise.all([...])
+    myItems.value = mine?.items || []
+    // ...
+    await nextTick()                            // 等数据驱动的 DOM 更新完
+    playEnterAnimations()                       // 再放动画
+  } catch (e) { ... }
+}
+
+const playEnterAnimations = () => {
+  gsap.from('.garden-header', {...})            // 静态元素，永远存在
+  gsap.from('.energy-card', {...})
+  if (document.querySelector('.source-bar')) {  // 动态元素，先检查存在
+    gsap.from('.source-bar', {...})
+  }
+  if (document.querySelector('.garden-item')) {
+    gsap.from('.garden-item', {...})
+  }
+  if (document.querySelector('.record-row')) {
+    gsap.from('.record-row', {...})
+  }
+}
+```
+
+**铁律**：**`onMounted` 里有 async 数据加载 + GSAP 入场动画时，动画必须在数据加载完成 + `nextTick` 之后执行**，不能依赖 `onMounted` 自己的 `nextTick`（那是 DOM 挂载完的 nextTick，不是数据加载完的 nextTick）。**v-for 渲染的元素必须先 `document.querySelector` 检查存在再调 `gsap.from`**，否则数据为空时 GSAP 必报 "target not found" 警告。其他视图（[AIChatView](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/ai/AIChatView.vue) `.msg-row`、[ShopView](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/garden/ShopView.vue) `.shop-card`、[MoodCalendarView](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/mood/MoodCalendarView.vue) `.calendar-cell`、[DiaryListView](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/diary/DiaryListView.vue) `.diary-item`）有同样的模式，目前未修，遇到警告时按本节套路修。
+
 ---
 
 ## 7. 改动指南

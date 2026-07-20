@@ -56,9 +56,6 @@ const FLOWER_COLORS = [
 const initScene = async () => {
   // 动态导入 Three.js（按需加载，减小首屏包）
   const THREE = await import('three')
-  // 保存 THREE 引用，动画循环里要用
-  three.value._THREE = THREE
-  three.value._dummy = new THREE.Object3D()
 
   const container = containerRef.value
   if (!container) return
@@ -255,6 +252,8 @@ const initScene = async () => {
     animationId: null,
     resizeObserver: null,
     mouse: { x: 0, y: 0, tx: 0, ty: 0 },
+    _THREE: THREE,          // 必须保留，animate/updatePetals 里要用
+    _dummy: new THREE.Object3D(),  // 必须保留，updatePetals 里要用
   }
 
   isLoading.value = false
