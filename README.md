@@ -186,7 +186,12 @@ webwrold/
 │       │   └── user.js           #   Pinia user store（cookie session 模式，不存 token，只缓存 user 对象到 localStorage）
 │       ├── components/
 │       │   ├── AppLayout.vue     #   桌面顶部导航 + 移动端底部 tabbar（768px 断点）
-│       │   └── FlowerField.vue   #   Three.js 3D 花田场景（60 朵花 × 5 瓣 = 300 InstancedMesh；治愈系 5 色；异步加载）
+│       │   ├── FlowerField.vue   #   Three.js 3D 花田场景（60 朵花 × 5 瓣 = 300 InstancedMesh；治愈系 5 色；异步加载）
+│       │   ├── AmbientBackground.vue  #   全局氛围背景（CSS 雾气 + Canvas2D 光点 + Three.js 粒子层三层渐进增强；挂在 AppLayout 根）
+│       │   ├── HeroScene.vue     #   首页 Hero 区 3D 浮岛雾海场景（PlaneGeometry 波动海面 + 3 个浮岛 + FogExp2 雾 + SVG 降级插画）
+│       │   └── AudioVisualizer.vue  #   5 色音波可视化（Web Audio API AnalyserNode + Canvas2D；嵌入 MusicDetailView；CSS 静态横条降级）
+│       ├── utils/
+│       │   └── visual.js         #   视觉能力检测（hasWebGL / prefersReducedMotion / isMobile / isLowPower / shouldUseThreeJS / shouldUseCanvas / smartRAF）
 │       └── views/                #   13 个视图（一个功能一个 .vue）
 │           ├── HomeView.vue              # 首页：Hero + 五音入口 + 模块卡 + GSAP 入场
 │           ├── auth/
@@ -316,6 +321,11 @@ webwrold/
 - **状态管理**：[frontend/src/stores/user.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/stores/user.js) Pinia user store；cookie session 模式，**不存 token**，只缓存 user 对象到 localStorage
 - **布局**：[frontend/src/components/AppLayout.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AppLayout.vue) 桌面顶部导航 + 移动端底部 tabbar（768px 断点）
 - **3D 花田**：[frontend/src/components/FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue) — Three.js `InstancedMesh` 渲染 60 朵花 × 5 瓣 = 300 个实例；5 种治愈色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）；绽放动效（错峰升起 + 缓动缩放）+ 风摆动（sin 错相位）+ 雾效 + 渐变背景 + 80 个飘浮光点 Points；摄影机自动呼吸摆动 + 鼠标跟随；用 `defineAsyncComponent` 异步加载（按需加载 Three.js，减小首屏包），加载时显示 "🌿 花田正在生长…" 提示；嵌入 `GardenView.vue` 顶部 380px 高 + 圆角阴影包裹
+- **全局氛围背景**：[frontend/src/components/AmbientBackground.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AmbientBackground.vue) — 三层渐进增强（CSS 雾气光斑永远启用 → Canvas2D 飘浮光点 24/60 个 → Three.js 80 个远景粒子层）；挂在 `AppLayout.vue` 根，`position: fixed; z-index: -1; pointer-events: none`；移动端粒子减半 + `smartRAF` 标签页隐藏暂停
+- **首页浮岛雾海**：[frontend/src/components/HeroScene.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/HeroScene.vue) — Hero 区 3D 场景呼应「海上有座岛」意象；128×128 PlaneGeometry 顶点位移波动海面 + 3 个浮岛（ConeGeometry 倒锥 + CylinderGeometry 顶 + 小树）+ FogExp2 雾 + 80 个远景光点 + HemisphereLight + DirectionalLight；相机自动呼吸 + 鼠标视差；用 `defineAsyncComponent` 异步加载；不支持 WebGL 或 `prefers-reduced-motion` 时降级为 SVG 静态插画（800×480 viewBox，含天空渐变 + 太阳光晕 + 3 个岛 + 3 层波浪）
+- **5 色音波可视化**：[frontend/src/components/AudioVisualizer.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AudioVisualizer.vue) — 嵌入 `MusicDetailView` 顶部；Web Audio API `createMediaElementSource` + `AnalyserNode`（fftSize=256）实时分析 `<audio>` 频谱；Canvas2D 绘制 5 条流动曲线（宫商角徵羽 5 色）；待机时显示极低振幅呼吸波纹；30fps（移动端 24fps）；`reduced-motion` 或无 Web Audio API 时降级为静态 5 色横条 CSS 动画
+- **视觉能力检测工具**：[frontend/src/utils/visual.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/visual.js) — `hasWebGL()` / `prefersReducedMotion()` / `isMobile()` / `isLowPower()` / `shouldUseThreeJS()` / `shouldUseCanvas()` / `smartRAF(callback)`；单次检测缓存结果；`smartRAF` 在 `document.hidden` 时暂停 rAF、可见时自动恢复，避免标签页隐藏时浪费 GPU
+- **HomeView 五音卡片 3D 倾斜**：[frontend/src/views/HomeView.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/HomeView.vue) — 鼠标移动驱动 `perspective(800px) rotateY/rotateX`，文字 `translateZ(20px/12px/8px)` 实现凸出层次；移动端关闭 translateZ 省 GPU；`prefers-reduced-motion` 关闭倾斜
 - **样式**：Tailwind CSS + [frontend/src/assets/styles/main.css](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/assets/styles/main.css) 全局 CSS 变量 + 通用组件类（`.btn` / `.card` / `.form-input`）+ 系统字体（`PingFang SC` / `Microsoft YaHei`，**零网络请求**，不再依赖 Google Fonts 国内镜像）
 - **治愈系配色**（[frontend/tailwind.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/tailwind.config.js)）：米白 `#F9F6F0` + 茶褐 `#8B7B5E` + 雾粉 / 雾蓝 / 青绿点缀；动画 token `breathe` / `float` / `fade-up`
 - **动效**：GSAP 入场 stagger 浮入 + 呼吸动效；`prefers-reduced-motion` 自动降级
@@ -490,6 +500,10 @@ tail -n 50 logs/healing.log        # Linux/macOS
 | **前端 Vite 配置** | [frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) |
 | **前端 Tailwind 配置** | [frontend/tailwind.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/tailwind.config.js) |
 | **前端 3D 花田组件** | [frontend/src/components/FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue) |
+| **前端全局氛围背景** | [frontend/src/components/AmbientBackground.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AmbientBackground.vue) |
+| **前端首页浮岛雾海 3D** | [frontend/src/components/HeroScene.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/HeroScene.vue) |
+| **前端 5 色音波可视化** | [frontend/src/components/AudioVisualizer.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AudioVisualizer.vue) |
+| **前端视觉能力检测工具** | [frontend/src/utils/visual.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/visual.js) |
 | API 文档（自动） | http://127.0.0.1:5000/docs |
 | **AI 交接** | [HANDOFF.md](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) |
 | 详细文档 | [docs/](file:///c:/Users/Administrator/Desktop/webwrold/docs/) |

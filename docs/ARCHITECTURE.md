@@ -6,6 +6,8 @@
 
 > 🔒 **2026-07-19 v2.0.1 端口策略 + Three.js 花田更新**：① §1 架构图改为 Vite :5000 / FastAPI :5001（开发）+ FastAPI :5000（生产）；② §1.1 前端架构加 `FlowerField.vue` 3D 花田组件说明；③ §1.2 开发/生产模式切换的端口策略更新（Vite 占 :5000，FastAPI 改 :5001）。关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` / `FlowerField` / `5001` 在 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）中都要出现。
 
+> 🔒 **2026-07-20 v2.1 视觉增强更新**：① §1.1 加 §1.1.6 视觉增强组件群（AmbientBackground / HeroScene / AudioVisualizer + utils/visual.js）；② §7.7 末尾的 Iron Rule 提醒扩展关键词，包含 `三层渐进增强` / `shallowRef` / `smartRAF` / `prefers-reduced-motion`。关键词 `三层渐进增强` / `AmbientBackground` / `HeroScene` / `AudioVisualizer` / `visual.js` / `shallowRef` / `smartRAF` 在 6 份文档中都要出现。
+
 ---
 
 ## 1. 总体架构
@@ -219,6 +221,51 @@ const FlowerField = defineAsyncComponent(() =>
 **降级**：`onMounted` 异步 `import('three')` 失败时，`isLoading=true` 占位文案一直显示，不阻塞页面其他模块（能量卡 / 物品列表 / 流水正常渲染）。
 
 **为什么 Three.js 0.168**：选择当时社区稳定版本；vite.config.js 的 `manualChunks` 把 `three` 单独打成 `three-vendor` chunk，避免和 vue/gsap 混在一起。
+
+### 1.1.6 视觉增强组件群（v2.1 加，2026-07-20）
+
+> 设计原则：**「三层渐进增强 + 能力检测 + 异步加载 + 完整降级」** —— 在 FlowerField 3D 花田基础上，为全站加入 3D / 伪 3D 背景元素和动态视觉效果，提升治愈系沉浸感；同时**不能影响首屏性能**，且**必须为 3D 渲染能力有限的浏览器实现备用机制**。决策：用「CSS 永远启用 → Canvas2D 中量级 → Three.js 按需」三层独立可降级，配套 `utils/visual.js` 能力检测。
+
+**4 个视觉文件**：
+
+| 文件 | 角色 | 嵌入位置 | 降级路径 |
+|---|---|---|---|
+| [frontend/src/utils/visual.js](../../frontend/src/utils/visual.js) | 视觉能力检测 | 被其他 3 个组件 import | 单次缓存检测结果，无降级（自身就是降级判断器） |
+| [frontend/src/components/AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) | 全局氛围背景 | [AppLayout.vue](../../frontend/src/components/AppLayout.vue) 根（所有页面可见） | CSS 永远启用 → Canvas2D（reduced-motion 关闭）→ Three.js 粒子层（WebGL + 非低性能） |
+| [frontend/src/components/HeroScene.vue](../../frontend/src/components/HeroScene.vue) | 首页 3D 浮岛雾海 | [HomeView.vue](../../frontend/src/views/HomeView.vue) 顶部 | 无 WebGL / reduced-motion / initScene 异常 → SVG 静态插画（800×480 viewBox：天空渐变 + 太阳 + 3 岛 + 3 层波浪 + 5 漂浮点） |
+| [frontend/src/components/AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) | 5 色音波可视化 | [MusicDetailView.vue](../../frontend/src/views/music/MusicDetailView.vue) 详情头之后 | 无 Web Audio / reduced-motion → CSS 5 色横条静态动画 |
+
+**核心架构决策**：
+
+| 维度 | 决策 | 理由 |
+|---|---|---|
+| 三层分级 | Layer 1 CSS（永远启用）/ Layer 2 Canvas2D（reduced-motion 关闭）/ Layer 3 Three.js（WebGL + 非低性能） | 治愈系要"柔和不刺眼"，分层降级让任何设备都有体面视觉 |
+| 能力检测 | `utils/visual.js` 单次缓存 `hasWebGL()` / `prefersReducedMotion()` / `isMobile()` / `isLowPower()` 结果 | 避免每次渲染重复检测；`shouldUseThreeJS()` = `hasWebGL && !prefersReducedMotion && !isLowPower` |
+| 异步加载 | 所有 Three.js 组件 `defineAsyncComponent(() => import(...))` | Three.js (~600KB) 不进首屏包，仅访问 `/`（HeroScene）或 `/garden`（FlowerField）时按需拉取 |
+| `manualChunks` | [vite.config.js](../../frontend/vite.config.js) 把 `three` 单独打成 `three-vendor` chunk（gzip 175KB） | 与 FlowerField 共享同一 chunk，不重复加载 |
+| Vue 响应式 | Three.js 对象用 `shallowRef` 持有 | `ref` 会深度代理 Three.js 内部 Scene/Object3D 私有字段拖累性能（详见 [HANDOFF §6.23.2](../../HANDOFF.md)） |
+| rAF 调度 | `smartRAF(callback)` 在 `document.hidden` 时 `cancelAnimationFrame`、可见时自动恢复 | 标签页隐藏时浏览器虽降为 1 fps 但仍执行渲染循环，GPU 不释放（详见 [HANDOFF §6.23.3](../../HANDOFF.md)） |
+| 资源释放 | `onBeforeUnmount` 释放 geometry / material / renderer / 事件监听 / ResizeObserver | 5 次切走后浏览器报 `Too many active WebGL contexts` 黑屏（详见 [HANDOFF §6.23.4](../../HANDOFF.md)） |
+| 移动端降级 | 粒子数减半 + `dpr` ≤ 1.5 | 移动端 GPU/CPU 弱，全量粒子会掉帧 |
+| 配色一致性 | 4 个组件全部用治愈系 5 色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）+ 米白 `#F9F6F0` 背景 | 与 [tailwind.config.js](../../frontend/tailwind.config.js) token 一致；AudioVisualizer 5 条曲线对应宫商角徵羽 5 音色 |
+| Web Audio 一次性约束 | `audioCtx.createMediaElementSource(audioEl)` 对同一 `<audio>` 元素只能调一次 | AudioVisualizer `if (!sourceNode)` 守卫 + MusicDetailView `visualizerConnected` ref 标记首次 `playIndex` 时连接（详见 [HANDOFF §6.23.1](../../HANDOFF.md)） |
+
+**为什么不用全屏 shader / 后处理**：
+- 治愈系调性要"柔和不刺眼"，shader bloom / DOF 过度装饰反而破坏氛围
+- 后处理增加 GPU 开销，移动端掉帧
+- 现有 Fog + InstancedMesh + Canvas2D 已足够，性能与视觉平衡
+
+**降级验证矩阵**：
+
+| 环境 | AmbientBackground | HeroScene | AudioVisualizer |
+|---|---|---|---|
+| 桌面 Chrome（WebGL + 默认 motion） | CSS + Canvas2D + Three.js 粒子层 | 3D 浮岛雾海 | Web Audio + Canvas2D 5 色波 |
+| 桌面 Chrome + `prefers-reduced-motion` | 仅 CSS 雾气光斑 | SVG 静态插画 | CSS 5 色横条静态 |
+| 移动端 Safari（WebGL + 默认 motion） | CSS + Canvas2D（粒子数减半）+ Three.js 粒子层（dpr≤1.5） | 3D 浮岛雾海（粒子数减半 + dpr≤1.5） | Web Audio + Canvas2D 5 色波 |
+| 旧浏览器（无 WebGL） | CSS + Canvas2D 光点 | SVG 静态插画 | CSS 5 色横条 |
+| `import('three')` 失败 | CSS + Canvas2D 光点 | SVG 静态插画 | 不受影响（不用 Three.js） |
+
+详见 [frontend/src/components/AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) + [HeroScene.vue](../../frontend/src/components/HeroScene.vue) + [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) + [utils/visual.js](../../frontend/src/utils/visual.js)，决策理由详见 [HANDOFF §5.10](../../HANDOFF.md)，4 大坑详见 [HANDOFF §6.23](../../HANDOFF.md)。
 
 ---
 
@@ -771,6 +818,10 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 > 完整规则见 [HANDOFF §12](../../HANDOFF.md)；本文件相关引用点 — 顶部提醒 + 本节 + [§1.1 前端架构](#11-前端架构vue-3-spa2026-07-19-v20-加) + [§1.2 开发/生产模式切换](#12-开发生产模式切换2026-07-19-v20-加) + [§5 旧 SSR 模式](#5-前端架构旧-jinja2-ssr-模式2026-07-19-v20-起仅-admin后台保留)。
 > **改 Vue 3 前端代码（[`frontend/src/`](../../frontend/src/)）+ 后端 SPA fallback（[app/main.py](../../app/main.py)）= 同一 commit 同步更新 6 份文档**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档中都要出现。**改代码不改文档 = 改了一半。**
 > 同步点速查：[README §9](../../README.md) / [HANDOFF §12](../../HANDOFF.md) / [PROJECT_STATE §8](../PROJECT_STATE.md) / 本节 / [DEPLOYMENT 顶部](../DEPLOYMENT.md) / [DEVELOPMENT §1.8](DEVELOPMENT.md)。
+
+> 🔒 **2026-07-20 v2.1 视觉增强 Iron Rule 扩展**：
+> 改 4 个视觉组件（[AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) / [HeroScene.vue](../../frontend/src/components/HeroScene.vue) / [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) / [utils/visual.js](../../frontend/src/utils/visual.js)）或 [vite.config.js](../../frontend/vite.config.js) `manualChunks` 配置 = **同一 commit 同步更新 6 份文档**，关键词 `三层渐进增强` / `AmbientBackground` / `HeroScene` / `AudioVisualizer` / `visual.js` / `shallowRef` / `smartRAF` / `prefers-reduced-motion` 在 6 份文档中都要出现。
+> 4 大集成铁律（缺任何一个都会在长时间使用或多视图切换后出问题）：① `createMediaElementSource` 一次性 — AudioVisualizer `if (!sourceNode)` 守卫；② Three.js 对象用 `shallowRef` 而非 `ref`；③ rAF 必须走 `smartRAF` 而非 `requestAnimationFrame`；④ `onBeforeUnmount` 必须完整释放 geometry / material / renderer / 监听 / ResizeObserver。详见 [HANDOFF §6.23](../../HANDOFF.md)。
 
 ### 7.8 AI 隐私边界（2026-07-17 加）
 > AI 接入必须**不破坏**日记端到端加密的隐私承诺。

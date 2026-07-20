@@ -4,6 +4,8 @@
 
 > 🔒 **2026-07-19 v2.0.1 端口策略调整 + Three.js 花田**：开发模式从 Vite :5173 + FastAPI :5000 改为 **Vite :5000 + FastAPI :5001**（用户始终访问 :5000）；新增 [FlowerField.vue](../../frontend/src/components/FlowerField.vue) 3D 花田组件作为 `defineAsyncComponent` 异步加载示例。关键词 `5001` / `FlowerField` / `Vite :5000` 在 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）中都要出现。详见 [§1.9.1 启动开发模式](#191-启动开发模式vite-dev-server-5000--fastapi-50012026-07-19-v201-改) / [§1.9.5 加新视图](#195-加新视图vue-3-spa-模式替代旧-21-jinja2-模式) / [§1.9.7 调试技巧](#197-调试技巧)。
 
+> 🔒 **2026-07-20 v2.1 视觉增强**：新增 4 个视觉组件（[AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) / [HeroScene.vue](../../frontend/src/components/HeroScene.vue) / [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) + [utils/visual.js](../../frontend/src/utils/visual.js)），三层渐进增强策略（CSS 永远启用 → Canvas2D 中量级 → Three.js 按需）。**新建视觉组件必须遵守 4 大铁律**（详见 [§1.9.8 视觉组件开发指南](#198-视觉组件开发指南v21-加2026-07-20)）：① `createMediaElementSource` 一次性守卫；② Three.js 对象用 `shallowRef` 而非 `ref`；③ rAF 必须走 `smartRAF` 而非 `requestAnimationFrame`；④ `onBeforeUnmount` 必须完整释放。关键词 `三层渐进增强` / `AmbientBackground` / `HeroScene` / `AudioVisualizer` / `visual.js` / `shallowRef` / `smartRAF` 在 6 份文档中都要出现。
+
 ---
 
 ## 1. 开发铁律
@@ -334,6 +336,144 @@ build: {
 - **端口 5000 被占用**：`python start.py stop` 停掉旧进程；或检查是否同时跑了 Vite 和 FastAPI（v2.0.1 dev 模式 Vite 占 :5000，如果 FastAPI 没改成 :5001 就会撞）。Vite `strictPort: true` 会直接报错不自动跳端口。
 - **3D 花田不显示**：访问 `/garden` 看到「🌿 花田正在生长…」一直转 → 打开 DevTools Console 看是不是 `Failed to fetch dynamically imported module`（three-vendor chunk 没加载到，检查 `static/dist/assets/three-vendor-*.js` 是否存在 → 不存在重新 `npm run build`）
 - **proxy 没生效**：检查 [vite.config.js](../../frontend/vite.config.js) 的 `server.proxy` 是否包含 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json`（v2.0.1 起多了 `/docs` 和 `/openapi.json`，方便开发时直接在 :5000 访问 Swagger）
+
+### 1.9.8 视觉组件开发指南（v2.1 加，2026-07-20）
+
+> 适用范围：所有用 Three.js / Canvas2D / Web Audio API 的视觉组件。当前已有 4 个：[FlowerField.vue](../../frontend/src/components/FlowerField.vue) / [AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) / [HeroScene.vue](../../frontend/src/components/HeroScene.vue) / [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue)。
+
+#### 4 大铁律（缺任何一个都会在长时间使用或多视图切换后出问题）
+
+**① `createMediaElementSource` 一次性守卫**（仅 AudioVisualizer 类组件）
+```js
+// AudioVisualizer.vue
+let sourceNode = null
+const connect = (audioEl) => {
+  if (sourceNode) return                    // ← 已连接则直接返回
+  sourceNode = audioCtx.createMediaElementSource(audioEl)
+  sourceNode.connect(analyser)
+  analyser.connect(audioCtx.destination)
+}
+defineExpose({ connect })
+```
+父组件用 ref 标记是否已连接，首次播放时调 `connect(audioEl)`，后续切歌不重连：
+```js
+// MusicDetailView.vue
+const visualizerConnected = ref(false)
+const playIndex = (idx) => {
+  // ...
+  if (!visualizerConnected.value && visualizerRef.value) {
+    visualizerRef.value.connect(audioEl)
+    visualizerConnected.value = true
+  }
+  audioEl.load(); audioEl.play()
+}
+```
+
+**② Three.js 对象用 `shallowRef` 而非 `ref`**
+```js
+import { shallowRef } from 'vue'
+const three = shallowRef(null)              // ← 而不是 ref(null)
+three.value = { scene, camera, renderer, clock, rafId }
+// 访问字段用 three.value?.scene，不要解构
+```
+理由：`ref` 对 object 会递归代理每一层属性，Three.js 的 Scene/Object3D 内部有大量私有字段 + 数组 + Map，递归代理既慢又可能干扰 Three.js 自己的内部逻辑。
+
+**③ rAF 必须走 `smartRAF` 而非 `requestAnimationFrame`**
+```js
+import { smartRAF } from '@/utils/visual'
+const loop = () => {
+  three.value?.renderer.render(three.value.scene, three.value.camera)
+  three.value.rafId = smartRAF(loop)        // ← 而不是 requestAnimationFrame(loop)
+}
+```
+理由：`requestAnimationFrame` 在标签页隐藏时浏览器虽降为 1 fps 但仍执行渲染循环，GPU 不释放；`smartRAF` 在 `document.hidden` 时主动 `cancelAnimationFrame`，可见时自动恢复。
+
+**④ `onBeforeUnmount` 必须完整释放**
+```js
+import { onBeforeUnmount } from 'vue'
+onBeforeUnmount(() => {
+  if (three.value?.rafId) cancelAnimationFrame(three.value.rafId)
+  three.value?.geometry?.dispose()
+  three.value?.material?.dispose()
+  three.value?.renderer?.dispose()
+  window.removeEventListener('resize', three.value.onResize)
+  three.value?.resizeObserver?.disconnect()
+  three.value = null                        // 释放引用，让 GC 回收
+})
+```
+理由：Vue 卸载组件时 Three.js 的 renderer / geometry / material / event listener / ResizeObserver 不会被 GC 自动回收，5 次切走后浏览器报 `Too many active WebGL contexts` 黑屏。
+
+#### 三层渐进增强实现模板
+
+```vue
+<script setup>
+import { ref, shallowRef, onMounted, onBeforeUnmount } from 'vue'
+import { hasWebGL, prefersReducedMotion, isMobile, isLowPower, shouldUseThreeJS, shouldUseCanvas, smartRAF } from '@/utils/visual'
+
+const canvas2d = ref(null)                  // Layer 2: Canvas2D
+const three = shallowRef(null)              // Layer 3: Three.js
+
+onMounted(async () => {
+  // Layer 2: Canvas2D（reduced-motion 关闭）
+  if (shouldUseCanvas()) initCanvas2D()
+  // Layer 3: Three.js（WebGL + 非 reduced-motion + 非低性能）
+  if (shouldUseThreeJS()) {
+    try {
+      const THREE = await import('three')   // 异步加载，不进首屏包
+      initThree(THREE)
+    } catch (e) {
+      console.warn('[Visual] Three.js init failed, falling back to Canvas2D/CSS', e)
+    }
+  }
+})
+
+onBeforeUnmount(() => { /* 见铁律 ④ */ })
+</script>
+
+<template>
+  <div class="visual-root">
+    <!-- Layer 1: CSS 永远启用 -->
+    <div class="css-layer" />
+    <!-- Layer 2: Canvas2D -->
+    <canvas v-if="shouldUseCanvas()" ref="canvas2d" />
+    <!-- Layer 3: Three.js -->
+    <div v-if="shouldUseThreeJS()" ref="threeMount" />
+    <!-- 降级静态层（无 WebGL / reduced-motion） -->
+    <svg v-if="!shouldUseThreeJS()" class="fallback-svg" viewBox="0 0 800 480">
+      <!-- 静态插画 -->
+    </svg>
+  </div>
+</template>
+```
+
+#### 视觉组件开发流程
+
+1. **判断需要哪层**：纯装饰背景 → CSS + Canvas2D 即可；要景深 / 光影 / 实例化 → Three.js；要音频可视化 → Web Audio API + Canvas2D
+2. **复制模板**：从 [AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue)（三层全有）或 [HeroScene.vue](../../frontend/src/components/HeroScene.vue)（Three.js + SVG 降级）开始改
+3. **配色一致性**：用治愈系 5 色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）+ 米白 `#F9F6F0` 背景，与 [tailwind.config.js](../../frontend/tailwind.config.js) token 一致
+4. **性能保护**：移动端粒子数减半 + `dpr` ≤ 1.5；`defineAsyncComponent` 异步加载 Three.js
+5. **降级路径**：每个 Three.js 组件必须有 CSS / SVG 静态降级；reduced-motion 用户不能看到闪烁 / 摇晃内容
+6. **验证清单**：
+   - 桌面 Chrome 默认 motion：3D / Canvas2D 正常渲染
+   - DevTools → Rendering → `prefers-reduced-motion: reduce`：降级为静态
+   - 移动端 Safari：粒子数减半、dpr ≤ 1.5
+   - 切走标签页 30s 后回切：GPU 占用应归零（smartRAF 生效）
+   - 在该组件所在视图和其他 Three.js 视图间来回切 5 次：无 `Too many active WebGL contexts` 警告
+7. **文档同步**：新增视觉组件 = **同一 commit 同步更新 6 份文档**（详见 [HANDOFF §12](../../HANDOFF.md)）
+
+#### 视觉能力检测 API（[utils/visual.js](../../frontend/src/utils/visual.js)）
+
+| 函数 | 返回 | 说明 |
+|---|---|---|
+| `hasWebGL()` | boolean | 当前浏览器是否支持 WebGL（含 2 / 1 fallback 测试） |
+| `prefersReducedMotion()` | boolean | 用户是否设置 `prefers-reduced-motion: reduce` |
+| `isMobile()` | boolean | 视口宽度 < 768px 或 UA 含 Mobile |
+| `isLowPower()` | boolean | `navigator.hardwareConcurrency` ≤ 4 或 `deviceMemory` ≤ 4 |
+| `shouldUseThreeJS()` | boolean | `hasWebGL && !prefersReducedMotion && !isLowPower` |
+| `shouldUseCanvas()` | boolean | `!prefersReducedMotion` |
+| `smartRAF(callback)` | number | `requestAnimationFrame` 包装，`document.hidden` 时 `cancelAnimationFrame`，可见时自动恢复 |
+
+所有函数**单次缓存**结果（同一会话内重复调用直接返回缓存值），不会重复检测拖累性能。
 
 ---
 

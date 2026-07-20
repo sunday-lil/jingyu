@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-19（v2.0.1 — 端口策略调整：开发模式 Vite 占 :5000 + FastAPI 改 :5001；新增 Three.js 3D 花田场景 `FlowerField.vue`；`start.py` 新增 `build` 子命令 + 自动检测 dist 切换端口策略）
+**最后更新**：2026-07-20（v2.1 视觉增强 — 三层渐进增强视觉策略：CSS 永远启用 → Canvas2D 中量级 → Three.js 按需；新增 4 个视觉组件 [AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) / [HeroScene.vue](../../frontend/src/components/HeroScene.vue) / [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) + [utils/visual.js](../../frontend/src/utils/visual.js) 能力检测；HomeView 五音卡片 CSS 3D 倾斜；MusicDetailView 集成 5 色音波可视化；全部支持 SVG / CSS 静态降级 + `prefers-reduced-motion`）
 
 ---
 
@@ -13,8 +13,9 @@
 |---|---|---|
 | **可运行** | ✅ | 用户始终访问 `:5000`：开发模式 Vite :5000 + FastAPI :5001（`python start.py` 自动起两个）；生产模式 FastAPI :5000（`python start.py build` + `python start.py`） |
 | **v2.0 Vue 3 重构** | ✅ 完成 | 2026-07-19，前端独立 `frontend/`，13 个视图迁入 `frontend/src/views/`，详见 §2 |
+| **v2.1 视觉增强** | ✅ 完成 | 2026-07-20，4 个视觉组件 + 三层渐进增强策略（CSS / Canvas2D / Three.js），全部支持降级，详见 §2 |
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
-| **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 — 全部 ✅ |
+| **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 / **3D + 伪 3D 视觉增强** — 全部 ✅ |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
 | **秘密后台** | ✅ | `/admin` 入口，6 个页面 + `/api/admin/*`（保留 Jinja2 SSR，与 Vue SPA 隔离） |
 | **AI 全面接入** | ✅ 可选 | NVIDIA NIM API（`meta/llama-3.1-8b-instruct`），4 个场景；未配 `QI_NVIDIA_API_KEY` 时优雅降级，业务不中断 |
@@ -27,6 +28,33 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-20（v2.1）— 视觉增强：三层渐进增强 + 4 个视觉组件
+
+- [x] 起因：用户要求在 v2.0.1 FlowerField 基础上进一步提升整体视觉美感，加入 3D / 伪 3D 背景元素和动态视觉效果，**但不能影响页面加载性能或用户体验，且必须为 3D 渲染能力有限的浏览器实现备用机制**
+- [x] **改动 1：三层渐进增强视觉策略** — 「CSS 永远启用 → Canvas2D 中量级 → Three.js 按需」三层独立可降级，配套 [utils/visual.js](../../frontend/src/utils/visual.js) 能力检测（`hasWebGL` / `prefersReducedMotion` / `isMobile` / `isLowPower` / `shouldUseThreeJS` / `shouldUseCanvas` / `smartRAF`）
+- [x] **改动 2：新增 4 个视觉文件**
+  - [frontend/src/utils/visual.js](../../frontend/src/utils/visual.js)：视觉能力检测工具（hasWebGL / prefersReducedMotion / isMobile / isLowPower / shouldUseThreeJS / shouldUseCanvas / smartRAF）
+  - [frontend/src/components/AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue)：全局氛围背景（CSS 雾气光斑 24s `mistDrift` 动画 + Canvas2D 飘浮光点（移动端 24 / 桌面 60）+ Three.js 远景粒子层 80 个 sprite），三层渐进增强，挂在 [AppLayout.vue](../../frontend/src/components/AppLayout.vue) 根；无 WebGL / 低性能 → 仅 CSS + Canvas2D；reduced-motion → 仅 CSS
+  - [frontend/src/components/HeroScene.vue](../../frontend/src/components/HeroScene.vue)：首页 Hero 区 3D 浮岛雾海（PlaneGeometry 128×128 波动海面 + 3 浮岛 + FogExp2 雾 + 80 飘浮光点 + 鼠标视差），SVG 静态插画降级（800×480 viewBox：天空渐变 + 太阳 + 3 岛 + 3 层波浪 + 5 漂浮点）；嵌入 [HomeView.vue](../../frontend/src/views/HomeView.vue) 顶部
+  - [frontend/src/components/AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue)：5 色音波可视化（Web Audio API `AnalyserNode` + Canvas2D 5 条流动曲线，对应宫商角徵羽 5 音色 + 治愈系 5 色），CSS 5 色横条降级（reduced-motion / 无 Web Audio 时）；挂在 [MusicDetailView.vue](../../frontend/src/views/music/MusicDetailView.vue) 详情头之后
+- [x] **改动 3：HomeView 重写** — 集成 HeroScene 3D 背景 + 五音卡片 CSS 3D 倾斜（`perspective: 1000px` + `rotateX/Y` + `translateZ`，鼠标跟随 + `prefers-reduced-motion` 自动降级为静态卡片）
+- [x] **改动 4：MusicDetailView 集成 AudioVisualizer** — `<AudioVisualizer ref="visualizerRef" :yin-key :is-playing :progress />`，首次 `playIndex` 时调 `visualizerRef.value.connect(audioEl)`，用 `visualizerConnected` ref 守卫 `createMediaElementSource` 一次性约束
+- [x] **性能保护**：
+  - 所有 Three.js 组件用 `defineAsyncComponent(() => import(...))` 异步加载，**不进首屏包**
+  - [vite.config.js](../../frontend/vite.config.js) `manualChunks` 把 `three` 单独打成 `three-vendor` chunk（gzip 175KB），仅访问 `/`（HeroScene）或 `/garden`（FlowerField）时按需拉取
+  - Three.js 对象用 `shallowRef` 持有（避免 Vue 深度代理拖累性能）
+  - `smartRAF(callback)` 在 `document.hidden` 时暂停 rAF、可见时自动恢复
+  - 移动端降级：粒子数减半 + `dpr` ≤ 1.5
+  - 所有 Three.js 组件 `onBeforeUnmount` 释放 geometry / material / renderer / 事件监听 / ResizeObserver
+- [x] **配色一致性**：4 个视觉组件全部用治愈系 5 色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）+ 米白 `#F9F6F0` 背景，与 [tailwind.config.js](../../frontend/tailwind.config.js) token 一致；AudioVisualizer 5 条曲线对应宫商角徵羽 5 音色
+- [x] **踩坑 4 条**（详见 [HANDOFF §6.23](../../HANDOFF.md)）：
+  1. `createMediaElementSource` 一次性约束 → AudioVisualizer `if (!sourceNode)` 守卫 + MusicDetailView `visualizerConnected` ref 标记
+  2. Three.js 对象用 `ref` 会深度代理拖累性能 → 改用 `shallowRef`
+  3. `requestAnimationFrame` 在标签页隐藏时仍执行 → 改用 `smartRAF`
+  4. `onBeforeUnmount` 不释放 WebGL context → 5 次切走后浏览器报 `Too many active WebGL contexts` → 必须完整释放
+- [x] 文档同步（Iron Rule）：6 份文档同步更新 — README §2/§3.5/§8、HANDOFF §2/§3/§5.10/§6.23/末次更新、PROJECT_STATE §1/§2（本条）/§3.3、ARCHITECTURE §1.1.6/§7.7、DEPLOYMENT 前端构建/顶部 Iron Rule、DEVELOPMENT §1.9.8/顶部 Iron Rule
+- [x] 验证：① `npm run build` 通过，183 模块编译无错，`three-vendor` 175KB gzip 独立 chunk，HeroScene 7.56KB，MusicDetailView 8.64KB；② 浏览器访问 `/` 看到 3D 浮岛雾海 + 五音卡片 3D 倾斜；③ 访问 `/garden` 看到 3D 花田（已有）；④ 访问 `/music/gong` 听歌时看到 5 色音波可视化随音量起伏；⑤ 全局氛围背景在所有页面可见（雾气光斑 + 飘浮光点）；⑥ DevTools 切到 reduced-motion 模拟 → 3D 场景降级为 SVG / CSS 静态；⑦ 切走标签页 → GPU 占用归零（smartRAF 生效）
 
 ### 2026-07-19（v2.0.1）— 端口策略调整 + Three.js 3D 花田场景
 
@@ -318,6 +346,10 @@
 - `src/stores/user.js` — Pinia user store（cookie session 模式，不存 token）
 - `src/components/AppLayout.vue` — 桌面顶部导航 + 移动端底部 tabbar（768px 断点）
 - `src/components/FlowerField.vue` — **Three.js 3D 花田场景**（v2.0.1 加）：60 朵花 × 5 瓣 = 300 `InstancedMesh`；5 种治愈色（藕粉 / 淡黄 / 青绿 / 雾蓝 / 纯白）；绽放动效 + 风摆动 + 雾效 + 80 个飘浮光点；摄影机自动呼吸 + 鼠标跟随；`defineAsyncComponent` 异步加载；嵌入 `GardenView.vue` 顶部 380px 高
+- `src/components/AmbientBackground.vue` — **全局氛围背景**（v2.1 加）：三层渐进增强 — CSS 雾气光斑（3 个 radial-gradient + 24s `mistDrift` 动画，永远启用）+ Canvas2D 飘浮光点（移动端 24 / 桌面 60，reduced-motion 关闭）+ Three.js 远景粒子层（80 个 sprite，WebGL + 非低性能时启用）；挂在 `AppLayout.vue` 根；`shallowRef` + `smartRAF` + `onBeforeUnmount` 完整释放
+- `src/components/HeroScene.vue` — **首页 Hero 区 3D 浮岛雾海**（v2.1 加）：PlaneGeometry 128×128 波动海面 + 3 浮岛 + FogExp2 雾 + 80 飘浮光点 + 鼠标视差；SVG 静态插画降级（800×480 viewBox：天空渐变 + 太阳光晕 + 3 岛 + 3 层波浪 + 5 漂浮点）；嵌入 `HomeView.vue` 顶部；`defineAsyncComponent` 异步加载
+- `src/components/AudioVisualizer.vue` — **5 色音波可视化**（v2.1 加）：Web Audio API `AnalyserNode` + Canvas2D 5 条流动曲线（对应宫商角徵羽 5 音色 + 治愈系 5 色）；CSS 5 色横条降级（reduced-motion / 无 Web Audio 时）；`defineExpose({ connect })` 暴露给父组件连接 `<audio>` 元素；挂在 `MusicDetailView.vue` 详情头之后
+- `src/utils/visual.js` — **视觉能力检测**（v2.1 加）：`hasWebGL()` / `prefersReducedMotion()` / `isMobile()` / `isLowPower()` / `shouldUseThreeJS()` / `shouldUseCanvas()` / `smartRAF(callback)`（标签页隐藏自动暂停 rAF，可见时自动恢复）；单次缓存检测结果
 - `src/views/` — **13 个视图**（HomeView / auth/LoginView+RegisterView / music/MusicListView+MusicDetailView / diary/DiaryListView+DiaryWriteView+PickBottleView / mood/MoodCalendarView / ai/AIChatView / garden/GardenView+ShopView / NotFoundView）
 - `src/assets/styles/main.css` — Tailwind 指令 + 全局 CSS 变量 + 通用组件类 + 系统字体
 

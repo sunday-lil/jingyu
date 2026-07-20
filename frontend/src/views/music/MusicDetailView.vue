@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/api'
+import AudioVisualizer from '@/components/AudioVisualizer.vue'
 
 // 路由通过 props: true 注入 yin 参数
 const props = defineProps({
@@ -30,6 +31,8 @@ const errorMsg = ref('')
 
 // 播放器状态
 const audioEl = ref(null)
+const visualizerRef = ref(null)
+const visualizerConnected = ref(false) // 标记 audio 元素是否已连接到 AnalyserNode
 const currentIndex = ref(-1)
 const currentMusic = computed(() =>
   currentIndex.value >= 0 ? musics.value[currentIndex.value] : null
@@ -84,6 +87,11 @@ const playIndex = (idx) => {
   listenReported.value = false
   const audio = audioEl.value
   if (!audio) return
+  // 首次播放时连接 AnalyserNode（createMediaElementSource 只能调用一次）
+  if (!visualizerConnected.value && visualizerRef.value) {
+    visualizerRef.value.connect(audio)
+    visualizerConnected.value = true
+  }
   audio.load()
   audio.volume = volume.value
   audio
@@ -228,6 +236,17 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </header>
+
+    <!-- 5 色音波可视化（Web Audio API + Canvas2D，reduced-motion / 无 Web Audio 自动降级为静态横条） -->
+    <section class="visualizer-wrap">
+      <AudioVisualizer
+        ref="visualizerRef"
+        :yin-key="yinKey"
+        :is-playing="isPlaying"
+        :progress="progress"
+        height="120px"
+      />
+    </section>
 
     <!-- 曲目列表 -->
     <section class="track-list">
@@ -380,6 +399,22 @@ onBeforeUnmount(() => {
   max-width: 1000px;
   margin: 32px auto 0;
   padding: 0 24px;
+}
+
+/* 5 色音波可视化容器 */
+.visualizer-wrap {
+  max-width: 1000px;
+  margin: 24px auto 0;
+  padding: 0 24px;
+}
+.visualizer-wrap > .audio-visualizer {
+  box-shadow: 0 6px 20px rgba(150, 130, 110, 0.08);
+}
+@media (max-width: 768px) {
+  .visualizer-wrap {
+    padding: 0 16px;
+    margin-top: 18px;
+  }
 }
 .track-list__empty {
   text-align: center;

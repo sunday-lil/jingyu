@@ -8,6 +8,8 @@
 
 > 🔒 **2026-07-19 v2.0.1 端口策略调整**：生产模式 FastAPI 监听 :5000（默认，从 `.env` 读 `QI_PORT`），Vite 不运行——**用户始终访问 :5000**；开发模式（不部署时）Vite 占 :5000，FastAPI 退到 :5001。**部署到服务器永远是生产模式**，无需关心 :5001，只需确保 `static/dist/` 已构建。关键词 `5001` / `FlowerField` / `Vite :5000` 在 6 份文档中都要出现。
 
+> 🔒 **2026-07-20 v2.1 视觉增强**：4 个视觉组件（[AmbientBackground.vue](../frontend/src/components/AmbientBackground.vue) / [HeroScene.vue](../frontend/src/components/HeroScene.vue) / [AudioVisualizer.vue](../frontend/src/components/AudioVisualizer.vue) + [utils/visual.js](../frontend/src/utils/visual.js)）加入构建后，`three-vendor` chunk 因 HeroScene 共享而**仍只输出一个文件**（gzip 175KB），首屏不加载，仅访问 `/`（HeroScene）或 `/garden`（FlowerField）时按需拉取。**部署前必须重新 `npm run build`**，否则用户看不到 v2.1 视觉增强。关键词 `三层渐进增强` / `AmbientBackground` / `HeroScene` / `AudioVisualizer` / `visual.js` / `shallowRef` / `smartRAF` 在 6 份文档中都要出现。
+
 ---
 
 ## 前端构建（v2.0 Vue 3 重构后必做，所有部署方式通用）
@@ -52,13 +54,16 @@ vite v5.x.x building for production...
 ✓ N modules transformed.
 dist/index.html                  ← ../static/dist/index.html
 dist/assets/index-xxxxxx.js      ← Vue 3 + 依赖 chunk
-dist/assets/three-vendor-*.js    ← Three.js 单独 chunk（仅花园页按需加载）
+dist/assets/three-vendor-*.js    ← Three.js 单独 chunk（v2.1 起 /garden FlowerField + / HeroScene 共享，gzip 175KB，首屏不加载）
 dist/assets/gsap-vendor-*.js     ← GSAP 单独 chunk
+dist/assets/vue-vendor-*.js      ← Vue 3 + Vue Router + Pinia 单独 chunk（v2.0.1 加 manualChunks 分包）
+dist/assets/HeroScene-*.js       ← 首页 Hero 区 3D 浮岛雾海组件（v2.1 加，7.5KB，仅 / 按需加载）
+dist/assets/AudioVisualizer-*.js ← 5 色音波可视化组件（v2.1 加，仅 /music/:yin 按需加载）
 dist/assets/index-xxxxxx.css     ← Tailwind CSS
 ✓ built in Xs
 ```
 
-> 💡 **Three.js chunk**：[FlowerField.vue](../../frontend/src/components/FlowerField.vue) 用 `defineAsyncComponent` 异步导入 `three`，所以 Three.js (~600KB) 被打成单独的 `three-vendor-*.js` chunk，**首屏不加载**，只在用户访问 `/garden` 精神花园页时按需拉取。
+> 💡 **Three.js chunk（v2.1 更新）**：[FlowerField.vue](../../frontend/src/components/FlowerField.vue)（`/garden` 精神花园页）和 [HeroScene.vue](../../frontend/src/components/HeroScene.vue)（`/` 首页，v2.1 加）都用 `defineAsyncComponent` 异步导入 `three`，所以 Three.js (~600KB) 被打成单独的 `three-vendor-*.js` chunk，**首屏不加载**，仅在用户访问 `/` 或 `/garden` 时按需拉取。两页共享同一 chunk，不重复下载。[AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue)（全局氛围背景，挂在 AppLayout）也异步加载 Three.js 远景粒子层，但首屏 DOM 由 CSS 雾气光斑 + Canvas2D 光点兜底，Three.js 加载完前页面已有完整视觉效果（三层渐进增强）。
 
 ### 构建产物去向
 

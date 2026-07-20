@@ -1,8 +1,14 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { gsap } from 'gsap'
+import { prefersReducedMotion } from '@/utils/visual'
+
+// 异步加载 Three.js 浮岛雾海场景（按需加载，减小首屏包）
+const HeroScene = defineAsyncComponent(() =>
+  import('@/components/HeroScene.vue')
+)
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -23,6 +29,22 @@ const modules = [
   { label: 'AI 树洞', desc: '一个会倾听你的小岛', icon: '💭', to: '/ai-chat', color: 'linear-gradient(135deg, #B8C5E8 0%, #A8D5BA 100%)' },
   { label: '精神花园', desc: '用露水浇灌你的秘密花园', icon: '🌸', to: '/garden', color: 'linear-gradient(135deg, #E8B8C5 0%, #F5D5C5 100%)' },
 ]
+
+// ─── 五音卡片 3D 鼠标倾斜 ───
+const TILT_MAX = 8  // 最大倾斜角度
+const onYinCardMove = (e) => {
+  if (prefersReducedMotion()) return
+  const card = e.currentTarget
+  const rect = card.getBoundingClientRect()
+  const x = (e.clientX - rect.left) / rect.width - 0.5
+  const y = (e.clientY - rect.top) / rect.height - 0.5
+  // 反向：鼠标在右上，卡片向左下倾斜（透视感）
+  card.style.transform = `perspective(800px) rotateY(${x * TILT_MAX}deg) rotateX(${-y * TILT_MAX}deg) translateY(-6px)`
+}
+const onYinCardLeave = (e) => {
+  const card = e.currentTarget
+  card.style.transform = ''
+}
 
 onMounted(() => {
   // Hero 入场动效
@@ -50,15 +72,22 @@ function goToMusic(yinKey) {
 
 <template>
   <div class="home">
-    <!-- Hero 区 -->
+    <!-- Hero 区：3D 浮岛雾海 + 文字叠加 -->
     <section class="hero">
-      <div class="hero-icon">🌿</div>
-      <p class="hero-verse">"海上有座岛，岛上有人听。"</p>
-      <h1 class="hero-title">静屿</h1>
-      <p class="hero-subtitle">
-        古琴五音 · 漂流瓶日记 · 情绪手帐 · AI 树洞<br>
-        一个属于你的治愈系身心疗愈空间
-      </p>
+      <HeroScene class="hero__scene" height="520px" />
+      <div class="hero__content">
+        <div class="hero-icon">🌿</div>
+        <p class="hero-verse">"海上有座岛，岛上有人听。"</p>
+        <h1 class="hero-title">静屿</h1>
+        <p class="hero-subtitle">
+          古琴五音 · 漂流瓶日记 · 情绪手帐 · AI 树洞<br>
+          一个属于你的治愈系身心疗愈空间
+        </p>
+      </div>
+      <div class="hero__scroll-hint">
+        <span>向下沉入海面</span>
+        <span class="hero__scroll-arrow">↓</span>
+      </div>
     </section>
 
     <!-- 五音入口 -->
@@ -72,6 +101,8 @@ function goToMusic(yinKey) {
           class="yin-card"
           :style="{ '--card-color': yin.color }"
           @click="goToMusic(yin.key)"
+          @mousemove="onYinCardMove"
+          @mouseleave="onYinCardLeave"
         >
           <div class="yin-card__char">{{ yin.name }}</div>
           <div class="yin-card__info">
@@ -127,10 +158,32 @@ function goToMusic(yinKey) {
   margin: 0 auto;
 }
 
-/* Hero */
+/* Hero：3D 场景 + 文字叠加 */
 .hero {
+  position: relative;
+  min-height: 520px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px 0 0;
+  border-radius: var(--radius-xl, 32px);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(139, 123, 94, 0.15));
+}
+.hero__scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.hero__content {
+  position: relative;
+  z-index: 2;
   text-align: center;
-  padding: 60px 0 48px;
+  padding: 60px 24px;
+  text-shadow: 0 2px 12px rgba(249, 246, 240, 0.6),
+               0 0 32px rgba(249, 246, 240, 0.4);
 }
 .hero-icon {
   font-size: 56px;
@@ -141,7 +194,7 @@ function goToMusic(yinKey) {
 .hero-verse {
   font-family: var(--font-serif);
   font-size: 15px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-style: italic;
   margin-bottom: 16px;
   letter-spacing: 0.1em;
@@ -158,6 +211,32 @@ function goToMusic(yinKey) {
   font-size: 15px;
   color: var(--color-text-secondary);
   line-height: 2;
+}
+
+/* 向下滚动提示 */
+.hero__scroll-hint {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-serif);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.15em;
+  pointer-events: none;
+  animation: scrollHint 2.4s ease-in-out infinite;
+}
+.hero__scroll-arrow {
+  font-size: 14px;
+}
+@keyframes scrollHint {
+  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.55; }
+  50% { transform: translateX(-50%) translateY(4px); opacity: 0.85; }
 }
 
 /* Section 通用 */
@@ -197,7 +276,10 @@ function goToMusic(yinKey) {
   justify-content: space-between;
   cursor: pointer;
   overflow: hidden;
-  transition: all 0.4s var(--ease-apple);
+  /* 3D 倾斜过渡：transform 由 JS 实时控制，transition 用 slower 避免抖动 */
+  transition: transform 0.4s var(--ease-apple), box-shadow 0.4s var(--ease-apple);
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 .yin-card::before {
   content: '';
@@ -217,7 +299,6 @@ function goToMusic(yinKey) {
   pointer-events: none;
 }
 .yin-card:hover {
-  transform: translateY(-6px);
   box-shadow: var(--shadow-lg);
 }
 .yin-card:hover::before {
@@ -233,16 +314,19 @@ function goToMusic(yinKey) {
   line-height: 1;
   color: var(--color-text-primary);
   text-shadow: 0 2px 8px rgba(255, 255, 255, 0.5);
+  transform: translateZ(20px);  /* 3D 凸出 */
 }
 .yin-card__name {
   font-size: 15px;
   font-weight: 500;
   color: var(--color-text-primary);
   margin-bottom: 4px;
+  transform: translateZ(12px);
 }
 .yin-card__desc {
   font-size: 12px;
   color: var(--color-text-secondary);
+  transform: translateZ(8px);
 }
 
 /* 今日心情条 */
@@ -339,20 +423,63 @@ function goToMusic(yinKey) {
 
 /* 响应式 */
 @media (max-width: 768px) {
-  .hero { padding: 32px 0 24px; }
+  .hero {
+    min-height: 400px;
+    border-radius: var(--radius-lg, 20px);
+  }
+  .hero__content {
+    padding: 40px 16px;
+  }
+  .hero-icon {
+    font-size: 44px;
+  }
+  .hero-title {
+    font-size: clamp(40px, 12vw, 60px);
+  }
   .yin-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
-  .yin-card { aspect-ratio: 1; padding: 14px; }
-  .yin-card__char { font-size: 40px; }
+  .yin-card {
+    aspect-ratio: 1;
+    padding: 14px;
+  }
+  .yin-card__char {
+    font-size: 40px;
+    transform: translateZ(0);  /* 移动端关闭 3D 凸出，省 GPU */
+  }
+  .yin-card__name,
+  .yin-card__desc {
+    transform: translateZ(0);
+  }
   .module-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-  .module-card { padding: 20px 14px; }
-  .module-card__icon { width: 52px; height: 52px; font-size: 26px; }
-  .module-card__title { font-size: 15px; }
-  .module-card__desc { font-size: 12px; }
+  .module-card {
+    padding: 20px 14px;
+  }
+  .module-card__icon {
+    width: 52px;
+    height: 52px;
+    font-size: 26px;
+  }
+  .module-card__title {
+    font-size: 15px;
+  }
+  .module-card__desc {
+    font-size: 12px;
+  }
+}
+
+/* reduced-motion：关 3D 倾斜 + 关滚动提示动画 */
+@media (prefers-reduced-motion: reduce) {
+  .yin-card {
+    transition: box-shadow 0.4s;
+  }
+  .hero__scroll-hint {
+    animation: none;
+    opacity: 0.5;
+  }
 }
 </style>

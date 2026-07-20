@@ -87,7 +87,7 @@ npm run dev         # Vite dev server :5000
 | 前端状态 | **Pinia** | user store（cookie session 模式，不存 token） |
 | 前端样式 | **Tailwind CSS 3.4** | 治愈系色彩 token + 动画（breathe/float/fade-up） |
 | 前端动效 | **GSAP 3.12 + @vueuse/motion 2.2** | 入场 stagger + 呼吸动效，`prefers-reduced-motion` 降级 |
-| 前端 3D | **Three.js 0.168** | 3D 花田场景（[FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue)，60 朵花 × 5 瓣 = 300 `InstancedMesh`；治愈系 5 色；异步加载按需引入减小首屏包） |
+| 前端 3D | **Three.js 0.168** | 4 个治愈系 3D / Canvas 组件群：① [FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue) 3D 花田（60 朵花 × 5 瓣 = 300 `InstancedMesh`）；② [AmbientBackground.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AmbientBackground.vue) 全局氛围背景（CSS 雾气 + Canvas2D 光点 + Three.js 粒子层三层渐进增强）；③ [HeroScene.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/HeroScene.vue) 首页浮岛雾海（PlaneGeometry 波动海面 + 3 浮岛 + FogExp2 雾）；④ [AudioVisualizer.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AudioVisualizer.vue) 5 色音波可视化（Web Audio API AnalyserNode + Canvas2D）。配套 [utils/visual.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/visual.js) 能力检测（hasWebGL / prefersReducedMotion / isMobile / isLowPower / smartRAF）。全部支持 SVG / CSS 静态降级 + `prefers-reduced-motion` |
 | 前端 HTTP | **axios 1.7** | `baseURL=/api`，`withCredentials=true`，401 自动跳登录 |
 | 密码哈希 | **bcrypt 4.x**（直接用，不用 passlib） | passlib 与 4.x 不兼容 |
 | 日记加密 | **Fernet (AES-128-CBC + HMAC)** | 客户端 Web Crypto PBKDF2 派生密钥 |
@@ -196,6 +196,27 @@ webwrold/
 │   │       ├── admin_logs.js / admin_system.js
 │   ├── audio/                ← 5 个占位 mp3（每音一个）
 │   └── images/               ← 占位封面（按需添加）
+│
+├── frontend/                 ← Vue 3 SPA 源码（2026-07-19 v2.0 重构加，详见 §5.8）
+│   ├── package.json          ← 依赖：vue/vue-router/pinia/axios/gsap/@vueuse/motion/three；devDeps：vite/@vitejs/plugin-vue/tailwindcss
+│   ├── vite.config.js        ← dev :5000 + proxy /api /static /admin /docs /openapi.json → :5001；build outDir ../static/dist；manualChunks（three-vendor / gsap-vendor / vue-vendor 三 chunk）
+│   ├── tailwind.config.js    ← 治愈系色彩 token（mist/ink/五音色/accent）+ 动画（breathe/float/fade-up）
+│   ├── index.html
+│   └── src/
+│       ├── main.js / App.vue
+│       ├── router/index.js   ← 13 条路由 + requiresAuth 守卫
+│       ├── stores/user.js    ← Pinia user store（cookie session 模式，不存 token）
+│       ├── api/index.js      ← axios 实例（baseURL=/api，withCredentials=true，401 自动跳登录）
+│       ├── assets/styles/main.css
+│       ├── components/
+│       │   ├── AppLayout.vue        ← 桌面顶部导航 + 移动端底部 tabbar（768px 断点）+ 挂载 AmbientBackground
+│       │   ├── FlowerField.vue      ← Three.js 3D 花田（60 朵花 × 5 瓣 = 300 InstancedMesh；治愈系 5 色；异步加载；2026-07-19 加）
+│       │   ├── AmbientBackground.vue ← 全局氛围背景（CSS 雾气 + Canvas2D 光点 + Three.js 粒子层三层渐进增强；挂在 AppLayout 根；2026-07-20 加）
+│       │   ├── HeroScene.vue        ← 首页 Hero 区 3D 浮岛雾海（PlaneGeometry 波动海面 + 3 浮岛 + FogExp2 + SVG 降级；2026-07-20 加）
+│       │   └── AudioVisualizer.vue  ← 5 色音波可视化（Web Audio API AnalyserNode + Canvas2D；挂在 MusicDetailView；2026-07-20 加）
+│       ├── utils/
+│       │   └── visual.js      ← 视觉能力检测（hasWebGL / prefersReducedMotion / isMobile / isLowPower / shouldUseThreeJS / shouldUseCanvas / smartRAF；2026-07-20 加）
+│       └── views/             ← 13 个视图（HomeView / auth / music / diary / mood / ai / garden / NotFoundView）
 │
 ├── data/healing.db           ← SQLite（git 忽略）
 ├── run/healing.pid           ← 后台进程 PID
@@ -371,6 +392,30 @@ webwrold/
 - **main.py 改动**：① SPA fallback 移除回退代理到 Vite 的逻辑（开发态不再转发，返回提示页引导用户访问 Vite :5000）；② 新增 `EXT_TO_MIME` 映射（`.js` / `.css` / `.woff2` 等正确设置 `Content-Type`），生产态从 dist 读取静态资源时不再被 Starlette 默认当成 `application/octet-stream` 让浏览器拒绝执行
 
 详见 [start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) + [frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) + [app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py)。
+
+### 5.10 为什么视觉增强走「三层渐进增强 + 能力检测 + 异步加载」策略（2026-07-20 加）
+- **背景**：v2.0.1 完成 FlowerField.vue 3D 花田后，用户要求进一步提升整体视觉美感，加入 3D / 伪 3D 背景元素和动态视觉效果，但**不能**影响页面加载性能或用户体验，且**必须**为 3D 渲染能力有限的浏览器实现备用机制
+- **决策**：用「CSS 永远启用 → Canvas2D 中量级 → Three.js 按需」三层渐进增强策略，每层独立可降级，配合 [utils/visual.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/visual.js) 能力检测
+- **三层分级**：
+  - **Layer 1 — CSS（永远启用）**：AmbientBackground 的 3 个 radial-gradient 雾气光斑 + 24s `mistDrift` 动画；AudioVisualizer 降级时的 5 色横条 CSS 动画；HomeView 五音卡片的 `perspective + rotateX/Y + translateZ` 3D 倾斜。零 JS 开销
+  - **Layer 2 — Canvas2D（reduced-motion 关闭）**：AmbientBackground 飘浮光点（移动端 24 / 桌面 60）；AudioVisualizer 5 条流动曲线。轻量 CPU 渲染
+  - **Layer 3 — Three.js（WebGL + 非 reduced-motion + 非低性能）**：FlowerField 花田（已有）；AmbientBackground 远景粒子层（80 个 sprite）；HeroScene 浮岛雾海（128×128 海面 + 3 浮岛 + 雾 + 80 光点）。GPU 渲染
+- **能力检测**：[utils/visual.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/visual.js) 单次缓存 `hasWebGL()` / `prefersReducedMotion()` / `isMobile()` / `isLowPower()` 结果；`shouldUseThreeJS()` = `hasWebGL && !prefersReducedMotion && !isLowPower`；`shouldUseCanvas()` = `!prefersReducedMotion`
+- **降级路径**：
+  - HeroScene 不支持 WebGL / reduced-motion / initScene 异常 → 渲染 SVG 静态插画（800×480 viewBox，天空渐变 + 太阳光晕 + 3 个岛 + 3 层波浪 + 5 漂浮点）
+  - AudioVisualizer 无 Web Audio API / reduced-motion → 5 色静态横条 CSS 动画（`barBreath` 3.6s）
+  - AmbientBackground 无 WebGL / 低性能 → 只显示 CSS 雾气光斑 + Canvas2D 光点（无 Three.js 粒子层）
+- **性能保护**：
+  - 所有 Three.js 组件用 `defineAsyncComponent(() => import(...))` 异步加载，**不进首屏包**（vite.config.js `manualChunks` 把 `three` 单独打成 `three-vendor` chunk，gzip 后 175KB，仅访问 `/`（HeroScene）或 `/garden`（FlowerField）时按需拉取）
+  - Three.js 对象用 `shallowRef` 持有，避免 Vue 深度代理拖累性能
+  - `smartRAF(callback)` 在 `document.hidden` 时暂停 rAF、可见时自动恢复，避免标签页隐藏时浪费 GPU
+  - 移动端降粒子数（Three.js 80→40，Canvas2D 60→24）、降分辨率（HeroScene 海面 128×128 → 64×64）、降帧率（AudioVisualizer 30fps → 24fps）
+  - 所有 Three.js 组件 `onBeforeUnmount` 释放 geometry / material / renderer / 事件监听 / ResizeObserver，避免切走后 WebGL 上下文泄漏
+- **Web Audio API 一次性约束**：`createMediaElementSource(audioEl)` 对同一 `<audio>` 元素**只能调用一次**，AudioVisualizer 用 `if (!sourceNode)` 守卫；MusicDetailView 用 `visualizerConnected` ref 标记是否已连接，首次 `playIndex` 时调 `visualizerRef.value.connect(audioEl)`，后续切歌不重连
+- **配色一致性**：4 个视觉组件全部用治愈系 5 色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）+ 米白 `#F9F6F0` 背景，与 [tailwind.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/tailwind.config.js) token 一致；AudioVisualizer 5 条曲线对应宫商角徵羽 5 音色
+- **为什么不用全屏 shader / 后处理**：① 治愈系调性要「柔和不刺眼」，shader bloom / DOF 过度装饰反而破坏氛围；② 后处理增加 GPU 开销，移动端掉帧；③ 现有 Fog + InstancedMesh + Canvas2D 已足够，性能与视觉平衡
+
+详见 [frontend/src/components/AmbientBackground.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AmbientBackground.vue) + [HeroScene.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/HeroScene.vue) + [AudioVisualizer.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AudioVisualizer.vue) + [utils/visual.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/visual.js)。
 
 ---
 
@@ -785,6 +830,78 @@ const playEnterAnimations = () => {
 
 **铁律**：**`onMounted` 里有 async 数据加载 + GSAP 入场动画时，动画必须在数据加载完成 + `nextTick` 之后执行**，不能依赖 `onMounted` 自己的 `nextTick`（那是 DOM 挂载完的 nextTick，不是数据加载完的 nextTick）。**v-for 渲染的元素必须先 `document.querySelector` 检查存在再调 `gsap.from`**，否则数据为空时 GSAP 必报 "target not found" 警告。其他视图（[AIChatView](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/ai/AIChatView.vue) `.msg-row`、[ShopView](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/garden/ShopView.vue) `.shop-card`、[MoodCalendarView](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/mood/MoodCalendarView.vue) `.calendar-cell`、[DiaryListView](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/diary/DiaryListView.vue) `.diary-item`）有同样的模式，目前未修，遇到警告时按本节套路修。
 
+### 6.23 视觉组件集成 4 大坑（2026-07-20 加）
+
+#### 6.23.1 `createMediaElementSource` 一次性约束（AudioVisualizer）
+
+**症状**：[MusicDetailView](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/music/MusicDetailView.vue) 切到第二首歌时，Console 报 `InvalidStateError: HTMLMediaElement already connected previously to a different MediaElementSourceNode`，音波可视化卡住不更新。
+
+**根因**：Web Audio API 规范规定 `audioCtx.createMediaElementSource(audioEl)` 对同一 `<audio>` 元素**只能调用一次**。但 [AudioVisualizer.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AudioVisualizer.vue) 的 `connect(audioEl)` 在每次切歌时被调用 → 第二次抛 InvalidStateError。
+
+**修复**：① AudioVisualizer 内部 `connect()` 用 `if (!sourceNode)` 守卫，已连接则直接返回；② MusicDetailView 用 `visualizerConnected` ref 标记，**首次 `playIndex` 时调 `visualizerRef.value.connect(audioEl)`，后续切歌不重连**：
+```js
+const playIndex = (idx) => {
+  // ...
+  if (!visualizerConnected.value && visualizerRef.value) {
+    visualizerRef.value.connect(audio)              // 只在首次播放时连接
+    visualizerConnected.value = true
+  }
+  audio.load()
+  audio.play().then(...)
+}
+```
+
+#### 6.23.2 `shallowRef` 持有 Three.js 对象，别用 `ref`
+
+**症状**：[AmbientBackground](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AmbientBackground.vue) / [HeroScene](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/HeroScene.vue) 用 `ref({ scene, camera, renderer, ... })` 时，初次渲染卡顿 200ms+，Console 有大量 Vue 警告 `Avoid adding reactive properties to a Vue instance`。
+
+**根因**：Vue 3 `ref` 对 object 会递归代理每一层属性（深度响应式）。Three.js 的 `Scene` / `Object3D` / `Geometry` / `Material` 内部有大量私有字段 + 数组 + Map，递归代理既慢又可能干扰 Three.js 自己的内部逻辑。
+
+**修复**：所有 Three.js 对象**必须**用 `shallowRef`（只代理 `.value`，不递归内部）：
+```js
+import { shallowRef } from 'vue'
+const three = shallowRef(null)              // ← 而不是 ref(null)
+three.value = { scene, camera, renderer, clock, rafId }
+```
+所有访问 Three.js 字段的地方用 `three.value?.scene` / `three.value?.renderer.dispose()`，**不要**解构。
+
+#### 6.23.3 `smartRAF` 必须用，否则标签页隐藏时浪费 GPU
+
+**症状**：开 `/`（HeroScene）+ `/garden`（FlowerField）切换后切走标签页，笔记本风扇狂转，任务管理器看 GPU 占用 30%。
+
+**根因**：Three.js 的 `requestAnimationFrame` 在标签页隐藏时浏览器虽然会降到 1 fps，但**仍在执行**渲染循环（GPU 资源不释放）。
+
+**修复**：所有视觉组件的 rAF 必须走 [utils/visual.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/visual.js) 的 `smartRAF(callback)`，它在 `document.hidden` 时主动 `cancelAnimationFrame`，可见时自动恢复：
+```js
+import { smartRAF } from '@/utils/visual'
+const loop = () => {
+  three.value?.renderer.render(three.value.scene, three.value.camera)
+  three.value.rafId = smartRAF(loop)        // ← 用 smartRAF 而不是 requestAnimationFrame
+}
+```
+
+#### 6.23.4 `onBeforeUnmount` 必须释放 geometry / material / renderer / 监听 / ResizeObserver
+
+**症状**：在 `/`（HeroScene）和 `/garden`（FlowerField）之间来回切 5 次，浏览器 Console 报 `WARNING: Too many active WebGL contexts. Oldest context will be lost.`，3D 场景黑屏。
+
+**根因**：每次切走视图时 Vue 卸载组件，但 Three.js 的 `renderer` / `geometry` / `material` / `event listener` / `ResizeObserver` 不会被 GC 自动回收。5 次切走 = 5 个 WebGL context 累积，浏览器强制丢弃最老的 → 黑屏。
+
+**修复**：所有 Three.js 组件**必须**在 `onBeforeUnmount` 释放：
+```js
+import { onBeforeUnmount } from 'vue'
+onBeforeUnmount(() => {
+  if (three.value?.rafId) cancelAnimationFrame(three.value.rafId)
+  three.value?.geometry?.dispose()
+  three.value?.material?.dispose()
+  three.value?.renderer?.dispose()
+  window.removeEventListener('resize', three.value.onResize)
+  three.value?.resizeObserver?.disconnect()
+  three.value = null                        // 释放引用，让 GC 回收
+})
+```
+
+**铁律**：视觉组件的 4 大坑（`createMediaElementSource` 一次性 / `shallowRef` 而非 `ref` / `smartRAF` 替代 `requestAnimationFrame` / `onBeforeUnmount` 完整释放）**必须同时满足**，缺任何一个都会在长时间使用或多视图切换后出问题。新建视觉组件时直接复制 [AmbientBackground.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AmbientBackground.vue) 的结构作为模板。
+
 ---
 
 ## 7. 改动指南
@@ -1159,3 +1276,5 @@ Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yello
 > 末次更新 2026-07-19（v2.0 全站 Vue 3 重构）：前端从「Jinja2 SSR + 原生 HTML/CSS/JS」迁移到「Vue 3 SPA + Vite 5 工程化」。新增 [`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/) 目录（Vue 3 `<script setup>` + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios），13 个视图迁入 `frontend/src/views/`。后端 [app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py) 加 SPA fallback（排除 /api//static//admin/ 路径），[app/routers/pages.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/pages.py) 简化为 4 个 302 重定向，[app/config.py](file:///c:/Users/Administrator/Desktop/webwrold/app/config.py) 修复 env_prefix bug（加 `env_prefix="qi_"`），[app/services/ai_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/ai_service.py) 超时 30s→60s，AI 模型链 `nvidia/llama-3.1-nemotron-70b-instruct` → `meta/llama-3.3-70b-instruct` → `meta/llama-3.1-8b-instruct`。删除 showcase 动效页。§2 技术栈表大改、§5.8 加前端选型决策、§6.12-6.15 加 4 条 Vue/Vite 踩坑（IPv6 [::1] / base dev 模式 / npm install 大包耗时 / SPA fallback 排除路径）、§12.2 同步表加 Vue 相关行。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），Iron Rule §12 仍然适用（地位高于任何具体技术决策）。
 >
 > 末次更新 2026-07-19（v2.0.1 端口策略 + Three.js 花田）：① **端口策略调整** — 开发模式让 Vite 占 :5000（用户入口），FastAPI 改听 :5001（API，由 [start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 设置 `QI_PORT=5001`），Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001；生产模式不变（FastAPI :5000 + SPA fallback）。原因：FastAPI :5000 反代 Vite :5173 时，Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含 null 字符 + 冒号被 httpx 转发破坏，浏览器报 `SyntaxError`。② **start.py 增强** — `start` 自动检测 dist 切换端口策略、`stop` 同时停 FastAPI + Vite、`status` 显示两进程状态、新增 `build` 子命令一键构建前端、`fg` 只起 FastAPI 不起 Vite。③ **vite.config.js** — dev server port 5173 → 5000，proxy target :5000 → :5001，移除 `hmr.clientPort`，新增 `/docs` 和 `/openapi.json` 代理。④ **app/main.py** — SPA fallback 移除回退代理到 Vite 逻辑，开发态返回提示页引导访问 Vite :5000；新增 `EXT_TO_MIME` 映射（`.js` / `.css` / `.woff2` 等正确设置 `Content-Type`）。⑤ **Three.js 3D 花田场景** — 新增 [frontend/src/components/FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue)：60 朵花 × 5 瓣 = 300 `InstancedMesh`，5 种治愈色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`），绽放动效 + 风摆动 + 雾效 + 飘浮光点，摄影机自动呼吸 + 鼠标跟随，用 `defineAsyncComponent` 异步加载减小首屏包；[GardenView.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/garden/GardenView.vue) 顶部嵌入 380px 高 + 圆角阴影包裹 + 底部提示文案。§5.9 加端口策略决策、§6.16 加 FastAPI 反代 Vite 踩坑。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
+>
+> 末次更新 2026-07-20（视觉增强 v2.1）：① **三层渐进增强视觉策略** — 用户要求在 v2.0.1 FlowerField 基础上进一步提升整体视觉美感，加入 3D / 伪 3D 背景元素和动态视觉效果，**但不能影响页面加载性能或用户体验，且必须为 3D 渲染能力有限的浏览器实现备用机制**。决策：用「CSS 永远启用 → Canvas2D 中量级 → Three.js 按需」三层渐进增强，每层独立可降级，配套 [utils/visual.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/visual.js) 能力检测（`hasWebGL` / `prefersReducedMotion` / `isMobile` / `isLowPower` / `shouldUseThreeJS` / `shouldUseCanvas` / `smartRAF`）。② **新增 4 个视觉文件** — [frontend/src/utils/visual.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/visual.js) 视觉能力检测；[frontend/src/components/AmbientBackground.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AmbientBackground.vue) 全局氛围背景（CSS 雾气光斑 + Canvas2D 飘浮光点 + Three.js 远景粒子层，三层渐进增强，挂在 [AppLayout.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AppLayout.vue) 根）；[frontend/src/components/HeroScene.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/HeroScene.vue) 首页 Hero 区 3D 浮岛雾海（PlaneGeometry 128×128 波动海面 + 3 浮岛 + FogExp2 雾 + 80 飘浮光点，SVG 静态插画降级）；[frontend/src/components/AudioVisualizer.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AudioVisualizer.vue) 5 色音波可视化（Web Audio API AnalyserNode + Canvas2D，CSS 5 色横条降级，挂在 [MusicDetailView.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/music/MusicDetailView.vue)）。③ **HomeView 重写** — 集成 HeroScene 3D 背景 + 五音卡片 CSS 3D 倾斜（`perspective + rotateX/Y + translateZ`，鼠标跟随 + reduced-motion 自动降级为静态）。④ **性能保护** — 所有 Three.js 组件 `defineAsyncComponent` 异步加载 + `shallowRef` 持有 + `smartRAF` 标签页隐藏暂停 + `onBeforeUnmount` 完整释放 + 移动端降级（粒子数减半 + dpr≤1.5）+ `manualChunks` 把 `three` 单独打成 `three-vendor` chunk（gzip 175KB，仅访问 `/` 或 `/garden` 时按需拉取，首屏不加载）。⑤ **Web Audio API 一次性约束** — `createMediaElementSource(audioEl)` 对同一 `<audio>` 元素只能调用一次，AudioVisualizer 用 `if (!sourceNode)` 守卫，MusicDetailView 用 `visualizerConnected` ref 标记首次 `playIndex` 时连接、后续切歌不重连。§5.10 加视觉增强策略决策、§6.23 加视觉组件集成 4 大坑（createMediaElementSource 一次性 / shallowRef 而非 ref / smartRAF 替代 requestAnimationFrame / onBeforeUnmount 完整释放）。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。

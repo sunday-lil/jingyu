@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import AmbientBackground from '@/components/AmbientBackground.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -42,6 +43,9 @@ function go(path) {
 
 <template>
   <div class="min-h-screen flex flex-col">
+    <!-- 全局治愈系氛围背景（CSS 雾气 + Canvas2D 光点 + Three.js 粒子层渐进增强） -->
+    <AmbientBackground />
+
     <!-- 桌面端顶部导航 -->
     <header class="desktop-nav safe-top">
       <div class="nav-inner">
