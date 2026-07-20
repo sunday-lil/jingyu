@@ -645,6 +645,64 @@ SessionLocal = sessionmaker(
 
 **铁律**：`expire_on_commit=False` 下，**commit 后读 ORM 对象属性 = 读旧值**。凡是"修改了某字段 → commit → 返回该字段新值"的场景，必须用 `db.query(Model.field).filter(...).scalar()` 或 `db.refresh(obj)` 重新获取。不要相信内存对象。
 
+### 6.19 同歌 24h 重复发放能量（代码缺失，2026-07-20 加）
+**症状**：用户听完一首歌（进度 ≥ 90%）调 `/api/music/listen-complete` 得到 +1 露水；24h 内重复调同一首，**又**得到 +1 露水。docstring 明确写"同一首歌 24h 内重复调用不重复发放"，但**代码完全没实现去重逻辑**。
+
+**根因**：[app/routers/music.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/music.py) `listen_complete` 只检查进度和单日上限，**没有任何"同一首歌 24h 内是否已发放过"的查询**。EnergyRecord 表里也没存 `music_id`，无法做这个去重。
+
+**修复**：
+1. [app/models/energy.py](file:///c:/Users/Administrator/Desktop/webwrold/app/models/energy.py) `EnergyRecord` 加 `music_id: Mapped[int | None]`（可空，仅 listen_music 来源有值）+ 复合索引 `ix_energy_user_music_date (user_id, music_id, created_at)`
+2. [app/database.py](file:///c:/Users/Administrator/Desktop/webwrold/app/database.py) `_migrate_legacy_columns()` 加 `ALTER TABLE energy_records ADD COLUMN music_id INTEGER`（轻量迁移，符合 §6.10）
+3. [app/services/energy_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/energy_service.py) `grant_energy` 加 `music_id: Optional[int] = None` 参数，写入 `EnergyRecord.music_id`
+4. [app/routers/music.py](file:///c:/Users/Administrator/Desktop/webwrold/app/routers/music.py) `listen_complete` 在 `grant_energy` 调用**前**查 24h 内同 user_id + music_id + source=listen_music 的记录，存在则直接 `return {"granted": False, "reason": "这首 24 小时内已经听过了"}`；并把 `body.music_id` 传给 `grant_energy`
+
+**铁律**：docstring 写的规则 ≠ 代码实现的规则。**每条写在文档里的业务规则，必须有对应的查询/分支代码实现**。规则要查 DB 去重时，**必须**有索引覆盖（避免全表扫描），并优先用复合索引（`user_id + 业务键 + created_at`）。
+
+### 6.20 `exchange_item` 已持有检查位置错误导致重复兑换 500（2026-07-20 加）
+**症状**：用户兑换一个 `cost=0` 的徽章（如"古琴初学者"），第二次兑换同一徽章返回 **HTTP 500**，错误：`sqlalchemy.exc.IntegrityError: UNIQUE constraint failed: garden_items.user_id, garden_items.item_id`。
+
+**根因**：[app/services/energy_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/energy_service.py) `exchange_item` 原代码：
+```python
+def exchange_item(db, user, item_id):
+    item = db.get(ShopItem, item_id)
+    if item is None: raise HTTPException(404, ...)
+    cost = item.cost or 0
+    if cost > 0:
+        # 扣能量 + 写流水
+        ...
+        # ❌ "检查已持有"在这 if 块里！cost=0 的徽章跳过检查
+        existing = db.query(GardenItem).filter(...).first()
+        if existing is not None:
+            raise HTTPException(400, "这件你已经拥有啦")
+    # 写入持有 → UNIQUE constraint 触发 500
+    garden_item = GardenItem(user_id=user.id, item_id=item_id)
+    db.add(garden_item)
+```
+
+"检查已持有"被嵌在 `if cost > 0:` 内部，**cost=0 的徽章完全跳过检查**，直接 INSERT，触发数据库唯一约束 → 500（应该返回 400 友好提示）。
+
+**修复**：把"检查已持有"**提到 `if cost > 0:` 之前**，对所有物品（不论 cost 多少）都先检查：
+```python
+def exchange_item(db, user, item_id):
+    item = db.get(ShopItem, item_id)
+    if item is None: raise HTTPException(404, ...)
+    # ✅ 对所有物品都检查
+    existing = db.query(GardenItem).filter(
+        GardenItem.user_id == user.id, GardenItem.item_id == item_id
+    ).first()
+    if existing is not None:
+        raise HTTPException(400, "这件你已经拥有啦")
+    cost = item.cost or 0
+    if cost > 0:
+        # 扣能量 + 写流水（不再含"检查已持有"）
+        ...
+    # 写入持有
+    garden_item = GardenItem(user_id=user.id, item_id=item_id)
+    db.add(garden_item)
+```
+
+**铁律**：**业务校验必须独立于价格分支**。"是否已持有"是物品层面的状态校验，跟"是否需要扣能量"是两个正交维度。**绝不能**把通用业务校验（持有/权限/存在性）埋进特定价格分支里。任何数据库 `UNIQUE` 约束都应该被业务层提前拦截，返回友好 4xx，而不是让 5xx 漏出去。
+
 ---
 
 ## 7. 改动指南

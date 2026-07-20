@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user_optional, get_current_user
+from app.models.energy import EnergyRecord
 from app.models.music import Music
 from app.models.user import User
 from app.schemas.music import MusicOut, ListenCompleteIn
@@ -70,9 +72,24 @@ def listen_complete(
     if music is None:
         raise HTTPException(status_code=404, detail="曲子不存在")
 
+    # 同一首歌 24h 内重复调用不重复发放
+    cutoff = datetime.now() - timedelta(hours=24)
+    existing = (
+        db.query(EnergyRecord)
+        .filter(
+            EnergyRecord.user_id == user.id,
+            EnergyRecord.music_id == body.music_id,
+            EnergyRecord.source == "listen_music",
+            EnergyRecord.created_at >= cutoff,
+        )
+        .first()
+    )
+    if existing is not None:
+        return {"granted": False, "reason": "这首 24 小时内已经听过了"}
+
     record = grant_energy(
         db, user, amount=1, source="listen_music",
-        note=f"听完《{music.title}》"
+        note=f"听完《{music.title}》", music_id=body.music_id,
     )
     if record is None:
         return {"granted": False, "reason": "今日露水已达上限"}

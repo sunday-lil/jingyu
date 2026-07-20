@@ -79,11 +79,13 @@ def grant_energy(
     note: Optional[str] = None,
     *,
     bypass_limit: bool = False,
+    music_id: Optional[int] = None,
 ) -> Optional[EnergyRecord]:
     """给用户发放能量，写一条 EnergyRecord，更新 user.total_energy。
 
     - ``amount`` 必须为正数。
     - ``bypass_limit=True`` 时跳过单日上限（用于 streak_7 / daily_bonus 等一次性奖励）。
+    - ``music_id`` 仅 listen_music 来源用，写入 EnergyRecord.music_id 供 24h 去重查询。
     - 返回 None 表示达到上限被截断。
     """
     if amount <= 0:
@@ -97,6 +99,7 @@ def grant_energy(
         amount=amount,
         source=source,
         note=note,
+        music_id=music_id,
     )
     db.add(record)
     # 用显式 UPDATE 累加，避免在长调用链里对 user 对象的赋值
@@ -118,19 +121,19 @@ def exchange_item(db: Session, user: User, item_id: int) -> GardenItem:
     if item is None:
         raise HTTPException(status_code=404, detail="找不到这件物品")
 
+    # 检查是否已持有（对所有物品都检查，包括 cost=0 的徽章）
+    existing = (
+        db.query(GardenItem)
+        .filter(GardenItem.user_id == user.id, GardenItem.item_id == item_id)
+        .first()
+    )
+    if existing is not None:
+        raise HTTPException(status_code=400, detail="这件你已经拥有啦")
+
     cost = item.cost or 0
     if cost > 0:
         if (user.total_energy or 0) < cost:
             raise HTTPException(status_code=400, detail=f"能量不足，还差 {cost - user.total_energy}")
-
-        # 检查是否已持有
-        existing = (
-            db.query(GardenItem)
-            .filter(GardenItem.user_id == user.id, GardenItem.item_id == item_id)
-            .first()
-        )
-        if existing is not None:
-            raise HTTPException(status_code=400, detail="这件你已经拥有啦")
 
         # 扣能量 + 写流水
         record = EnergyRecord(

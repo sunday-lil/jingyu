@@ -59,6 +59,8 @@ def _migrate_legacy_columns() -> None:
     insp = inspect(engine)
     if not insp.has_table("users"):
         return  # 首次启动还没建表，create_all 会处理
+
+    # users 表
     cols = {c["name"] for c in insp.get_columns("users")}
     with engine.begin() as conn:
         if "is_admin" not in cols:
@@ -66,6 +68,16 @@ def _migrate_legacy_columns() -> None:
                 "ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0 NOT NULL"
             ))
             logger.info("[MIGRATE] users.is_admin 已添加")
+
+    # energy_records 表（2026-07-20 加 music_id，用于同歌 24h 去重）
+    if insp.has_table("energy_records"):
+        e_cols = {c["name"] for c in insp.get_columns("energy_records")}
+        with engine.begin() as conn:
+            if "music_id" not in e_cols:
+                conn.execute(text(
+                    "ALTER TABLE energy_records ADD COLUMN music_id INTEGER"
+                ))
+                logger.info("[MIGRATE] energy_records.music_id 已添加")
 
 
 def init_db() -> None:
