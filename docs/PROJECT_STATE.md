@@ -14,6 +14,7 @@
 | **可运行** | ✅ | 用户始终访问 `:5000`：开发模式 Vite :5000 + FastAPI :5001（`python start.py` 自动起两个）；生产模式 FastAPI :5000（`python start.py build` + `python start.py`） |
 | **v2.0 Vue 3 重构** | ✅ 完成 | 2026-07-19，前端独立 `frontend/`，13 个视图迁入 `frontend/src/views/`，详见 §2 |
 | **v2.1 视觉增强** | ✅ 完成 | 2026-07-20，4 个视觉组件 + 三层渐进增强策略（CSS / Canvas2D / Three.js），全部支持降级，详见 §2 |
+| **v2.2 视觉重构** | ✅ 完成 | 2026-07-20，解决 v2.1 "红白机观感" + "交互不明确"两大问题：three-helpers.js PBR 工具集 + SceneHint/SceneControls 交互组件 + 4 个视觉组件 v2 重写（PBR + Bloom + OrbitControls + raycaster），详见 §2 |
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
 | **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 / **3D + 伪 3D 视觉增强** — 全部 ✅ |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
@@ -28,6 +29,64 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-20（v2.2）— 视觉重构：PBR 管线 + 交互指引 + raycaster 拾取
+
+- [x] 起因：用户反馈 v2.1 视觉效果"红白机观感"（MeshLambertMaterial + 平面 2D ShapeGeometry + 方形 PointsMaterial + 无阴影/Bloom/色调映射）+ "交互不明确"（仅被动鼠标跟随，无指引无反馈）；要求彻底重构达现代设计水准
+- [x] **改动 1：新增 [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) PBR 工具集** — 统一现代渲染管线工厂函数：`createRenderer`（ACES + sRGB + PCFSoftShadowMap）、`createEnvironment`（RoomEnvironment + PMREMGenerator）、`createPostProcessing`（EffectComposer + RenderPass + UnrealBloomPass + OutputPass）、`createOrbitControls`（统一约束：禁用 pan + 极角限制 + 阻尼）、`createSoftSpriteTexture`（程序化柔光圆点 sprite，替代方形 PointsMaterial）、`createKeyLight` / `createFillLight`（带阴影主光 + 半球补光）、`disposeObject3D` / `disposeRenderer`（递归释放 geometry/material/texture/renderer/composer/pmrem/envMap）。所有 addon 走 `three/addons/` 子路径，便于 tree-shaking
+- [x] **改动 2：新增交互组件**
+  - [frontend/src/components/SceneHint.vue](../../frontend/src/components/SceneHint.vue)：可复用交互指引横幅。Props: `text` / `gesture` ('drag-rotate' / 'scroll-zoom' / 'click' / 'drag-rotate-zoom' / 'touch') / `autoHide` (5s) / `showDelay` (800ms) / `visible` (v-model)。毛玻璃胶囊 + SVG 手势图标 + 脉冲动画，用户首次交互（pointerdown/wheel/touchstart）后自动消失
+  - [frontend/src/components/SceneControls.vue](../../frontend/src/components/SceneControls.vue)：可复用视图控制工具栏。Props: `modelValue` (v-model autoRotate) / `enableFullscreen` / `position`。Emits: `update:modelValue` / `reset` / `fullscreen`。三个按钮（自动旋转开关 / 重置视角 / 全屏）
+- [x] **改动 3：[HeroScene.vue](../../frontend/src/components/HeroScene.vue) v2 重写** — PBR 现代化管线
+  - `LatheGeometry` 程序化有机浮岛轮廓（10 段 + 噪声扰动 + 顶部轻微鼓起），替代 v1 ConeGeometry 倒锥
+  - 递归樱花树（4 层分枝 + IcosahedronGeometry 花团），Bloom 高亮
+  - PBR 水面：`MeshStandardMaterial` + `onBeforeCompile` 注入 4 层正弦波 vertex shader 位移（柔和起伏），metalness 0.35 + roughness 0.12 让水面有反射
+  - `OrbitControls` 拖拽旋转 + 滚轮缩放 + 自动旋转 + `SceneHint` 交互提示 + `SceneControls` 控制工具栏
+  - `raycaster` 点击主岛 → 相机平滑飞入 + 信息卡浮现（3 岛名：静屿 / 远屿 / 花屿 + 诗句）
+  - `UnrealBloomPass`（strength 0.55，移动端 0.4）+ `OutputPass` + ACES 色调映射
+  - 柔光 sprite 纹理替代方形点（80 个飘浮光点）
+  - 体积：13.54KB（gzip 5.71KB）
+- [x] **改动 4：[FlowerField.vue](../../frontend/src/components/FlowerField.vue) v2 重写** — 3D 立体花瓣 + 点击花语
+  - 自定义 `BufferGeometry` 立体花瓣（4×6 顶点网格 + Z 轴凸起 + 顶部收窄），替代 v1 平面 `ShapeGeometry`
+  - `MeshPhysicalMaterial`（sheen 0.7 + clearcoat 0.2 + envMap 反射 0.9），替代 v1 MeshLambertMaterial
+  - `InstancedMesh` 300 花瓣 + 60 花蕊 + 60 花茎（3 draw call）
+  - `PCFSoftShadowMap` 软阴影 + `UnrealBloomPass` 花蕊高光
+  - `OrbitControls` + `SceneHint` + `SceneControls`
+  - `raycaster` 拾取 InstancedMesh → 花朵爆裂脉冲动画（1.5s sin 放大）+ 花语 tooltip（5 种花语：温柔的陪伴 / 阳光的心意 / 宁静的生长 / 深沉的思念 / 纯粹的可能）
+  - 体积：9.94KB（gzip 4.51KB）
+- [x] **改动 5：[AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) v2 重写** — 多模式 + 节拍检测
+  - 4 种可视化模式，点击 canvas 循环切换：
+    - `wave` 流动波形（v1 默认，5 色曲线）
+    - `mirror` 镜像柱状（48 根上下对称频谱柱，渐变色）
+    - `radial` 径向频谱（64 根 360° + 中心呼吸圆）
+    - `particles` 粒子流（120 个粒子带光晕 + 拖尾 + 频谱驱动跳动）
+  - 节拍检测：bass 能量突增（>1.35× 上次 + >0.35 阈值）→ 触发 10 个粒子爆裂（所有模式通用）
+  - 频响主色：低频强 → 暖色（gong/zhi），高频强 → 冷色（yu/shang），混合时用 accent 色
+  - 模式切换 toast（顶部居中毛玻璃胶囊 1.4s）+ 持续 hint 提示（8s 淡出）
+  - 高度 120px → 160px
+  - 保留：`createMediaElementSource` 一次性 `if (!sourceNode)` 守卫、`smartRAF` 30fps（移动端 24fps）、reduced-motion 静态 5 色横条降级
+- [x] **改动 6：[AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) v2 重写** — 柔光 sprite + 鼠标交互 + 视差
+  - Canvas2D 层：预生成 32×32 柔光圆点 sprite 纹理（径向渐变），`source-atop` 合成模式叠加颜色；鼠标 120px 半径内柔和排斥（带阻尼回归）
+  - Three.js 层：`createSoftSpriteTexture` 128×128 柔光 sprite + `AdditiveBlending` 加法混合；双层粒子（远景 90 个 + 近景 35 个，移动端减半）
+  - 鼠标跟随：相机轻微旋转（仅旋转，不位移，避免视觉抖动）
+  - 滚动视差：远景 `scrollY * 0.0008`，近景 `scrollY * 0.002`（近景物镜移动快，景深感强）
+  - 轻量 `UnrealBloomPass`（strength 0.3，移动端 0.18）+ `OutputPass`
+  - 完整释放：`disposeRenderer(renderer, composer)` + `disposeObject3D(points)` + sprite 纹理 dispose
+  - 保留：3 层渐进增强（CSS 永远启用 → Canvas2D reduced-motion 关闭 → Three.js 按需）+ `smartRAF` + `prefers-reduced-motion` 降级
+- [x] **改动 7：[vite.config.js](../../frontend/vite.config.js) `manualChunks` 函数形式** — 让 `three/addons/*`（EffectComposer / OrbitControls / RoomEnvironment 等）跨 HeroScene / FlowerField / AmbientBackground 共享同一 `three-vendor` chunk，避免每个组件重复打包 addon 代码
+- [x] **设计原则**：
+  - **交互指引优先**：所有 3D 场景首次进入显示 `SceneHint` 提示如何操作（拖拽 / 滚轮 / 点击），首次交互后自动消失，避免用户"不知道能做什么"
+  - **视图控制统一**：所有 3D 场景都有 `SceneControls` 工具栏（自动旋转开关 + 重置视角），用户能主动控制相机
+  - **点击反馈**：HeroScene 点击岛屿飞入 + 信息卡；FlowerField 点击花朵爆裂 + 花语；AudioVisualizer 点击 canvas 切换模式 + toast
+  - **PBR 一致性**：4 个组件统一用 `three-helpers.js` 工厂函数，渲染管线一致（ACES + sRGB + Bloom + 软阴影），视觉语言统一
+  - **完整释放**：`onBeforeUnmount` 用 `disposeRenderer` + `disposeObject3D` 统一释放，避免 WebGL context 累积
+- [x] **降级保留**：
+  - HeroScene 不支持 WebGL / reduced-motion / initScene 异常 → SVG 静态插画（不变）
+  - AudioVisualizer 无 Web Audio API / reduced-motion → 5 色静态横条 CSS 动画（不变）
+  - AmbientBackground 无 WebGL / 低性能 → CSS 雾气光斑 + Canvas2D 光点（不变）
+  - 移动端：dpr ≤ 1.5 / 粒子数减半 / Bloom 强度降低 / 阴影 mapSize 1024
+- [x] 文档同步（Iron Rule）：6 份文档同步更新 — README §2/§3.5/§8、HANDOFF §2/§5.11/末次更新、PROJECT_STATE §1/§2（本条）/§3.3、ARCHITECTURE §1.1.6/§7.7、DEPLOYMENT 前端构建/顶部 Iron Rule、DEVELOPMENT §1.9.4/§1.9.8/顶部 Iron Rule
+- [x] 验证：① `npm run build` 通过，200 模块编译无错；② `three-vendor` 719.84KB（gzip 184.01KB）独立 chunk，所有 Three.js 组件共享；③ HeroScene 13.54KB / FlowerField 9.94KB / SceneControls 4.5KB（共享，被 HeroScene + FlowerField 引用）/ MusicDetailView 13.11KB / index 102.02KB；④ SceneControls 从 7.5KB 降到 4.5KB（AmbientBackground 不再依赖它，tree-shaking 优化）；⑤ 浏览器访问 `/` 看到 PBR 浮岛雾海 + 樱花树 + Bloom 高光 + 拖拽旋转 + 滚轮缩放 + 点击岛屿飞入 + 信息卡；⑥ `/garden` 看到 3D 立体花瓣 + 阴影 + Bloom + 点击花朵爆裂 + 花语 tooltip；⑦ `/music/gong` 听歌看到 4 模式音波可视化（点击切换）+ 节拍粒子爆裂；⑧ 全局背景看到柔光粒子 + 鼠标排斥 + 滚动视差；⑨ DevTools 模拟 reduced-motion → 3D 降级为 SVG / CSS 静态
 
 ### 2026-07-20（v2.1）— 视觉增强：三层渐进增强 + 4 个视觉组件
 

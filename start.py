@@ -14,23 +14,31 @@
     python start.py fg             # 前台运行（systemd / supervisor 用）
     python start.py build          # 构建前端到 static/dist/
 
---- 架构说明（v2.0 Vue 3 重构后）：
+--- 架构说明（v2.0 Vue 3 重构后，v2.0.1 端口策略调整）：
     前端由 Vue 3 SPA 接管，FastAPI 改为纯 API 后端 + SPA fallback：
       1. 后端 API（/api/* 路由）
       2. SPA fallback：dist 已构建 → 返回 static/dist/index.html
-                      dist 未构建 → 转发到 Vite dev server :5173
+                      dist 未构建 → 开发态返回提示页引导访问 Vite :5000
       3. 静态资源（/static/* 下的 CSS/JS/图片 + /static/dist/* 前端构建产物）
 
-    start.py 自动检测：
-      - dist 已构建（生产模式）：只起 FastAPI :5000
-      - dist 未构建（开发模式）：同时起 FastAPI :5000 + Vite :5173，用户访问 :5000 即可
+    start.py 自动检测 dist 是否构建：
+      - dist 已构建（生产模式）：只起 FastAPI :5000（从 .env 读 QI_PORT）
+      - dist 未构建（开发模式）：Vite 占 :5000（用户入口，HMR）+ FastAPI 改听 :5001（API）
+        Vite proxy 把 /api、/static、/admin、/docs、/openapi.json 转发到 :5001
+      **用户始终访问 :5000**，由 start.py 自动切换端口策略
 
---- 宝塔面板配置（生产）：
-    项目类型  : Python
-    启动命令  : cd /www/wwwroot/healing && python start.py
-    停止命令  : cd /www/wwwroot/healing && python start.py stop
-    端口      : 5000（与 .env 的 QI_PORT 一致）
-    前端构建  : cd frontend && npm install && npm run build（部署时一次性）
+--- 服务器开机启动 + 端口转发（生产）：
+    方式 A（宝塔面板）：
+      项目类型  : Python
+      启动命令  : cd /www/wwwroot/healing && python start.py
+      停止命令  : cd /www/wwwroot/healing && python start.py stop
+      端口      : 5000（与 .env 的 QI_PORT 一致）
+      前端构建  : python start.py build（部署时一次性，dist 已构建后 start.py 自动走生产模式）
+      反向代理  : 宝塔站点 → 反向代理 → 目标 URL http://127.0.0.1:5000
+    方式 B（systemd）：
+      ExecStart=/home/healing/app/venv/bin/python start.py fg  # fg 前台运行，systemd 管进程
+      Environment=QI_PORT=5000
+      Nginx 反代 80/443 → 127.0.0.1:5000
 
 环境变量（与 .env 一致）：
     QI_HOST, QI_PORT, QI_DEBUG, QI_SECRET_KEY, QI_DATABASE_URL,

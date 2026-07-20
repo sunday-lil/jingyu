@@ -8,6 +8,8 @@
 
 > 🔒 **2026-07-20 v2.1 视觉增强更新**：① §1.1 加 §1.1.6 视觉增强组件群（AmbientBackground / HeroScene / AudioVisualizer + utils/visual.js）；② §7.7 末尾的 Iron Rule 提醒扩展关键词，包含 `三层渐进增强` / `shallowRef` / `smartRAF` / `prefers-reduced-motion`。关键词 `三层渐进增强` / `AmbientBackground` / `HeroScene` / `AudioVisualizer` / `visual.js` / `shallowRef` / `smartRAF` 在 6 份文档中都要出现。
 
+> 🔒 **2026-07-20 v2.2 3D 元素与动效全面重构**：① 4 个视觉组件全部升级到 PBR 渲染管线（ACESFilmicToneMapping + SRGBColorSpace + PCFSoftShadowMap + RoomEnvironment PMREM + UnrealBloomPass）；② 新增 [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 集中导出 9 个共享 PBR 工具函数；③ 新增 [SceneHint.vue](../../frontend/src/components/SceneHint.vue) 交互指引横幅 + [SceneControls.vue](../../frontend/src/components/SceneControls.vue) 视图控制工具栏，解决「用户不知道如何与 3D 元素交互」问题；④ HeroScene 改用 `LatheGeometry` 旋转曲面浮岛 + 递归樱花树 + 水面 `onBeforeCompile` 顶点位移 shader；FlowerField 改用自定义 `BufferGeometry` 立体花瓣 + `MeshPhysicalMaterial`；AudioVisualizer 升级 4 模式 + 节拍检测；AmbientBackground 升级 Canvas2D 柔光 sprite + 滚动视差；⑤ 所有 3D 场景统一 `OrbitControls`（拖拽旋转 + 滚轮缩放）+ `raycaster` 点击拾取。关键词 `PBR` / `three-helpers` / `SceneHint` / `SceneControls` / `OrbitControls` / `raycaster` / `UnrealBloomPass` / `RoomEnvironment` / `LatheGeometry` 在 6 份文档中都要出现。
+
 ---
 
 ## 1. 总体架构
@@ -222,50 +224,61 @@ const FlowerField = defineAsyncComponent(() =>
 
 **为什么 Three.js 0.168**：选择当时社区稳定版本；vite.config.js 的 `manualChunks` 把 `three` 单独打成 `three-vendor` chunk，避免和 vue/gsap 混在一起。
 
-### 1.1.6 视觉增强组件群（v2.1 加，2026-07-20）
+### 1.1.6 视觉增强组件群（v2.1 加，2026-07-20；v2.2 PBR 升级，2026-07-20）
 
 > 设计原则：**「三层渐进增强 + 能力检测 + 异步加载 + 完整降级」** —— 在 FlowerField 3D 花田基础上，为全站加入 3D / 伪 3D 背景元素和动态视觉效果，提升治愈系沉浸感；同时**不能影响首屏性能**，且**必须为 3D 渲染能力有限的浏览器实现备用机制**。决策：用「CSS 永远启用 → Canvas2D 中量级 → Three.js 按需」三层独立可降级，配套 `utils/visual.js` 能力检测。
+>
+> **v2.2 PBR 升级**（2026-07-20）：4 个视觉组件全部升级到 PBR 渲染管线（`ACESFilmicToneMapping` + `SRGBColorSpace` + `PCFSoftShadowMap` + `RoomEnvironment` PMREM + `UnrealBloomPass`）；新增 [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 集中 9 个共享 PBR 工具函数；新增 [SceneHint.vue](../../frontend/src/components/SceneHint.vue) 交互指引横幅 + [SceneControls.vue](../../frontend/src/components/SceneControls.vue) 视图控制工具栏，解决「用户不知道如何与 3D 元素交互」问题；所有 3D 场景统一 `OrbitControls`（拖拽旋转 + 滚轮缩放）+ `raycaster` 点击拾取。决策理由详见 [HANDOFF §5.11](../../HANDOFF.md)。
 
-**4 个视觉文件**：
+**v2.2 视觉文件群**（共 7 个）：
 
 | 文件 | 角色 | 嵌入位置 | 降级路径 |
 |---|---|---|---|
-| [frontend/src/utils/visual.js](../../frontend/src/utils/visual.js) | 视觉能力检测 | 被其他 3 个组件 import | 单次缓存检测结果，无降级（自身就是降级判断器） |
-| [frontend/src/components/AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) | 全局氛围背景 | [AppLayout.vue](../../frontend/src/components/AppLayout.vue) 根（所有页面可见） | CSS 永远启用 → Canvas2D（reduced-motion 关闭）→ Three.js 粒子层（WebGL + 非低性能） |
-| [frontend/src/components/HeroScene.vue](../../frontend/src/components/HeroScene.vue) | 首页 3D 浮岛雾海 | [HomeView.vue](../../frontend/src/views/HomeView.vue) 顶部 | 无 WebGL / reduced-motion / initScene 异常 → SVG 静态插画（800×480 viewBox：天空渐变 + 太阳 + 3 岛 + 3 层波浪 + 5 漂浮点） |
-| [frontend/src/components/AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) | 5 色音波可视化 | [MusicDetailView.vue](../../frontend/src/views/music/MusicDetailView.vue) 详情头之后 | 无 Web Audio / reduced-motion → CSS 5 色横条静态动画 |
+| [frontend/src/utils/visual.js](../../frontend/src/utils/visual.js) | 视觉能力检测 | 被其他组件 import | 单次缓存检测结果，无降级（自身就是降级判断器） |
+| [frontend/src/utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) | **PBR 工具集（v2.2 加）** | 被 HeroScene / FlowerField / AmbientBackground import | 9 个共享函数：createRenderer / createEnvironment / createPostProcessing / createOrbitControls / createKeyLight / createFillLight / createSoftSpriteTexture / disposeObject3D / disposeRenderer |
+| [frontend/src/components/AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) | 全局氛围背景 v2 | [AppLayout.vue](../../frontend/src/components/AppLayout.vue) 根（所有页面可见） | CSS 永远启用 → Canvas2D 柔光 sprite（reduced-motion 关闭）→ Three.js 双层粒子 + 轻量 Bloom（WebGL + 非低性能） |
+| [frontend/src/components/HeroScene.vue](../../frontend/src/components/HeroScene.vue) | 首页 3D 浮岛雾海 v2 | [HomeView.vue](../../frontend/src/views/HomeView.vue) 顶部 | 无 WebGL / reduced-motion / initScene 异常 → SVG 静态插画（800×480 viewBox：天空渐变 + 太阳 + 3 岛 + 3 层波浪 + 5 漂浮点） |
+| [frontend/src/components/FlowerField.vue](../../frontend/src/components/FlowerField.vue) | 3D 花田 v2 | [GardenView.vue](../../frontend/src/views/garden/GardenView.vue) 顶部 | 无 WebGL / reduced-motion / initScene 异常 → CSS 渐变背景 + 提示文案 |
+| [frontend/src/components/AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) | 音波可视化 v2 | [MusicDetailView.vue](../../frontend/src/views/music/MusicDetailView.vue) 详情头之后 | 无 Web Audio / reduced-motion → CSS 5 色横条静态动画 |
+| [frontend/src/components/SceneHint.vue](../../frontend/src/components/SceneHint.vue) | **3D 场景交互指引（v2.2 加）** | 被 HeroScene / FlowerField 引用 | `pointer-events: none` 不阻挡 3D 交互；3 秒后自动淡出 |
+| [frontend/src/components/SceneControls.vue](../../frontend/src/components/SceneControls.vue) | **3D 场景视图控制（v2.2 加）** | 被 HeroScene / FlowerField 引用 | emit 事件由父组件处理；玻璃拟态样式 + 8px 圆角 |
 
 **核心架构决策**：
 
 | 维度 | 决策 | 理由 |
 |---|---|---|
 | 三层分级 | Layer 1 CSS（永远启用）/ Layer 2 Canvas2D（reduced-motion 关闭）/ Layer 3 Three.js（WebGL + 非低性能） | 治愈系要"柔和不刺眼"，分层降级让任何设备都有体面视觉 |
+| **PBR 渲染管线（v2.2）** | `ACESFilmicToneMapping` + `SRGBColorSpace` + `PCFSoftShadowMap` + `RoomEnvironment` PMREM + `UnrealBloomPass` | 替代 v2.1 的 `LinearToneMapping` + `MeshBasicMaterial`，解决「视觉粗糙过时，类似 80/90 年代红白机」问题 |
+| **共享工具集（v2.2）** | [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 集中 9 个 PBR 工具函数 | 避免 4 个组件重复造轮子；统一释放逻辑避免 WebGL context 泄漏 |
+| **交互指引（v2.2）** | [SceneHint.vue](../../frontend/src/components/SceneHint.vue) 横幅 + [SceneControls.vue](../../frontend/src/components/SceneControls.vue) 工具栏 | 解决「用户不知道如何与 3D 元素交互」问题；3 秒淡出不遮挡视野 |
+| **OrbitControls（v2.2）** | 所有 3D 场景统一 `OrbitControls`（阻尼 + 极角约束 + 禁用 pan + 自动旋转） | 用户可拖拽旋转 + 滚轮缩放；阻尼让旋转有惯性；极角约束防止视角穿地 |
+| **raycaster 点击拾取（v2.2）** | HeroScene 点击浮岛相机飞入；FlowerField 点击花朵显示花语 toast | 让 3D 场景「可交互」而非「只能看」 |
 | 能力检测 | `utils/visual.js` 单次缓存 `hasWebGL()` / `prefersReducedMotion()` / `isMobile()` / `isLowPower()` 结果 | 避免每次渲染重复检测；`shouldUseThreeJS()` = `hasWebGL && !prefersReducedMotion && !isLowPower` |
 | 异步加载 | 所有 Three.js 组件 `defineAsyncComponent(() => import(...))` | Three.js (~600KB) 不进首屏包，仅访问 `/`（HeroScene）或 `/garden`（FlowerField）时按需拉取 |
-| `manualChunks` | [vite.config.js](../../frontend/vite.config.js) 把 `three` 单独打成 `three-vendor` chunk（gzip 175KB） | 与 FlowerField 共享同一 chunk，不重复加载 |
+| `manualChunks` | [vite.config.js](../../frontend/vite.config.js) 函数形式把 `three` + `three/addons/*` 跨组件共享 `three-vendor` chunk（v2.2 含 OrbitControls / EffectComposer / UnrealBloomPass / RoomEnvironment，gzip 719.84KB） | 与 FlowerField / HeroScene / AmbientBackground 共享同一 chunk，不重复加载 |
 | Vue 响应式 | Three.js 对象用 `shallowRef` 持有 | `ref` 会深度代理 Three.js 内部 Scene/Object3D 私有字段拖累性能（详见 [HANDOFF §6.23.2](../../HANDOFF.md)） |
 | rAF 调度 | `smartRAF(callback)` 在 `document.hidden` 时 `cancelAnimationFrame`、可见时自动恢复 | 标签页隐藏时浏览器虽降为 1 fps 但仍执行渲染循环，GPU 不释放（详见 [HANDOFF §6.23.3](../../HANDOFF.md)） |
-| 资源释放 | `onBeforeUnmount` 释放 geometry / material / renderer / 事件监听 / ResizeObserver | 5 次切走后浏览器报 `Too many active WebGL contexts` 黑屏（详见 [HANDOFF §6.23.4](../../HANDOFF.md)） |
-| 移动端降级 | 粒子数减半 + `dpr` ≤ 1.5 | 移动端 GPU/CPU 弱，全量粒子会掉帧 |
-| 配色一致性 | 4 个组件全部用治愈系 5 色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）+ 米白 `#F9F6F0` 背景 | 与 [tailwind.config.js](../../frontend/tailwind.config.js) token 一致；AudioVisualizer 5 条曲线对应宫商角徵羽 5 音色 |
+| 资源释放 | `onBeforeUnmount` 调 `disposeObject3D` + `disposeRenderer` 完整释放 geometry / material / texture / renderer / composer / 事件监听 / ResizeObserver | 5 次切走后浏览器报 `Too many active WebGL contexts` 黑屏（详见 [HANDOFF §6.23.4](../../HANDOFF.md)） |
+| 移动端降级 | 粒子数减半 + `dpr` ≤ 1.5 + Bloom strength 0.3 → 0.18 | 移动端 GPU/CPU 弱，全量粒子 + 强 Bloom 会掉帧 |
+| 配色一致性 | 4 个组件全部用治愈系 5 色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）+ 米白 `#F9F6F0` 背景 | 与 [tailwind.config.js](../../frontend/tailwind.config.js) token 一致；AudioVisualizer 4 模式频响颜色低频暖色 → 高频冷色 |
 | Web Audio 一次性约束 | `audioCtx.createMediaElementSource(audioEl)` 对同一 `<audio>` 元素只能调一次 | AudioVisualizer `if (!sourceNode)` 守卫 + MusicDetailView `visualizerConnected` ref 标记首次 `playIndex` 时连接（详见 [HANDOFF §6.23.1](../../HANDOFF.md)） |
 
-**为什么不用全屏 shader / 后处理**：
-- 治愈系调性要"柔和不刺眼"，shader bloom / DOF 过度装饰反而破坏氛围
-- 后处理增加 GPU 开销，移动端掉帧
-- 现有 Fog + InstancedMesh + Canvas2D 已足够，性能与视觉平衡
+**为什么 v2.2 引入 PBR + Bloom 后处理**（推翻 v2.1 决策）：
+- v2.1 决策「不用全屏 shader / 后处理」基于「治愈系要柔和不刺眼」，但实际效果过于平淡，被用户评价为「粗糙过时，类似 80/90 年代红白机」
+- v2.2 调整：Bloom strength 0.3（移动端 0.18）保持克制，只让发光物体（花瓣 / 樱花 / 光点）有柔光晕，**不**做全屏泛光；ACESFilmic 色调映射让暗部有细节不死黑，高光不爆白
+- 性能保护：移动端 Bloom strength 降到 0.18 + 粒子数减半 + dpr ≤ 1.5；reduced-motion 直接降级为 SVG 静态插画，不走 Bloom 路径
 
 **降级验证矩阵**：
 
-| 环境 | AmbientBackground | HeroScene | AudioVisualizer |
-|---|---|---|---|
-| 桌面 Chrome（WebGL + 默认 motion） | CSS + Canvas2D + Three.js 粒子层 | 3D 浮岛雾海 | Web Audio + Canvas2D 5 色波 |
-| 桌面 Chrome + `prefers-reduced-motion` | 仅 CSS 雾气光斑 | SVG 静态插画 | CSS 5 色横条静态 |
-| 移动端 Safari（WebGL + 默认 motion） | CSS + Canvas2D（粒子数减半）+ Three.js 粒子层（dpr≤1.5） | 3D 浮岛雾海（粒子数减半 + dpr≤1.5） | Web Audio + Canvas2D 5 色波 |
-| 旧浏览器（无 WebGL） | CSS + Canvas2D 光点 | SVG 静态插画 | CSS 5 色横条 |
-| `import('three')` 失败 | CSS + Canvas2D 光点 | SVG 静态插画 | 不受影响（不用 Three.js） |
+| 环境 | AmbientBackground | HeroScene | FlowerField | AudioVisualizer |
+|---|---|---|---|---|
+| 桌面 Chrome（WebGL + 默认 motion） | CSS + Canvas2D 柔光 sprite + Three.js 双层粒子 + Bloom | 3D 浮岛雾海 + 樱花树 + PBR 水面 + Bloom + OrbitControls | 3D 立体花瓣 + MeshPhysicalMaterial + Bloom + OrbitControls + raycaster | Web Audio + Canvas2D 4 模式 + 节拍检测 |
+| 桌面 Chrome + `prefers-reduced-motion` | 仅 CSS 雾气光斑 | SVG 静态插画 | CSS 渐变背景 + 提示文案 | CSS 5 色横条静态 |
+| 移动端 Safari（WebGL + 默认 motion） | CSS + Canvas2D（粒子减半）+ Three.js 双层粒子（dpr≤1.5）+ Bloom strength 0.18 | 3D 浮岛雾海（粒子减半 + dpr≤1.5 + Bloom 0.18） | 3D 立体花瓣（粒子减半 + dpr≤1.5） | Web Audio + Canvas2D 4 模式 |
+| 旧浏览器（无 WebGL） | CSS + Canvas2D 光点 | SVG 静态插画 | CSS 渐变背景 + 提示文案 | CSS 5 色横条 |
+| `import('three')` 失败 | CSS + Canvas2D 光点 | SVG 静态插画 | CSS 渐变背景 + 提示文案 | 不受影响（不用 Three.js） |
 
-详见 [frontend/src/components/AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) + [HeroScene.vue](../../frontend/src/components/HeroScene.vue) + [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) + [utils/visual.js](../../frontend/src/utils/visual.js)，决策理由详见 [HANDOFF §5.10](../../HANDOFF.md)，4 大坑详见 [HANDOFF §6.23](../../HANDOFF.md)。
+详见 [frontend/src/components/AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) + [HeroScene.vue](../../frontend/src/components/HeroScene.vue) + [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) + [FlowerField.vue](../../frontend/src/components/FlowerField.vue) + [SceneHint.vue](../../frontend/src/components/SceneHint.vue) + [SceneControls.vue](../../frontend/src/components/SceneControls.vue) + [utils/visual.js](../../frontend/src/utils/visual.js) + [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js)，决策理由详见 [HANDOFF §5.10](../../HANDOFF.md) + [HANDOFF §5.11](../../HANDOFF.md)，4 大坑详见 [HANDOFF §6.23](../../HANDOFF.md)。
 
 ---
 

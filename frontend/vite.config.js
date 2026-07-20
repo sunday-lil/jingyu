@@ -51,10 +51,17 @@ export default defineConfig(({ command }) => ({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vue-vendor': ['vue', 'vue-router', 'pinia'],
-          'gsap-vendor': ['gsap'],
-          'three-vendor': ['three'],
+        // 函数式 manualChunks：three 主体 + three/addons/* 一起归入 three-vendor
+        // 这样 HeroScene / FlowerField / AudioVisualizer 等组件共享一份 OrbitControls + 后处理
+        manualChunks(id) {
+          if (id.includes('node_modules/three/')) return 'three-vendor'
+          if (
+            id.includes('node_modules/vue/') ||
+            id.includes('node_modules/vue-router/') ||
+            id.includes('node_modules/pinia/') ||
+            id.includes('node_modules/@vue/')
+          ) return 'vue-vendor'
+          if (id.includes('node_modules/gsap/')) return 'gsap-vendor'
         },
       },
     },

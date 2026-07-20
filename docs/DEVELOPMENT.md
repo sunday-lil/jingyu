@@ -200,7 +200,15 @@ frontend/
     │   └── index.js          ← axios 实例（baseURL=/api，withCredentials，401 拦截）
     ├── components/
     │   ├── AppLayout.vue     ← 桌面顶部导航 + 移动端底部 tabbar（768px 断点）
-    │   └── FlowerField.vue   ← 3D 花田场景（Three.js + InstancedMesh，v2.0.1 加）
+    │   ├── FlowerField.vue   ← 3D 花田场景 v2（立体花瓣 BufferGeometry + MeshPhysicalMaterial + Bloom + OrbitControls + raycaster；v2.0.1 加，v2.2 PBR 升级）
+    │   ├── AmbientBackground.vue  ← 全局氛围背景 v2（CSS 雾气 + Canvas2D 柔光 sprite + Three.js 双层粒子 + 鼠标排斥 + 滚动视差 + 轻量 Bloom；v2.1 加，v2.2 升级）
+    │   ├── HeroScene.vue     ← 首页 Hero 区 3D 浮岛雾海 v2（LatheGeometry 浮岛 + 递归樱花树 + PBR 水面 shader + Bloom + OrbitControls + raycaster；v2.1 加，v2.2 PBR 升级）
+    │   ├── AudioVisualizer.vue  ← 音波可视化 v2（4 模式：wave/mirror/radial/particles + 节拍检测 + 频响颜色 + 点击切换；v2.1 加，v2.2 升级）
+    │   ├── SceneHint.vue     ← 3D 场景交互指引横幅（拖拽旋转 · 滚轮缩放 · 点击交互，3 秒淡出；v2.2 加）
+    │   └── SceneControls.vue  ← 3D 场景视图控制工具栏（重置视角 / 自动旋转开关；v2.2 加）
+    ├── utils/
+    │   ├── visual.js         ← 视觉能力检测（hasWebGL / prefersReducedMotion / smartRAF；v2.1 加）
+    │   └── three-helpers.js  ← Three.js PBR 工具集（createRenderer / createEnvironment / createPostProcessing / createOrbitControls / disposeObject3D 等 9 函数；v2.2 加）
     ├── views/                ← 【一个视图一个 .vue 文件】
     │   ├── HomeView.vue
     │   ├── NotFoundView.vue
@@ -337,9 +345,60 @@ build: {
 - **3D 花田不显示**：访问 `/garden` 看到「🌿 花田正在生长…」一直转 → 打开 DevTools Console 看是不是 `Failed to fetch dynamically imported module`（three-vendor chunk 没加载到，检查 `static/dist/assets/three-vendor-*.js` 是否存在 → 不存在重新 `npm run build`）
 - **proxy 没生效**：检查 [vite.config.js](../../frontend/vite.config.js) 的 `server.proxy` 是否包含 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json`（v2.0.1 起多了 `/docs` 和 `/openapi.json`，方便开发时直接在 :5000 访问 Swagger）
 
-### 1.9.8 视觉组件开发指南（v2.1 加，2026-07-20）
+### 1.9.8 视觉组件开发指南（v2.1 加，2026-07-20；v2.2 PBR 升级，2026-07-20）
 
-> 适用范围：所有用 Three.js / Canvas2D / Web Audio API 的视觉组件。当前已有 4 个：[FlowerField.vue](../../frontend/src/components/FlowerField.vue) / [AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) / [HeroScene.vue](../../frontend/src/components/HeroScene.vue) / [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue)。
+> 适用范围：所有用 Three.js / Canvas2D / Web Audio API 的视觉组件。当前已有 7 个：[FlowerField.vue](../../frontend/src/components/FlowerField.vue) / [AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) / [HeroScene.vue](../../frontend/src/components/HeroScene.vue) / [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) / [SceneHint.vue](../../frontend/src/components/SceneHint.vue) / [SceneControls.vue](../../frontend/src/components/SceneControls.vue) + [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) PBR 工具集。
+
+#### v2.2 新增 3 大铁律（在 v2.1 4 大铁律之上）
+
+**⑤ PBR 渲染管线必须用 `three-helpers.js` 工具函数**（v2.2 加）
+```js
+// ❌ 不要自己 new THREE.WebGLRenderer / new THREE.PMREMGenerator / new EffectComposer
+// ✅ 用 three-helpers.js 集中导出的函数
+import { createRenderer, createEnvironment, createPostProcessing, createOrbitControls } from '@/utils/three-helpers'
+
+const renderer = createRenderer(canvas)              // ACESFilmic + SRGB + PCFSoft + dpr≤2
+const envMap = createEnvironment(renderer)           // RoomEnvironment + PMREM
+scene.environment = envMap
+const composer = createPostProcessing(renderer, scene, camera)  // EffectComposer + UnrealBloomPass
+const controls = createOrbitControls(camera, canvas) // 阻尼 + 极角约束 + 禁用 pan + 自动旋转
+```
+理由：v2.1 各组件自己写 `new THREE.WebGLRenderer({ canvas, antialias: true })` + `renderer.toneMapping = ...`，4 个组件 4 套配置不一致；v2.2 抽到 [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 统一管理，新组件直接调函数即可。
+
+**⑥ 3D 场景必须有 `SceneHint.vue` 交互指引 + `SceneControls.vue` 视图控制**（v2.2 加）
+```vue
+<template>
+  <div class="scene-root">
+    <div ref="mount" class="scene-canvas" />
+    <SceneHint />                       <!-- ← 顶部交互指引横幅，3 秒淡出 -->
+    <SceneControls                      <!-- ← 视图控制工具栏 -->
+      @reset-view="resetView"
+      @toggle-auto-rotate="toggleAutoRotate"
+    />
+  </div>
+</template>
+```
+理由：v2.1 的 3D 场景用户不知道可以拖拽 / 缩放 / 点击，以为是静态背景；v2.2 强制要求所有 3D 场景挂 `SceneHint` + `SceneControls`，让用户**第一眼就知道怎么交互**。
+
+**⑦ 3D 场景必须支持 `OrbitControls` 拖拽旋转 + 滚轮缩放 + `raycaster` 点击拾取**（v2.2 加）
+```js
+import { createOrbitControls } from '@/utils/three-helpers'
+const controls = createOrbitControls(camera, canvas)  // 阻尼 + 极角约束 + 禁用 pan + 自动旋转
+
+// raycaster 点击拾取
+const raycaster = new THREE.Raycaster()
+const onMouseClick = (e) => {
+  const rect = canvas.getBoundingClientRect()
+  const mouse = new THREE.Vector2(
+    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1
+  )
+  raycaster.setFromCamera(mouse, camera)
+  const hits = raycaster.intersectObjects(clickableObjects.value)
+  if (hits.length > 0) handleClick(hits[0].object)
+}
+```
+理由：v2.1 的 3D 场景只能看不能交互；v2.2 要求所有 3D 场景统一 `OrbitControls` + `raycaster`，让 3D 场景「可交互」而非「只能看」。
 
 #### 4 大铁律（缺任何一个都会在长时间使用或多视图切换后出问题）
 

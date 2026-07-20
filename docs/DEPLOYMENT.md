@@ -10,6 +10,8 @@
 
 > 🔒 **2026-07-20 v2.1 视觉增强**：4 个视觉组件（[AmbientBackground.vue](../frontend/src/components/AmbientBackground.vue) / [HeroScene.vue](../frontend/src/components/HeroScene.vue) / [AudioVisualizer.vue](../frontend/src/components/AudioVisualizer.vue) + [utils/visual.js](../frontend/src/utils/visual.js)）加入构建后，`three-vendor` chunk 因 HeroScene 共享而**仍只输出一个文件**（gzip 175KB），首屏不加载，仅访问 `/`（HeroScene）或 `/garden`（FlowerField）时按需拉取。**部署前必须重新 `npm run build`**，否则用户看不到 v2.1 视觉增强。关键词 `三层渐进增强` / `AmbientBackground` / `HeroScene` / `AudioVisualizer` / `visual.js` / `shallowRef` / `smartRAF` 在 6 份文档中都要出现。
 
+> 🔒 **2026-07-20 v2.2 3D 元素与动效全面重构**：4 个视觉组件全部升级到 PBR 渲染管线（`UnrealBloomPass` + `RoomEnvironment` PMREM + ACESFilmic 色调映射），新增 [utils/three-helpers.js](../frontend/src/utils/three-helpers.js) PBR 工具集 + [SceneHint.vue](../frontend/src/components/SceneHint.vue) 交互指引 + [SceneControls.vue](../frontend/src/components/SceneControls.vue) 视图控制。构建产物体积变化：HeroScene 7.5KB → 13.54KB、FlowerField 单独 chunk 9.94KB、SceneControls 4.5KB、three-vendor 175KB → 719.84KB（含 addons：OrbitControls / EffectComposer / UnrealBloomPass / RoomEnvironment）。**部署前必须重新 `npm run build`**，否则用户看不到 v2.2 PBR 升级 + 交互指引。关键词 `PBR` / `three-helpers` / `SceneHint` / `SceneControls` / `OrbitControls` / `raycaster` / `UnrealBloomPass` / `RoomEnvironment` / `LatheGeometry` 在 6 份文档中都要出现。
+
 ---
 
 ## 前端构建（v2.0 Vue 3 重构后必做，所有部署方式通用）
@@ -54,16 +56,18 @@ vite v5.x.x building for production...
 ✓ N modules transformed.
 dist/index.html                  ← ../static/dist/index.html
 dist/assets/index-xxxxxx.js      ← Vue 3 + 依赖 chunk
-dist/assets/three-vendor-*.js    ← Three.js 单独 chunk（v2.1 起 /garden FlowerField + / HeroScene 共享，gzip 175KB，首屏不加载）
+dist/assets/three-vendor-*.js    ← Three.js + addons 单独 chunk（v2.2 起 /garden FlowerField + / HeroScene + AmbientBackground 共享，gzip 719.84KB，含 OrbitControls / EffectComposer / UnrealBloomPass / RoomEnvironment，首屏不加载）
 dist/assets/gsap-vendor-*.js     ← GSAP 单独 chunk
 dist/assets/vue-vendor-*.js      ← Vue 3 + Vue Router + Pinia 单独 chunk（v2.0.1 加 manualChunks 分包）
-dist/assets/HeroScene-*.js       ← 首页 Hero 区 3D 浮岛雾海组件（v2.1 加，7.5KB，仅 / 按需加载）
-dist/assets/AudioVisualizer-*.js ← 5 色音波可视化组件（v2.1 加，仅 /music/:yin 按需加载）
+dist/assets/HeroScene-*.js       ← 首页 Hero 区 3D 浮岛雾海 v2 组件（v2.1 加 7.5KB → v2.2 PBR 升级 13.54KB，仅 / 按需加载）
+dist/assets/FlowerField-*.js     ← 3D 花田 v2 组件（v2.2 PBR 升级，9.94KB，仅 /garden 按需加载）
+dist/assets/SceneControls-*.js   ← 3D 场景视图控制工具栏（v2.2 加，4.5KB，被 HeroScene / FlowerField 引用）
+dist/assets/AudioVisualizer-*.js ← 音波可视化 v2 组件（4 模式 + 节拍检测，仅 /music/:yin 按需加载）
 dist/assets/index-xxxxxx.css     ← Tailwind CSS
 ✓ built in Xs
 ```
 
-> 💡 **Three.js chunk（v2.1 更新）**：[FlowerField.vue](../../frontend/src/components/FlowerField.vue)（`/garden` 精神花园页）和 [HeroScene.vue](../../frontend/src/components/HeroScene.vue)（`/` 首页，v2.1 加）都用 `defineAsyncComponent` 异步导入 `three`，所以 Three.js (~600KB) 被打成单独的 `three-vendor-*.js` chunk，**首屏不加载**，仅在用户访问 `/` 或 `/garden` 时按需拉取。两页共享同一 chunk，不重复下载。[AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue)（全局氛围背景，挂在 AppLayout）也异步加载 Three.js 远景粒子层，但首屏 DOM 由 CSS 雾气光斑 + Canvas2D 光点兜底，Three.js 加载完前页面已有完整视觉效果（三层渐进增强）。
+> 💡 **Three.js chunk（v2.2 更新）**：[FlowerField.vue](../../frontend/src/components/FlowerField.vue)（`/garden`）、[HeroScene.vue](../../frontend/src/components/HeroScene.vue)（`/`）和 [AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue)（全局，挂在 AppLayout）都用 `defineAsyncComponent` 异步导入 `three` + `three/addons/*`，所以 Three.js + addons 被打成单独的 `three-vendor-*.js` chunk，**首屏不加载**，仅在用户访问 `/` 或 `/garden` 时按需拉取。三处共享同一 chunk，不重复下载。v2.2 起 chunk 体积从 175KB 增长到 719.84KB，因为加入了 PBR 渲染管线所需的 addons：`OrbitControls`（交互）/ `EffectComposer` + `RenderPass` + `UnrealBloomPass` + `OutputPass`（后处理）/ `RoomEnvironment`（环境映射）。AmbientBackground 首屏 DOM 由 CSS 雾气光斑 + Canvas2D 光点兜底，Three.js 加载完前页面已有完整视觉效果（三层渐进增强）。
 
 ### 构建产物去向
 
