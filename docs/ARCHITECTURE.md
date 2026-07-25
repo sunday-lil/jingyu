@@ -10,7 +10,7 @@
 
 > 🔒 **2026-07-20 v2.2 3D 元素与动效全面重构**：① 4 个视觉组件全部升级到 PBR 渲染管线（ACESFilmicToneMapping + SRGBColorSpace + PCFSoftShadowMap + RoomEnvironment PMREM + UnrealBloomPass）；② 新增 [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 集中导出 9 个共享 PBR 工具函数；③ 新增 [SceneHint.vue](../../frontend/src/components/SceneHint.vue) 交互指引横幅 + [SceneControls.vue](../../frontend/src/components/SceneControls.vue) 视图控制工具栏，解决「用户不知道如何与 3D 元素交互」问题；④ HeroScene 改用 `LatheGeometry` 旋转曲面浮岛 + 递归樱花树 + 水面 `onBeforeCompile` 顶点位移 shader；FlowerField 改用自定义 `BufferGeometry` 立体花瓣 + `MeshPhysicalMaterial`；AudioVisualizer 升级 4 模式 + 节拍检测；AmbientBackground 升级 Canvas2D 柔光 sprite + 滚动视差；⑤ 所有 3D 场景统一 `OrbitControls`（拖拽旋转 + 滚轮缩放）+ `raycaster` 点击拾取。关键词 `PBR` / `three-helpers` / `SceneHint` / `SceneControls` / `OrbitControls` / `raycaster` / `UnrealBloomPass` / `RoomEnvironment` / `LatheGeometry` 在 6 份文档中都要出现。
 
-> 🔒 **2026-07-20 v2.2.1 start.py 自动构建**：`python start.py` 默认行为变更——dist 未构建时不再走开发模式（Vite 占 :5000），而是自动 `npm install + npm run build` 后走生产模式（**:5000 永远是 FastAPI**）。新增 `--dev` 参数显式走开发模式。§1.2 开发/生产模式切换的端口策略不变，但触发条件改为：dist 未构建 + 非 `--dev` → 自动构建后生产模式（而非开发模式）。关键词 `--dev` / `自动构建` / `:5000 永远是 FastAPI` 在 6 份文档中都要出现。
+> 🔒 **2026-07-25 v2.2.2 start.py 默认应用模式**：`python start.py` 默认行为变更——**默认走应用/开发模式**（Vite :5000 HMR + FastAPI :5001 API 一起起），自动检测 `frontend/node_modules` 不存在则 `npm install`（不 build dist，应用模式用 Vite dev server 不需要构建产物）。新增 `--prod` 参数显式生产模式（FastAPI :5000 单进程，需 dist 已构建）。`--dev` 改为兼容别名（等同默认行为）。§1.2 开发/生产模式切换的端口策略不变，但触发条件改为：默认 → 应用模式（Vite :5000）；`--prod` → 生产模式（FastAPI :5000，需 dist 已构建）。关键词 `--prod` / `默认应用模式` / `自动 npm install` / `前后端一起起` 在 6 份文档中都要出现。
 
 ---
 
@@ -261,14 +261,14 @@ const FlowerField = defineAsyncComponent(() =>
 | Vue 响应式 | Three.js 对象用 `shallowRef` 持有 | `ref` 会深度代理 Three.js 内部 Scene/Object3D 私有字段拖累性能（详见 [HANDOFF §6.23.2](../../HANDOFF.md)） |
 | rAF 调度 | `smartRAF(callback)` 在 `document.hidden` 时 `cancelAnimationFrame`、可见时自动恢复 | 标签页隐藏时浏览器虽降为 1 fps 但仍执行渲染循环，GPU 不释放（详见 [HANDOFF §6.23.3](../../HANDOFF.md)） |
 | 资源释放 | `onBeforeUnmount` 调 `disposeObject3D` + `disposeRenderer` 完整释放 geometry / material / texture / renderer / composer / 事件监听 / ResizeObserver | 5 次切走后浏览器报 `Too many active WebGL contexts` 黑屏（详见 [HANDOFF §6.23.4](../../HANDOFF.md)） |
-| 移动端降级 | 粒子数减半 + `dpr` ≤ 1.5 + Bloom strength 0.3 → 0.18 | 移动端 GPU/CPU 弱，全量粒子 + 强 Bloom 会掉帧 |
+| 移动端降级 | 粒子数减半 + `dpr` ≤ 1.5 + Bloom strength 0.3 → 0.18 + 几何精度降档（Lathe/Cylinder 段数 24→16、Icosahedron detail 2→1、樱花树递归深度 4→3、花瓣网格 5×8→4×6、地面圆 64→32、AudioVisualizer 柱数 48/64→32） | 移动端 GPU/CPU 弱，全量粒子 + 强 Bloom + 高精度几何会掉帧；几何降档可在不牺牲视觉层次的前提下大幅减少顶点数 |
 | 配色一致性 | 4 个组件全部用治愈系 5 色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）+ 米白 `#F9F6F0` 背景 | 与 [tailwind.config.js](../../frontend/tailwind.config.js) token 一致；AudioVisualizer 4 模式频响颜色低频暖色 → 高频冷色 |
 | Web Audio 一次性约束 | `audioCtx.createMediaElementSource(audioEl)` 对同一 `<audio>` 元素只能调一次 | AudioVisualizer `if (!sourceNode)` 守卫 + MusicDetailView `visualizerConnected` ref 标记首次 `playIndex` 时连接（详见 [HANDOFF §6.23.1](../../HANDOFF.md)） |
 
 **为什么 v2.2 引入 PBR + Bloom 后处理**（推翻 v2.1 决策）：
 - v2.1 决策「不用全屏 shader / 后处理」基于「治愈系要柔和不刺眼」，但实际效果过于平淡，被用户评价为「粗糙过时，类似 80/90 年代红白机」
 - v2.2 调整：Bloom strength 0.3（移动端 0.18）保持克制，只让发光物体（花瓣 / 樱花 / 光点）有柔光晕，**不**做全屏泛光；ACESFilmic 色调映射让暗部有细节不死黑，高光不爆白
-- 性能保护：移动端 Bloom strength 降到 0.18 + 粒子数减半 + dpr ≤ 1.5；reduced-motion 直接降级为 SVG 静态插画，不走 Bloom 路径
+- 性能保护：移动端 Bloom strength 降到 0.18 + 粒子数减半 + dpr ≤ 1.5 + 几何精度降档（Lathe/Cylinder/Icosahedron 段数与细分降低，樱花树递归深度 4→3，花瓣网格 5×8→4×6，地面圆 64→32，AudioVisualizer 柱数减半）；reduced-motion 直接降级为 SVG 静态插画，不走 Bloom 路径
 
 **降级验证矩阵**：
 
@@ -276,7 +276,7 @@ const FlowerField = defineAsyncComponent(() =>
 |---|---|---|---|---|
 | 桌面 Chrome（WebGL + 默认 motion） | CSS + Canvas2D 柔光 sprite + Three.js 双层粒子 + Bloom | 3D 浮岛雾海 + 樱花树 + PBR 水面 + Bloom + OrbitControls | 3D 立体花瓣 + MeshPhysicalMaterial + Bloom + OrbitControls + raycaster | Web Audio + Canvas2D 4 模式 + 节拍检测 |
 | 桌面 Chrome + `prefers-reduced-motion` | 仅 CSS 雾气光斑 | SVG 静态插画 | CSS 渐变背景 + 提示文案 | CSS 5 色横条静态 |
-| 移动端 Safari（WebGL + 默认 motion） | CSS + Canvas2D（粒子减半）+ Three.js 双层粒子（dpr≤1.5）+ Bloom strength 0.18 | 3D 浮岛雾海（粒子减半 + dpr≤1.5 + Bloom 0.18） | 3D 立体花瓣（粒子减半 + dpr≤1.5） | Web Audio + Canvas2D 4 模式 |
+| 移动端 Safari（WebGL + 默认 motion） | CSS + Canvas2D（粒子减半）+ Three.js 双层粒子（dpr≤1.5）+ Bloom strength 0.18 | 3D 浮岛雾海（粒子减半 + dpr≤1.5 + Bloom 0.18 + 樱花树深度 4→3 + Lathe/Cylinder 段数 24→16 + Icosahedron detail 2→1） | 3D 立体花瓣（粒子减半 + dpr≤1.5 + 花瓣网格 5×8→4×6 + 花蕊 Icosahedron detail 2→1 + 地面圆 64→32 + 茎圆柱段 6→5） | Web Audio + Canvas2D 4 模式（镜像柱 48→32 / 径向柱 64→32 / 粒子流 120→60 / 节拍粒子 10→6 / 24fps） |
 | 旧浏览器（无 WebGL） | CSS + Canvas2D 光点 | SVG 静态插画 | CSS 渐变背景 + 提示文案 | CSS 5 色横条 |
 | `import('three')` 失败 | CSS + Canvas2D 光点 | SVG 静态插画 | CSS 渐变背景 + 提示文案 | 不受影响（不用 Three.js） |
 
@@ -284,11 +284,13 @@ const FlowerField = defineAsyncComponent(() =>
 
 ---
 
-## 1.2 开发/生产模式切换（2026-07-19 v2.0 加，v2.0.1 端口策略调整）
+## 1.2 开发/生产模式切换（2026-07-19 v2.0 加，v2.0.1 端口策略调整，v2.2.2 默认应用模式）
 
-> **2026-07-19 v2.0.1 端口策略调整**：开发模式从「Vite :5173 + FastAPI :5000」改为「**Vite :5000 + FastAPI :5001**」——用户**始终**访问 :5000，由 [start.py](../../start.py) 自动检测 dist 是否构建来切换端口策略。理由：原方案让 FastAPI :5000 反代 Vite :5173，但 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含 null 字节转义 + 冒号，httpx 转发时被破坏，浏览器报 `SyntaxError: Unexpected token '.'`（详见 [HANDOFF §6.16](../../HANDOFF.md)）。
+> **2026-07-19 v2.0.1 端口策略调整**：开发模式从「Vite :5173 + FastAPI :5000」改为「**Vite :5000 + FastAPI :5001**」——用户**始终**访问 :5000，由 [start.py](../../start.py) 切换端口策略。理由：原方案让 FastAPI :5000 反代 Vite :5173，但 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含 null 字节转义 + 冒号，httpx 转发时被破坏，浏览器报 `SyntaxError: Unexpected token '.'`（详见 [HANDOFF §6.16](../../HANDOFF.md)）。
 
-### 1.2.1 开发模式（Vite dev server :5000 + FastAPI :5001）
+> **2026-07-25 v2.2.2 默认应用模式**：`python start.py` 默认行为变更为**应用/开发模式**（Vite :5000 HMR + FastAPI :5001 API 一起起），自动检测 `frontend/node_modules` 不存在则 `npm install`。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 dist 已构建）。`--dev` 改为兼容别名（等同默认行为）。
+
+### 1.2.1 应用模式（Vite dev server :5000 + FastAPI :5001，默认）
 
 ```
 浏览器 → http://127.0.0.1:5000/  ← 用户始终访问 :5000
@@ -307,16 +309,16 @@ const FlowerField = defineAsyncComponent(() =>
                                           └─ /docs、/openapi.json → Swagger
 ```
 
-- **推荐**：`python start.py`（自动起 Vite :5000 + FastAPI :5001 双进程，dev 模式由 `is_dist_built()` 检测自动切换）
+- **推荐**：`python start.py`（默认应用模式：自动起 Vite :5000 + FastAPI :5001 双进程，自动检测 `frontend/node_modules` 不存在则 `npm install`）
 - **备选**（手动两终端）：
   - 终端 1：`cd frontend && npm install && npm run dev`（Vite 监听 :5000）
-  - 终端 2：`set QI_PORT=5001 && python start.py`（FastAPI 监听 :5001）
+  - 终端 2：`set QI_PORT=5001 && python start.py fg`（FastAPI 监听 :5001）
 - 浏览器访问 **:5000**（即 Vite），前端调 API 走 proxy 无跨域
-- start.py 在 dev 模式会设置环境变量 `QI_PORT=5001` 让 FastAPI 改听 5001（默认是 5000）
+- start.py 在应用模式会设置环境变量 `QI_PORT=5001` 让 FastAPI 改听 5001（默认是 5000）
 - Vite host 显式设 `127.0.0.1`（不写 `localhost`，避免 IPv6 `[::1]` 问题，详见 [HANDOFF §6.12](../../HANDOFF.md)）
 - Vite `strictPort: true` 防止 5000 被占用时自动跳到 5001（会和 FastAPI 撞）
 
-### 1.2.2 生产模式（FastAPI :5000 + SPA fallback，Vite 不运行）
+### 1.2.2 生产模式（FastAPI :5000 + SPA fallback，Vite 不运行，需 --prod）
 
 ```
 浏览器 → http://127.0.0.1:5000/  ← 用户始终访问 :5000
@@ -330,19 +332,19 @@ const FlowerField = defineAsyncComponent(() =>
                                                               + EXT_TO_MIME 映射静态资源
 ```
 
-- **推荐**：`python start.py build`（一键构建前端到 `static/dist/`）+ `python start.py`（启动 FastAPI）
-- 备选：`cd frontend && npm run build` 输出到 `static/dist/`，然后 `python start.py`
+- **推荐**：`python start.py build`（一键构建前端到 `static/dist/`）+ `python start.py --prod`（启动 FastAPI 单进程）
+- 备选：`cd frontend && npm run build` 输出到 `static/dist/`，然后 `python start.py --prod`
 - 浏览器访问 **:5000**（这次是 FastAPI），FastAPI 兜底返回 `index.html`，Vue Router 接管客户端路由
-- dist 未构建时（仍走生产模式）返回治愈系提示页，引导用户访问 Vite dev server :5000 或运行 `python start.py build`
+- dist 未构建时（`--prod` 模式）报错退出，提示先 `python start.py build` 或不加 `--prod` 走默认应用模式
 
 ### 1.2.3 端口策略对照表
 
 | 模式 | 用户访问 | Vite | FastAPI | 启动方式 |
 |---|---|---|---|---|
-| 开发（dist 未构建） | :5000 | :5000（用户入口 + HMR） | :5001（API） | `python start.py` |
-| 生产（dist 已构建） | :5000 | 不运行 | :5000（API + SPA + 静态） | `python start.py`（自动检测 dist） |
+| 应用（默认，v2.2.2 起） | :5000 | :5000（用户入口 + HMR） | :5001（API） | `python start.py`（自动 npm install 当 node_modules 不存在） |
+| 生产（--prod） | :5000 | 不运行 | :5000（API + SPA + 静态） | `python start.py --prod`（需 dist 已构建，或先 `python start.py build`） |
 
-**为什么 dev 让 Vite 占 :5000 而不是 FastAPI**：见 [HANDOFF §5.9](../../HANDOFF.md)（决策）/ [HANDOFF §6.16](../../HANDOFF.md)（踩坑）。核心：让 FastAPI 反代 Vite 内部路径会失败，所以让 Vite 直接占住用户入口，FastAPI 退到 :5001 专做 API。
+**为什么应用模式让 Vite 占 :5000 而不是 FastAPI**：见 [HANDOFF §5.9](../../HANDOFF.md)（决策）/ [HANDOFF §6.16](../../HANDOFF.md)（踩坑）。核心：让 FastAPI 反代 Vite 内部路径会失败，所以让 Vite 直接占住用户入口，FastAPI 退到 :5001 专做 API。
 
 ### 1.2.4 SPA fallback 路径排除（必读）
 

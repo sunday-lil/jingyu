@@ -185,4 +185,18 @@ async function handleSubmit() {
   color: var(--color-accent-dark);
   font-weight: 500;
 }
+
+/* 移动端：减小内边距，避开顶部 topbar */
+@media (max-width: 768px) {
+  .auth-page {
+    min-height: auto;
+    padding: 20px 14px 60px;
+  }
+  .auth-card {
+    padding: 28px 20px;
+  }
+  .auth-card__title {
+    font-size: 24px;
+  }
+}
 </style>

@@ -1,53 +1,53 @@
 """静屿 — 一键启动脚本（前后端一起起来）。
 
 >>> 一句话用法：
-    python start.py                # 后台启动：dist 已构建走生产，未构建自动 npm install + build 后走生产
-    python start.py --dev          # 强制开发模式（Vite :5000 + FastAPI :5001，本地改前端用）
+    python start.py                # 后台启动：默认应用模式（Vite :5000 + FastAPI :5001 一起起，HMR 热更新）
+    python start.py --prod         # 显式生产模式（FastAPI :5000 单进程，需 dist 已构建）
     python start.py fg             # 前台运行（systemd / 调试用，关掉终端就停）
     python start.py --init-db      # 启动前重置数据库
 
 --- 全部子命令：
-    python start.py                # 后台启动（默认）：dist 已构建走生产，未构建自动构建后走生产
+    python start.py                # 后台启动（默认 = 应用/开发模式）：Vite 占 :5000 + FastAPI 退 :5001，前后端一起起
     python start.py start          # 同上
-    python start.py --dev          # 强制开发模式（Vite 占 :5000，FastAPI 退 :5001）
+    python start.py --prod         # 显式生产模式：FastAPI 监听 :5000，需 static/dist/ 已构建
+    python start.py --dev          # 兼容别名，等同默认行为（应用/开发模式）
     python start.py stop           # 优雅停止（同时停 FastAPI + Vite）
     python start.py restart        # 重启
     python start.py status         # 查看状态
-    python start.py fg             # 前台运行（systemd / supervisor 用）
+    python start.py fg             # 前台运行（systemd / 调试用，关掉终端就停；fg 默认仍是应用模式，可加 --prod 切生产）
     python start.py build          # 仅构建前端到 static/dist/（不启动服务）
 
---- 架构说明（v2.0 Vue 3 重构 + v2.0.1 端口策略 + v2.2.1 自动构建）：
+--- 架构说明（v2.0 Vue 3 重构 + v2.0.1 端口策略 + v2.2.2 默认应用模式）：
     前端由 Vue 3 SPA 接管，FastAPI 改为纯 API 后端 + SPA fallback：
       1. 后端 API（/api/* 路由）
       2. SPA fallback：dist 已构建 → 返回 static/dist/index.html
                       dist 未构建 → 开发态返回提示页引导访问 Vite :5000
       3. 静态资源（/static/* 下的 CSS/JS/图片 + /static/dist/* 前端构建产物）
 
-    start.py 自动检测 dist 是否构建：
-      - dist 已构建（生产模式）：只起 FastAPI :5000（从 .env 读 QI_PORT）
-      - dist 未构建 + 非 --dev：
-          * Node.js 可用 → 自动 npm install + npm run build → 走生产模式（首次约 7 分钟）
-          * Node.js 不可用 → 报错退出（不让 Vite 占 :5000 破坏端口代理）
-      - dist 未构建 + --dev：Vite 占 :5000（HMR）+ FastAPI 改听 :5001（API）
+    start.py 默认应用/开发模式（前后端一起起）：
+      - 应用模式（默认）：Vite 占 :5000（HMR）+ FastAPI 退 :5001（API）
+        启动前自动检测 frontend/node_modules，不存在则自动 npm install（约 7 分钟，仅首次）
         Vite proxy 把 /api、/static、/admin、/docs、/openapi.json 转发到 :5001
-      **生产部署 :5000 永远是 FastAPI**（除非显式 --dev），端口代理可放心指 :5000
+        **用户始终访问 :5000**（Vite dev server，HMR 热更新）
+      - 生产模式（--prod）：只起 FastAPI :5000（从 .env 读 QI_PORT），需 static/dist/ 已构建
+        dist 未构建 → 报错退出（提示先跑 `python start.py build` 或不要加 --prod 走默认应用模式）
 
---- 服务器开机启动 + 端口转发（生产，端口代理已配好 :5000 不能动）：
-    前提：服务器装 Node.js 18+（首次启动会自动 npm install + build，之后直接走生产模式）
-          或本地构建好 dist 后上传 static/dist/ 目录（则服务器不需要 Node.js）
+--- 服务器开机启动 + 端口转发（生产场景，端口代理已配好 :5000 不能动）：
+    前提：服务器装 Node.js 18+（默认应用模式需要 Vite dev server 运行）
+          或本地构建好 dist 后用 `python start.py --prod` 走生产模式（则服务器不需要 Node.js）
 
-    方式 A（宝塔面板）：
+    方式 A（宝塔面板，默认应用模式）：
       项目类型  : Python
       启动命令  : cd /www/wwwroot/healing && python start.py
       停止命令  : cd /www/wwwroot/healing && python start.py stop
-      端口      : 5000（与 .env 的 QI_PORT 一致）
+      端口      : 5000（Vite dev server，用户入口）+ 5001（FastAPI，API 后端）
       反向代理  : 宝塔站点 → 反向代理 → 目标 URL http://127.0.0.1:5000
-      首次启动  : 自动 npm install + npm run build（约 7 分钟），之后秒启
-    方式 B（systemd）：
-      ExecStart=/home/healing/app/venv/bin/python start.py fg  # fg 前台运行，systemd 管进程
+      首次启动  : 自动 npm install（约 7 分钟），之后秒启
+    方式 B（systemd，生产模式推荐）：
+      ExecStart=/home/healing/app/venv/bin/python start.py fg --prod  # fg 前台运行 + 显式生产模式
       Environment=QI_PORT=5000
       Nginx 反代 80/443 → 127.0.0.1:5000
-      首次启动  : 自动 npm install + npm run build（约 7 分钟），之后秒启
+      部署前   : 先 `python start.py build` 构建 dist，再启 --prod 模式
 
 环境变量（与 .env 一致）：
     QI_HOST, QI_PORT, QI_DEBUG, QI_SECRET_KEY, QI_DATABASE_URL,
@@ -85,6 +85,7 @@ LOG_FILE = LOG_DIR / "healing.log"
 VITE_LOG_FILE = LOG_DIR / "vite.log"
 FRONTEND_DIR = ROOT / "frontend"
 DIST_INDEX = ROOT / "static" / "dist" / "index.html"
+NODE_MODULES_DIR = FRONTEND_DIR / "node_modules"
 
 
 # ─────────────────────────────────────────────────────────────
@@ -223,52 +224,62 @@ def _check_node_available() -> tuple[bool, str]:
     return False, ""
 
 
-def _ensure_dist_or_dev(force_dev: bool) -> str:
-    """决定启动模式。
+def _ensure_node_modules() -> bool:
+    """应用/开发模式启动前的依赖检查。
 
-    返回:
-      "prod" — dist 已就绪，走生产模式（FastAPI :5000，端口代理可放心指 :5000）
-      "dev"  — 走开发模式（Vite :5000 + FastAPI :5001，仅本地开发用）
-      失败时 sys.exit(1) 退出（dist 未就绪 + 无法自动构建 + 非 force_dev）
-
-    生产部署场景（服务器端口代理已配好 :5000 指向 FastAPI）：
-      - dist 未构建 + Node.js 可用 → 自动 npm install + npm run build → 走生产模式
-      - dist 未构建 + Node.js 不可用 → 报错退出（不让 Vite 占 :5000 破坏端口代理）
+    检测 frontend/node_modules 是否存在：
+      - 存在 → 直接返回 True
+      - 不存在 → 检测 Node.js → 自动 npm install（约 7 分钟，仅首次）
+      - Node.js 不可用 → 报错退出
     """
-    if is_dist_built():
-        return "prod"
+    if NODE_MODULES_DIR.exists():
+        return True
 
-    if force_dev:
-        print("[INFO] --dev 模式，dist 未构建 → 走开发模式（Vite :5000 + FastAPI :5001）")
-        return "dev"
-
-    # 生产部署场景：dist 未构建，尝试自动构建
-    print("[INFO] 检测到前端未构建（static/dist/index.html 不存在）")
+    print("[INFO] 检测到前端依赖未安装（frontend/node_modules 不存在）")
     node_ok, node_ver = _check_node_available()
     if not node_ok:
-        print("[FAIL] dist 未构建且 Node.js 不可用，无法自动构建前端")
+        print("[FAIL] 前端依赖未安装且 Node.js 不可用，无法自动 npm install")
         print("       解决方案（任选其一）：")
-        print("         A. 服务器装 Node.js 18+，再跑 python start.py（自动 npm install + npm run build）")
-        print("         B. 本地构建好 dist 后，把 static/dist/ 目录上传到服务器")
-        print("         C. 本地开发用 python start.py --dev（走 Vite 开发模式，:5000 是 Vite 不是 FastAPI）")
+        print("         A. 装 Node.js 18+，再跑 python start.py（自动 npm install）")
+        print("         B. 本地构建好 dist 后，用 python start.py --prod 走生产模式（不需要 Node.js）")
         sys.exit(1)
 
-    print(f"[INFO] 检测到 {node_ver}，自动构建前端（首次约 7 分钟，含 npm install）...")
-    if not build_frontend():
-        print("[FAIL] 前端自动构建失败")
-        print("       请手动执行：cd frontend && npm install && npm run build")
+    print(f"[INFO] 检测到 {node_ver}，自动安装前端依赖（首次约 7 分钟）...")
+    npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
+    result = subprocess.run(
+        [npm_cmd, "install", "--no-audit", "--no-fund", "--loglevel=error"],
+        cwd=str(FRONTEND_DIR),
+    )
+    if result.returncode != 0:
+        print("[FAIL] npm install 失败")
+        print("       请手动执行：cd frontend && npm install")
         sys.exit(1)
 
-    print("[OK] 前端自动构建完成，走生产模式")
-    return "prod"
+    print("[OK] 前端依赖安装完成")
+    return True
+
+
+def _ensure_dist_for_prod() -> None:
+    """生产模式启动前的 dist 检查。
+
+    dist 未构建 → 报错退出（提示先 build 或走默认应用模式）。
+    """
+    if is_dist_built():
+        return
+
+    print("[FAIL] 生产模式（--prod）要求 static/dist/ 已构建，但未找到 static/dist/index.html")
+    print("       解决方案（任选其一）：")
+    print("         A. 先构建前端：python start.py build（自动 npm install + npm run build）")
+    print("         B. 不加 --prod 走默认应用模式：python start.py（Vite :5000 + FastAPI :5001）")
+    sys.exit(1)
 
 
 def start_vite_background() -> int | None:
-    """后台启动 Vite dev server（仅开发模式用）。
+    """后台启动 Vite dev server（应用/开发模式用）。
 
     返回 Vite 进程 PID，失败返回 None。
     """
-    if not (FRONTEND_DIR / "node_modules").exists():
+    if not NODE_MODULES_DIR.exists():
         print("[WARN] frontend/node_modules 不存在，跳过 Vite 启动")
         print("       请先执行：cd frontend && npm install")
         return None
@@ -318,7 +329,7 @@ def start_vite_background() -> int | None:
 
 def build_frontend() -> bool:
     """构建前端到 static/dist/。返回是否成功。"""
-    if not (FRONTEND_DIR / "node_modules").exists():
+    if not NODE_MODULES_DIR.exists():
         print("[INFO] frontend/node_modules 不存在，先执行 npm install ...")
         npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
         result = subprocess.run(
@@ -342,14 +353,17 @@ def build_frontend() -> bool:
     return True
 
 
-def start_background(force_dev: bool = False) -> int:
+def start_background(force_prod: bool = False) -> int:
     """后台启动子进程（脱离父进程），返回子进程 PID。
 
-    自动检测 dist 是否构建：
-    - 已构建（生产模式）：FastAPI 监听 :5000，提供 SPA + API
-    - 未构建 + 非 --dev：自动 npm install + npm run build 后走生产模式（Node.js 不可用则报错退出）
-    - 未构建 + --dev：Vite 监听 :5000（用户入口），FastAPI 改听 :5001（API）
-      Vite proxy 把 /api、/static、/admin 转发到 :5001
+    默认 = 应用/开发模式（前后端一起起）：
+      - 自动检测 frontend/node_modules，不存在则 npm install（约 7 分钟，仅首次）
+      - Vite 监听 :5000（用户入口，HMR）+ FastAPI 改听 :5001（API，由 start.py 设 QI_PORT=5001）
+      - Vite proxy 把 /api、/static、/admin、/docs、/openapi.json 转发到 :5001
+
+    生产模式（force_prod=True）：
+      - 要求 static/dist/ 已构建（未构建报错退出）
+      - FastAPI 监听 :5000（从 .env 读 QI_PORT），Vite 不运行
     """
     ensure_dirs()
     existing = read_pid()
@@ -357,21 +371,26 @@ def start_background(force_dev: bool = False) -> int:
         print(f"[INFO] FastAPI 已在运行（PID {existing}），先 stop 再 start")
         return existing
 
-    mode = _ensure_dist_or_dev(force_dev)
-    dist_built = (mode == "prod")
-    mode_label = "生产" if dist_built else "开发"
+    if force_prod:
+        _ensure_dist_for_prod()
+        is_prod = True
+    else:
+        _ensure_node_modules()
+        is_prod = False
 
-    # 开发模式：FastAPI 改听 :5001，让 Vite 占 :5000
+    mode_label = "生产" if is_prod else "应用"
+
+    # 应用模式：FastAPI 改听 :5001，让 Vite 占 :5000
     # 生产模式：FastAPI 听 :5000（默认，从 .env 读 QI_PORT）
-    if not dist_built:
+    if not is_prod:
         fastapi_port = 5001
     else:
         fastapi_port = settings.port
 
     print(f"[START] 后台启动（{mode_label}模式）")
     print(f"   FastAPI : http://{settings.host}:{fastapi_port}")
-    if not dist_built:
-        print(f"   Vite    : http://{settings.host}:5000（用户访问入口）")
+    if not is_prod:
+        print(f"   Vite    : http://{settings.host}:5000（用户访问入口，HMR 热更新）")
     print(f"   日志文件 : {LOG_FILE}")
     print(f"   PID 文件 : {PID_FILE}")
 
@@ -381,12 +400,12 @@ def start_background(force_dev: bool = False) -> int:
     child_env = os.environ.copy()
     child_env["PYTHONIOENCODING"] = "utf-8"
     child_env["PYTHONUTF8"] = "1"
-    # 开发模式覆盖 QI_PORT 让 FastAPI 听 :5001
-    if not dist_built:
+    # 应用模式覆盖 QI_PORT 让 FastAPI 听 :5001
+    if not is_prod:
         child_env["QI_PORT"] = str(fastapi_port)
     kwargs: dict = dict(
         # 用 __file__ 引用自己，不写死文件名（万一用户重命名也能跑）
-        args=[sys.executable, str(Path(__file__).resolve()), "fg"],
+        args=[sys.executable, str(Path(__file__).resolve()), "fg"] + (["--prod"] if force_prod else []),
         stdout=log_fp,
         stderr=subprocess.STDOUT,
         stdin=subprocess.DEVNULL,
@@ -419,8 +438,8 @@ def start_background(force_dev: bool = False) -> int:
 
     print(f"[OK] FastAPI 启动成功（PID {proc.pid}, :{fastapi_port}）")
 
-    # 开发模式：再起 Vite（占 :5000）
-    if not dist_built:
+    # 应用模式：再起 Vite（占 :5000）
+    if not is_prod:
         vite_pid = start_vite_background()
         if vite_pid is not None:
             print(f"   访问     http://{settings.host}:5000（Vite dev，HMR 热更新）")
@@ -433,25 +452,33 @@ def start_background(force_dev: bool = False) -> int:
     return proc.pid
 
 
-def run_foreground(force_dev: bool = False) -> None:
+def run_foreground(force_prod: bool = False) -> None:
     """前台运行（systemd / supervisor / 调试用）。
 
-    自动检测 dist：
-    - 已构建 → 生产模式（FastAPI :5000，systemd 推荐场景）
-    - 未构建 + 非 --dev → 自动 npm install + npm run build 后走生产模式（Node.js 不可用则报错退出）
-    - 未构建 + --dev → 开发模式（需单独起 Vite，fg 模式不自动起 Vite）
+    默认 = 应用/开发模式：
+      - 自动检测 frontend/node_modules，不存在则 npm install
+      - FastAPI 退到 :5001（由 start.py 设 QI_PORT=5001），需单独起 Vite
+      - 注意：fg 模式不会自动起 Vite，应用模式请单独执行 `cd frontend && npm run dev`
+              或用 `python start.py`（后台模式自动起 Vite）
 
-    注意：fg 模式不会自动起 Vite，开发模式请单独执行 `cd frontend && npm run dev`。
+    生产模式（force_prod=True）：
+      - 要求 static/dist/ 已构建
+      - FastAPI 听 :5000（systemd 推荐场景）
     """
     ensure_dirs()
     # 用 lifespan 钩子做建表 + 种子
     import uvicorn
-    mode = _ensure_dist_or_dev(force_dev)
-    dist_built = (mode == "prod")
-    mode_label = "生产" if dist_built else "开发"
+    if force_prod:
+        _ensure_dist_for_prod()
+        is_prod = True
+    else:
+        _ensure_node_modules()
+        is_prod = False
+    mode_label = "生产" if is_prod else "应用"
     print(f"[HEAL] 静屿 — 前台启动（{mode_label}模式）-> http://{settings.host}:{settings.port}")
-    if not dist_built:
-        print(f"   [提示] 开发模式：请单独执行 `cd frontend && npm run dev` 启动 Vite")
+    if not is_prod:
+        print(f"   [提示] 应用模式（fg）：请单独执行 `cd frontend && npm run dev` 启动 Vite :5000")
+        print(f"   [提示] 或用 `python start.py`（后台模式）自动同时起 Vite + FastAPI")
     uvicorn.run(
         "app.main:app",
         host=settings.host,
@@ -469,7 +496,9 @@ def show_status() -> None:
         print("状态：未运行")
         sys.exit(3)
     dist_built = is_dist_built()
-    fastapi_port = settings.port if dist_built else 5001
+    # 状态判断：默认应用模式（FastAPI 在 :5001）；--prod 模式 FastAPI 在 :5000
+    # 通过查 vite_pid 是否存在判断当前是否应用模式
+    fastapi_port = settings.port if dist_built and vite_pid is None else 5001
     print("状态：")
     if pid is not None:
         print(f"  FastAPI : 运行中（PID {pid}）-> http://{settings.host}:{fastapi_port}")
@@ -477,8 +506,8 @@ def show_status() -> None:
         print(f"  FastAPI : 未运行")
     if vite_pid is not None:
         print(f"  Vite    : 运行中（PID {vite_pid}）-> http://{settings.host}:5000")
-    elif not dist_built:
-        print(f"  Vite    : 未运行（开发模式建议启动）")
+    elif not dist_built or fastapi_port == 5001:
+        print(f"  Vite    : 未运行（应用模式建议启动）")
     else:
         print(f"  Vite    : 未启动（生产模式，dist 已构建）")
     print(f"  日志    : {LOG_FILE} | {VITE_LOG_FILE}")
@@ -516,12 +545,18 @@ def parse_args() -> argparse.Namespace:
         nargs="?",
         default="start",
         choices=["start", "stop", "restart", "status", "fg", "foreground", "build"],
-        help="操作：start 后台启动（默认，自动检测 dist）/ stop / restart / status / fg 前台 / build 构建前端",
+        help="操作：start 后台启动（默认 = 应用模式，前后端一起起）/ stop / restart / status / fg 前台 / build 构建前端",
     )
-    p.add_argument(
+    mode_group = p.add_mutually_exclusive_group()
+    mode_group.add_argument(
+        "--prod",
+        action="store_true",
+        help="显式生产模式：FastAPI 监听 :5000，需 static/dist/ 已构建（部署用）",
+    )
+    mode_group.add_argument(
         "--dev",
         action="store_true",
-        help="强制开发模式（Vite :5000 + FastAPI :5001）。不加此参数时，dist 未构建会自动 npm install + npm run build 后走生产模式",
+        help="兼容别名，等同默认行为（应用/开发模式：Vite :5000 + FastAPI :5001）",
     )
     p.add_argument(
         "--init-db",
@@ -539,20 +574,23 @@ def main() -> None:
 
     action = "fg" if args.action in ("fg", "foreground") else args.action
 
+    # --dev 是兼容别名（默认就是应用模式）；--prod 显式生产模式
+    force_prod = args.prod
+
     if action == "start":
-        start_background(force_dev=args.dev)
+        start_background(force_prod=force_prod)
     elif action == "stop":
         sys.exit(0 if stop_process() else 1)
     elif action == "restart":
         stop_process()
         time.sleep(0.5)
-        start_background(force_dev=args.dev)
+        start_background(force_prod=force_prod)
     elif action == "status":
         show_status()
     elif action == "build":
         sys.exit(0 if build_frontend() else 1)
     elif action == "fg":
-        run_foreground(force_dev=args.dev)
+        run_foreground(force_prod=force_prod)
 
 
 if __name__ == "__main__":

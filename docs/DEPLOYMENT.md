@@ -12,7 +12,9 @@
 
 > 🔒 **2026-07-20 v2.2 3D 元素与动效全面重构**：4 个视觉组件全部升级到 PBR 渲染管线（`UnrealBloomPass` + `RoomEnvironment` PMREM + ACESFilmic 色调映射），新增 [utils/three-helpers.js](../frontend/src/utils/three-helpers.js) PBR 工具集 + [SceneHint.vue](../frontend/src/components/SceneHint.vue) 交互指引 + [SceneControls.vue](../frontend/src/components/SceneControls.vue) 视图控制。构建产物体积变化：HeroScene 7.5KB → 13.54KB、FlowerField 单独 chunk 9.94KB、SceneControls 4.5KB、three-vendor 175KB → 719.84KB（含 addons：OrbitControls / EffectComposer / UnrealBloomPass / RoomEnvironment）。**部署前必须重新 `npm run build`**，否则用户看不到 v2.2 PBR 升级 + 交互指引。关键词 `PBR` / `three-helpers` / `SceneHint` / `SceneControls` / `OrbitControls` / `raycaster` / `UnrealBloomPass` / `RoomEnvironment` / `LatheGeometry` 在 6 份文档中都要出现。
 
-> 🔒 **2026-07-20 v2.2.1 start.py 自动构建（服务器部署重大简化）**：`python start.py`（无参数）默认行为变更——dist 未构建时**不再走开发模式**，而是自动 `npm install + npm run build` 后走生产模式（:5000 永远是 FastAPI）。**服务器部署只需 3 步**：① 上传代码 ② 装 Python 依赖 + Node.js 18+ ③ `python start.py`（首次自动构建约 7 分钟，之后秒启）。不再需要手动 `python start.py build`。端口代理可放心指 :5000。**本地开发用 `python start.py --dev`**（强制开发模式，Vite :5000 + FastAPI :5001）。关键词 `--dev` / `自动构建` / `:5000 永远是 FastAPI` 在 6 份文档中都要出现。
+> 🔒 **2026-07-25 v2.2.2 start.py 默认应用模式**：`python start.py`（无参数）默认行为变更——**默认走应用/开发模式**（前后端一起起：Vite :5000 HMR + FastAPI :5001 API），自动检测 `frontend/node_modules` 不存在则 `npm install`（约 7 分钟，仅首次）。新增 `--prod` 参数显式生产模式（FastAPI :5000 单进程，需 dist 已构建，部署用）。`--dev` 保留为兼容别名（等同默认行为）。**服务器部署只需 3 步**：① 上传代码 ② 装 Python 依赖 + Node.js 18+ ③ `python start.py`（首次自动 npm install，之后秒启，默认 Vite :5000 + FastAPI :5001）。生产部署可选 `python start.py build && python start.py --prod`（构建 dist + 单进程模式，端口代理 :5000 永远指向 FastAPI，不需要 Node.js 运行时）。关键词 `--prod` / `默认应用模式` / `自动 npm install` / `前后端一起起` 在 6 份文档中都要出现。
+
+> 🔒 **2026-07-25 v2.2.3 移动端响应式 UI + 3D 几何降档**：三档断点系统（≤768px 手机 / 769-1024px 平板 / ≥1025px 桌面）差异化布局 + iOS Safari `100dvh` + `env(safe-area-inset-*)` 适配 + `fullscreen` 路由模式 + 4 个 3D 组件移动端几何精度降档（Lathe/Cylinder/Icosahedron 段数降低、樱花树深度 4→3、花瓣网格 5×8→4×6、AudioVisualizer 柱数减半）。**部署前必须重新 `npm run build`**，否则用户拿不到移动端布局优化 + 3D 几何降档。关键词 `三档断点` / `100dvh` / `safe-area-inset` / `fullscreen` / `几何精度降档` / `iPhone 16` 在 6 份文档中都要出现。
 
 ---
 
@@ -114,13 +116,13 @@ python start.py restart
 
 > ⚠️ **顺序很重要**：先 `npm run build`，后 `python start.py`。否则 FastAPI 起来后还是返回旧 dist（或提示页）。
 
-### 关于开发模式（不需要构建）
+### 关于应用/开发模式（不需要构建，v2.2.2 起为默认行为）
 
 开发时不用每次改前端都 `npm run build`，直接跑 Vite dev server：
 ```bash
-python start.py                # 自动检测 dist 是否构建：
-                               #   未构建 → dev 模式（Vite :5000 + FastAPI :5001）
-                               #   已构建 → prod 模式（FastAPI :5000）
+python start.py                # 默认应用模式（v2.2.2 起）：
+                               #   自动 npm install 当 node_modules 不存在
+                               #   起 Vite :5000（HMR + 用户入口）+ FastAPI :5001（API）
 ```
 
 或手动两终端（v2.0.1 端口策略）：
@@ -129,10 +131,12 @@ python start.py                # 自动检测 dist 是否构建：
 cd frontend && npm run dev     # http://127.0.0.1:5000/
 
 # 终端 2：FastAPI（API 退到 :5001）
-set QI_PORT=5001 && python start.py    # http://127.0.0.1:5001/
+set QI_PORT=5001 && python start.py fg    # http://127.0.0.1:5001/
 ```
 
-> ⚠️ **v2.0.1 端口策略调整**：开发模式 Vite 占 :5000（用户入口 + HMR），FastAPI 退到 :5001（API）；不再是 v2.0 的 Vite :5173 + FastAPI :5000。理由：让 FastAPI 反代 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 会因 null 字节转义 + 冒号失败（详见 [HANDOFF §6.16](../../HANDOFF.md)）。**用户始终访问 :5000**。
+> ⚠️ **v2.0.1 端口策略调整**：应用/开发模式 Vite 占 :5000（用户入口 + HMR），FastAPI 退到 :5001（API）；不再是 v2.0 的 Vite :5173 + FastAPI :5000。理由：让 FastAPI 反代 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 会因 null 字节转义 + 冒号失败（详见 [HANDOFF §6.16](../../HANDOFF.md)）。**用户始终访问 :5000**。
+
+> ⚠️ **v2.2.2 默认行为变更**：`python start.py`（无参数）默认走应用模式（Vite :5000 + FastAPI :5001），自动检测 `frontend/node_modules` 不存在则 `npm install`。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 dist 已构建）。
 
 Vite dev server 提供 HMR 热更新 + 自动 proxy `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 到 FastAPI :5001，详见 [DEVELOPMENT 前端开发](DEVELOPMENT.md)。
 
@@ -206,17 +210,27 @@ cd /www/wwwroot/healing
 python3 -m pip install -r requirements.txt
 ```
 
-**5b. 前端构建**（v2.2.1 起**可选**，start.py 会自动构建）：
+**5b. 前端构建**（v2.2.2 起按部署模式不同，需要不同处理）：
+
+**情况 A：默认应用模式部署**（推荐，Vite :5000 + FastAPI :5001 一起起）
 ```bash
 # 服务器需先装 Node.js 18+（宝塔软件商店 → Node.js 版本管理器）
-# v2.2.1 起：这一步可以跳过，python start.py 首次启动时会自动 npm install + npm run build
-# 想提前手动构建（避免首次启动等 7 分钟）：
+# 不需要手动 npm install / npm run build
+# python start.py 首次启动时会自动 npm install（约 7 分钟），之后秒启
+# 端口代理 :5000 指向 Vite dev server（用户入口），:5001 是 FastAPI（API 后端）
+```
+
+**情况 B：生产模式部署**（FastAPI :5000 单进程，性能更好但需构建 dist）
+```bash
+# 服务器需先装 Node.js 18+（构建用，运行时不需要）
+# 提前手动构建（避免 systemd 首次启动超时）：
 cd /www/wwwroot/healing/frontend
 npm install        # 首次约 7 分钟（含 three.js 大包）
 npm run build      # 输出到 ../static/dist/
+# 之后用 python start.py --prod 走生产模式（端口代理 :5000 永远指向 FastAPI）
 ```
 
-> 💡 **v2.2.1 新行为**：`python start.py` 检测到 `static/dist/` 未构建时，会**自动**执行 `npm install + npm run build`（首次约 7 分钟），构建完成后走生产模式。所以 5b 可省略，直接跳到 §1.6 启动。**端口代理 :5000 永远指向 FastAPI**（不会因 dist 未构建被 Vite 占用）。
+> 💡 **v2.2.2 新行为**：`python start.py`（无参数）默认走**应用模式**（Vite :5000 + FastAPI :5001），自动 `npm install` 当 `frontend/node_modules` 不存在（不构建 dist，应用模式用 Vite dev server 不需要构建产物）。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 dist 已构建）。**端口代理 :5000 在应用模式指向 Vite，在生产模式指向 FastAPI**——根据部署模式选择。
 
 ### 1.6 启动
 
@@ -228,15 +242,21 @@ cd /www/wwwroot/healing
 python start.py
 ```
 
-应该看到：
+应该看到（默认应用模式）：
 ```
-[START] 后台启动 -> http://0.0.0.0:5000
+[START] 后台启动（应用模式）
+   FastAPI : http://0.0.0.0:5001
+   Vite    : http://0.0.0.0:5000（用户访问入口，HMR 热更新）
    日志文件 : /www/wwwroot/healing/logs/healing.log
    PID 文件 : /www/wwwroot/healing/run/healing.pid
-[OK] 启动成功（PID 12345）
-   首页     http://0.0.0.0:5000
-   API 文档 http://0.0.0.0:5000/docs
+[OK] FastAPI 启动成功（PID 12345, :5001）
+[START] 后台启动 Vite dev server -> http://127.0.0.1:5000
+[OK] Vite 启动成功（PID 12346）
+   访问     http://0.0.0.0:5000（Vite dev，HMR 热更新）
+   API      http://0.0.0.0:5001/docs
 ```
+
+> 💡 **生产模式启动**（若已 build dist）：`python start.py --prod` → FastAPI 单进程 :5000（Vite 不运行）
 
 ### 1.7 反向代理（让外网能访问）
 
@@ -306,20 +326,33 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**3b. 前端构建**（v2.2.1 起**可选**，start.py 会自动构建）：
+**3b. 前端构建**（v2.2.2 起按部署模式不同，需要不同处理）：
+
+**情况 A：默认应用模式部署**（不推荐 systemd 用，Vite + FastAPI 双进程不易管理）
 ```bash
 # 服务器需先装 Node.js 18+
 sudo apt install nodejs npm     # Ubuntu/Debian
 # 或: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs
 
-# v2.2.1 起：这一步可以跳过，python start.py fg 首次启动时会自动 npm install + npm run build
-# 想提前手动构建（避免 systemd 首次启动超时）：
+# 不需要手动 npm install / npm run build
+# python start.py 首次启动时会自动 npm install（约 7 分钟），之后秒启
+# 注意：systemd 管理双进程较复杂，建议用 §1 宝塔面板或 §3 nohup 方式跑应用模式
+```
+
+**情况 B：生产模式部署**（systemd 推荐，FastAPI 单进程）
+```bash
+# 服务器需先装 Node.js 18+（构建用，运行时不需要）
+sudo apt install nodejs npm     # Ubuntu/Debian
+# 或: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs
+
+# 提前手动构建（避免 systemd 首次启动超时）：
 cd /home/healing/app/frontend
 npm install        # 首次约 7 分钟（含 three.js 大包）
 npm run build      # 输出到 ../static/dist/
+# 之后用 python start.py fg --prod 走生产模式（端口代理 :5000 永远指向 FastAPI）
 ```
 
-> 💡 **v2.2.1 新行为**：`python start.py fg`（systemd 调用）检测到 `static/dist/` 未构建时，会**自动**执行 `npm install + npm run build`（首次约 7 分钟），构建完成后走生产模式。所以 3b 可省略。但 systemd 默认 `TimeoutStartSec=90` 秒，**建议提前手动跑 3b** 避免 systemd 因首次构建超时而判定启动失败。**端口代理 :5000 永远指向 FastAPI**。
+> 💡 **v2.2.2 新行为**：`python start.py fg`（systemd 调用）默认走应用模式（需单独起 Vite，不适合 systemd），生产模式需显式加 `--prod`（`python start.py fg --prod`），且需 dist 已构建。但 systemd 默认 `TimeoutStartSec=90` 秒，**建议提前手动跑情况 B 的构建** 避免 systemd 因首次启动超时。**生产模式端口代理 :5000 永远指向 FastAPI**。
 
 ### 2.4 配置 .env
 
@@ -352,8 +385,9 @@ Environment="PATH=/home/healing/app/venv/bin"
 Environment="QI_HOST=0.0.0.0"
 Environment="QI_PORT=5000"
 Environment="QI_DEBUG=false"
-# 用 systemd 管，start.py 跑前台（fg 子命令）
-ExecStart=/home/healing/app/venv/bin/python start.py fg
+# 用 systemd 管，start.py 跑前台（fg 子命令）+ 显式生产模式（--prod，需 dist 已构建）
+# v2.2.2 起默认是应用模式（不适合 systemd 双进程管理），生产部署必须加 --prod
+ExecStart=/home/healing/app/venv/bin/python start.py fg --prod
 Restart=always
 RestartSec=5
 StandardOutput=append:/home/healing/app/logs/healing.log

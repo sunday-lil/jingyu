@@ -196,7 +196,7 @@ onBeforeUnmount(() => {
   transform: translateX(-50%) translateY(-4px);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .scene-hint {
     bottom: 16px;
     padding: 8px 16px;

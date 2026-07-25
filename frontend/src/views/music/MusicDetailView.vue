@@ -330,6 +330,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .music-detail-view {
   min-height: 100vh;
+  min-height: 100dvh;
   padding-bottom: 140px;
 }
 
@@ -379,9 +380,9 @@ onBeforeUnmount(() => {
 .detail-header__meta .dot {
   opacity: 0.5;
 }
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .detail-header {
-    padding: 28px 20px 32px;
+    padding: calc(28px + env(safe-area-inset-top)) 20px 32px;
   }
   .detail-header__inner {
     gap: 18px;
@@ -597,8 +598,12 @@ onBeforeUnmount(() => {
   accent-color: var(--accent);
 }
 
-/* 移动端播放器适配 */
+/* 移动端播放器适配：上移避开 AppLayout 底部 tabbar（72px + safe-area） */
 @media (max-width: 768px) {
+  .player {
+    /* 上移避开底部 tabbar */
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
   .player__inner {
     flex-wrap: wrap;
     padding: 10px 14px;
@@ -624,6 +629,17 @@ onBeforeUnmount(() => {
     padding: 0 16px;
     margin-top: 22px;
   }
+  /* 内容底部留空：播放器 + tabbar */
+  .music-detail-view {
+    padding-bottom: calc(220px + env(safe-area-inset-bottom));
+  }
+}
+
+/* 平板：播放器正常贴底 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .player {
+    bottom: 0;
+  }
 }
 
 /* toast */
@@ -641,6 +657,12 @@ onBeforeUnmount(() => {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(6px);
   white-space: nowrap;
+}
+/* 移动端 toast 上移避开 tabbar */
+@media (max-width: 768px) {
+  .toast {
+    bottom: calc(190px + env(safe-area-inset-bottom));
+  }
 }
 .toast-enter-active,
 .toast-leave-active {

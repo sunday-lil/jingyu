@@ -421,54 +421,189 @@ function goToMusic(yinKey) {
   justify-content: center;
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
+/* 响应式：三档断点（手机 ≤768 / 平板 769-1024 / 桌面 ≥1025） */
+
+/* ── 平板（769-1024px）：紧凑布局 ── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .home {
+    max-width: 960px;
+  }
   .hero {
-    min-height: 400px;
-    border-radius: var(--radius-lg, 20px);
+    min-height: 440px;
+    margin: 12px 0 0;
   }
   .hero__content {
-    padding: 40px 16px;
+    padding: 48px 20px;
   }
   .hero-icon {
-    font-size: 44px;
+    font-size: 48px;
   }
   .hero-title {
-    font-size: clamp(40px, 12vw, 60px);
+    font-size: clamp(44px, 7vw, 64px);
   }
   .yin-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 12px;
   }
   .yin-card {
-    aspect-ratio: 1;
-    padding: 14px;
+    padding: 16px;
   }
   .yin-card__char {
-    font-size: 40px;
-    transform: translateZ(0);  /* 移动端关闭 3D 凸出，省 GPU */
-  }
-  .yin-card__name,
-  .yin-card__desc {
-    transform: translateZ(0);
+    font-size: 44px;
   }
   .module-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  .module-card {
+    padding: 24px 16px;
+  }
+  .guest-cta__btns {
+    flex-wrap: wrap;
+  }
+}
+
+/* ── 移动端（≤768px）：手机竖屏，差异化布局 ── */
+@media (max-width: 768px) {
+  .home {
+    max-width: 100%;
+    padding: 0 12px;
+  }
+  .hero {
+    min-height: 380px;
+    /* 100svh = small viewport height，确保 iOS Safari 底部地址栏出现时 Hero 也能完整显示 */
+    min-height: min(380px, 60svh);
+    margin: 8px 0 0;
+    border-radius: var(--radius-lg, 20px);
+  }
+  .hero__content {
+    padding: 32px 16px;
+  }
+  .hero-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+  }
+  .hero-verse {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .hero-title {
+    font-size: clamp(36px, 11vw, 52px);
+    margin: 0 0 12px;
+  }
+  .hero-subtitle {
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  .hero__scroll-hint {
+    bottom: 12px;
+    font-size: 11px;
+  }
+
+  /* 五音卡片：横向滚动，5 张排一行，节省垂直空间 */
+  .yin-section {
+    margin: 32px 0;
+  }
+  .section-title {
+    font-size: 20px;
+  }
+  .section-subtitle {
+    font-size: 12px;
+    margin-bottom: 20px;
+  }
+  .yin-grid {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 0 12px;
+    margin: 0 -12px;
+    padding-left: 12px;
+    padding-right: 12px;
+    scrollbar-width: none;
+  }
+  .yin-grid::-webkit-scrollbar { display: none; }
+  .yin-card {
+    flex: 0 0 120px;  /* 固定宽度，横向滚动 */
+    aspect-ratio: 3/4;
+    scroll-snap-align: start;
+    padding: 14px 10px;
+  }
+  .yin-card__char {
+    font-size: 38px;
+    transform: translateZ(0);  /* 移动端关闭 3D 凸出，省 GPU */
+  }
+  .yin-card__name {
+    font-size: 13px;
+    transform: translateZ(0);
+  }
+  .yin-card__desc {
+    font-size: 11px;
+    transform: translateZ(0);
+  }
+
+  /* 今日心情条：紧凑 */
+  .today-strip {
+    padding: 14px 18px;
+    margin: 24px 0;
+    flex-direction: row;
+    gap: 8px;
+  }
+  .today-strip__date {
+    font-size: 14px;
+  }
+  .today-strip__action {
+    font-size: 13px;
+  }
+
+  /* 模块入口：单列大卡片，移动端展示更详细信息 */
+  .module-section {
+    margin: 32px 0;
+  }
+  .module-grid {
+    grid-template-columns: 1fr;
     gap: 12px;
   }
   .module-card {
-    padding: 20px 14px;
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    padding: 16px 18px;
+    gap: 14px;
   }
   .module-card__icon {
-    width: 52px;
-    height: 52px;
-    font-size: 26px;
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+    margin-bottom: 0;
+    flex-shrink: 0;
   }
   .module-card__title {
-    font-size: 15px;
+    font-size: 16px;
+    margin-bottom: 2px;
   }
   .module-card__desc {
     font-size: 12px;
+  }
+
+  /* 未登录引导：紧凑 */
+  .guest-cta {
+    padding: 28px 20px;
+    margin: 32px 0;
+  }
+  .guest-cta__title {
+    font-size: 19px;
+  }
+  .guest-cta__desc {
+    font-size: 13px;
+    margin: 0 0 18px;
+  }
+  .guest-cta__btns {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .guest-cta__btns .btn {
+    width: 100%;
   }
 }
 

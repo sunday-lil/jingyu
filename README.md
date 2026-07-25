@@ -11,7 +11,7 @@
 
 > 🤖 **AI 接手请先看 [HANDOFF.md](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md)**，那是元信息 + 关键决策 + 踩坑清单的汇总。
 
-> 🔒 **2026-07-20 v2.2.1 start.py 自动构建**：`python start.py` 默认行为变更——dist 未构建时不再走开发模式，而是自动 `npm install + npm run build` 后走生产模式（**:5000 永远是 FastAPI**，端口代理可放心指 :5000）。服务器部署 3 步：① 上传代码 ② 装 Python + Node.js 18+ ③ `python start.py`（首次自动构建约 7 分钟）。本地开发用 `python start.py --dev`（强制开发模式）。
+> 🔒 **2026-07-25 v2.2.2 start.py 默认应用模式**：`python start.py` 默认行为变更——**默认走应用/开发模式**（前后端一起起：Vite :5000 HMR + FastAPI :5001 API），自动检测 `frontend/node_modules` 不存在则 `npm install`（约 7 分钟，仅首次）。新增 `--prod` 参数显式生产模式（FastAPI :5000 单进程，需 dist 已构建，部署用）。`--dev` 保留为兼容别名（等同默认行为）。服务器部署 3 步：① 上传代码 ② 装 Python + Node.js 18+ ③ `python start.py`（首次自动 npm install，之后秒启）。
 
 ---
 
@@ -35,23 +35,24 @@
 # 安装依赖
 pip install -r requirements.txt
 
-# 启动（自动检测 dist：已构建走生产，未构建走开发）
+# 启动（默认应用模式：Vite :5000 + FastAPI :5001 一起起，自动 npm install）
 python start.py
 
 # 浏览器打开 http://127.0.0.1:5000
 ```
 
-> 📌 **用户始终访问 :5000**，开发 / 生产模式由 `start.py` 自动切换：
-> - **生产模式**（dist 已构建）：FastAPI 监听 :5000，提供 SPA + API + 静态资源（Vite 不运行）
-> - **开发模式**（dist 未构建）：Vite 监听 :5000（用户入口，HMR 热更新）+ FastAPI 改听 :5001（API 后端，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001
+> 📌 **用户始终访问 :5000**，应用 / 生产模式由 `start.py` 自动切换：
+> - **应用模式**（默认）：Vite 监听 :5000（用户入口，HMR 热更新）+ FastAPI 改听 :5001（API 后端，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001；自动检测 `frontend/node_modules` 不存在则 `npm install`
+> - **生产模式**（`--prod`）：FastAPI 监听 :5000，提供 SPA + API + 静态资源（Vite 不运行），需 `static/dist/` 已构建（未构建报错退出，提示先 `python start.py build`）
 
 **服务管理：**
 ```bash
-python start.py start     # 后台启动（默认，自动检测 dist 切换端口策略）
+python start.py start     # 后台启动（默认 = 应用模式，前后端一起起）
+python start.py --prod    # 后台启动（显式生产模式，FastAPI 单进程，需 dist 已构建）
 python start.py stop      # 停止（同时停 FastAPI + Vite）
-python start.py restart   # 重启
+python start.py restart   # 重启（默认应用模式）
 python start.py status    # 查 PID + 端口（显示 FastAPI / Vite 两个进程状态）
-python start.py fg        # 前台运行 FastAPI（systemd / 调试用，不自动起 Vite）
+python start.py fg        # 前台运行 FastAPI（systemd / 调试用；fg 默认应用模式，可加 --prod 切生产）
 python start.py build     # 构建前端到 static/dist/（自动 npm install + npm run build）
 python start.py --init-db # 启动前重置数据库
 ```
@@ -66,21 +67,22 @@ python -m uvicorn app.main:app --reload --port 5000
 
 启动入口是 [app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py)。`--reload` 模式适合本地改代码热重启，**不要**在生产用。
 
-### 1.3 前端开发模式（Vue 3 + Vite 热更新）
+### 1.3 前端开发模式（Vue 3 + Vite 热更新，2026-07-25 v2.2.2 起为默认行为）
 
-2026-07-19 全站 Vue 3 重构后，前端代码独立到 [`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/) 目录，开发时用 Vite dev server 跑 SPA，热更新。
+2026-07-19 全站 Vue 3 重构后，前端代码独立到 [`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/) 目录，开发时用 Vite dev server 跑 SPA，热更新。**2026-07-25 v2.2.2 起，应用/开发模式成为 `python start.py` 的默认行为**（前后端一起起 + 自动 npm install）。
 
-**推荐方式：`python start.py` 一键起**（自动检测 dist 未构建 → 启动 Vite :5000 + FastAPI :5001）
+**推荐方式：`python start.py` 一键起**（默认应用模式，自动 npm install 当 node_modules 不存在）
 
 ```bash
-python start.py         # 自动起 Vite :5000（用户入口）+ FastAPI :5001（API）
+python start.py         # 默认应用模式：自动起 Vite :5000（用户入口）+ FastAPI :5001（API）
+                        # frontend/node_modules 不存在时自动 npm install（约 7 分钟，仅首次）
 # 浏览器打开 http://127.0.0.1:5000（Vite dev server，HMR 热更新）
 ```
 
 **备选方式：手动分两个终端起**（调试时方便看各自日志）
 
 ```bash
-# 终端 1：启动 FastAPI 后端（开发模式手动设置 QI_PORT=5001）
+# 终端 1：启动 FastAPI 后端（应用模式手动设置 QI_PORT=5001）
 cd c:\Users\Administrator\Desktop\webwrold
 $env:QI_PORT="5001"; python start.py fg       # Windows PowerShell
 # 或：QI_PORT=5001 python start.py fg          # Linux/macOS
@@ -95,7 +97,7 @@ npm run dev     # 启动 Vite dev server，访问 http://127.0.0.1:5000/
 
 > 📌 **为什么 Vite 占 :5000 而不是 :5173**：之前尝试 FastAPI :5000 代理转发到 Vite :5173，但 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含特殊字符（null 字符转义 + 冒号），httpx 转发会破坏，导致浏览器报 `SyntaxError: Unexpected token '.'`。改成 Vite 直接占 :5000 后，所有 Vite 内部路径都走本地，无转发问题。详见 [HANDOFF §6.16](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md) 踩坑清单。
 
-**生产模式**：见 §1.1，`python start.py build`（或手动 `cd frontend && npm run build`）输出到 `static/dist/`，再 `python start.py` 走 FastAPI :5000 SPA fallback（详见 [docs/ARCHITECTURE.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/ARCHITECTURE.md)「开发/生产模式切换」节）。
+**生产模式**（部署用）：先 `python start.py build`（或手动 `cd frontend && npm run build`）输出到 `static/dist/`，再 `python start.py --prod` 走 FastAPI :5000 单进程 SPA fallback（详见 [docs/ARCHITECTURE.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/ARCHITECTURE.md)「开发/生产模式切换」节）。
 
 ---
 
@@ -264,8 +266,8 @@ webwrold/
 - **前端**：Vue 3 SPA 工程化在 [`frontend/`](file:///c:/Users/Administrator/Desktop/webwrold/frontend/)，`npm run build` 输出到 `static/dist/`，含 `index.html` + JS/CSS chunk
 - **后端**：FastAPI 只提供 `/api/*` JSON 接口 + SPA fallback；前台不再用 Jinja2 渲染（仅 `/admin/*` 后台仍保留 SSR）
 - **端口策略**（用户始终访问 :5000，由 `start.py` 自动切换）：
-  - **生产模式**（dist 已构建）：FastAPI 监听 :5000，提供 SPA + API + 静态资源（Vite 不运行）
-  - **开发模式**（dist 未构建）：Vite 监听 :5000（用户入口，HMR）+ FastAPI 改听 :5001（API，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001
+  - **应用模式**（默认，v2.2.2 起）：Vite 监听 :5000（用户入口，HMR）+ FastAPI 改听 :5001（API，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001；自动检测 `frontend/node_modules` 不存在则 `npm install`
+  - **生产模式**（`--prod`）：FastAPI 监听 :5000，提供 SPA + API + 静态资源（Vite 不运行），需 `static/dist/` 已构建（未构建报错退出，提示先 `python start.py build`）
 - **SPA fallback**（[app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py)）：所有未匹配的 GET 请求（排除 `/api/`、`/static/`、`/admin`、`/docs`、`/openapi.json`）：
   - **生产态**（dist 已构建）：从 `static/dist/` 读取对应静态文件（`.js` / `.css` / `.woff2` 等通过 `EXT_TO_MIME` 映射正确设置 `Content-Type`），未命中文件返回 `index.html` 让 Vue Router 接管
   - **开发态**（dist 未构建）：返回提示页引导用户访问 Vite dev server :5000（**不再**反向代理到 Vite，避免内部路径含特殊字符被 httpx 转发破坏，详见 [HANDOFF §6.16](file:///c:/Users/Administrator/Desktop/webwrold/HANDOFF.md)）
@@ -338,7 +340,7 @@ webwrold/
 - **治愈系配色**（[frontend/tailwind.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/tailwind.config.js)）：米白 `#F9F6F0` + 茶褐 `#8B7B5E` + 雾粉 / 雾蓝 / 青绿点缀；动画 token `breathe` / `float` / `fade-up`
 - **动效**：GSAP 入场 stagger 浮入 + 呼吸动效；`prefers-reduced-motion` 自动降级
 - **日记加密**：浏览器 Web Crypto API（PBKDF2 + Fernet 等价 AES-128-CBC），前端加密后只发密文给服务端
-- **响应式**：桌面顶部导航 + 移动端底部 tabbar，768px 断点切换
+- **响应式（v2.2.3 强化）**：三档断点系统差异化布局 — 桌面（≥1025px）顶部完整导航 / 平板（769-1024px）紧凑导航 / 移动端（≤768px）topbar + 底部 tabbar + 「更多」抽屉；iPhone 16 Safari 底部地址栏用 `100dvh` + `env(safe-area-inset-bottom)` 适配；`fullscreen` 路由模式（如 `/ai-chat`）隐藏 tabbar 让聊天页占满视口；4 个 3D 组件移动端几何精度降档（Lathe/Cylinder/Icosahedron 段数降低、樱花树深度 4→3、花瓣网格 5×8→4×6、AudioVisualizer 柱数减半）
 
 **后台 = Jinja2 SSR**（保留）：`/admin/*` 仍用 [templates/admin/](file:///c:/Users/Administrator/Desktop/webwrold/templates/admin/) + [static/css/07-admin.css](file:///c:/Users/Administrator/Desktop/webwrold/static/css/07-admin.css) + `static/js/pages/admin_*.js`，与前台 Vue SPA 完全隔离。
 

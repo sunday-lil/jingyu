@@ -6,6 +6,8 @@
 
 > 🔒 **2026-07-20 v2.1 视觉增强**：新增 4 个视觉组件（[AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) / [HeroScene.vue](../../frontend/src/components/HeroScene.vue) / [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) + [utils/visual.js](../../frontend/src/utils/visual.js)），三层渐进增强策略（CSS 永远启用 → Canvas2D 中量级 → Three.js 按需）。**新建视觉组件必须遵守 4 大铁律**（详见 [§1.9.8 视觉组件开发指南](#198-视觉组件开发指南v21-加2026-07-20)）：① `createMediaElementSource` 一次性守卫；② Three.js 对象用 `shallowRef` 而非 `ref`；③ rAF 必须走 `smartRAF` 而非 `requestAnimationFrame`；④ `onBeforeUnmount` 必须完整释放。关键词 `三层渐进增强` / `AmbientBackground` / `HeroScene` / `AudioVisualizer` / `visual.js` / `shallowRef` / `smartRAF` 在 6 份文档中都要出现。
 
+> 🔒 **2026-07-25 v2.2.2 start.py 默认应用模式**：`python start.py` 默认行为变更——**默认走应用/开发模式**（Vite :5000 HMR + FastAPI :5001 API 一起起），自动检测 `frontend/node_modules` 不存在则 `npm install`。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 dist 已构建）。`--dev` 改为兼容别名（等同默认行为）。关键词 `--prod` / `默认应用模式` / `自动 npm install` / `前后端一起起` 在 6 份文档中都要出现。
+
 ---
 
 ## 1. 开发铁律
@@ -105,28 +107,30 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1
 
 ---
 
-## 1.9 前端开发模式（Vue 3 SPA，2026-07-19 v2.0 加，v2.0.1 端口策略调整，v2.2.1 自动构建）
+## 1.9 前端开发模式（Vue 3 SPA，2026-07-19 v2.0 加，v2.0.1 端口策略调整，v2.2.2 默认应用模式）
 
 > 2026-07-19 v2.0 全站 Vue 3 重构后，前台 13 个页面迁移到 Vue 3 SPA。本节讲**怎么开发前端**，不是讲铁律。架构看 [ARCHITECTURE §1.1](../ARCHITECTURE.md)，部署看 [DEPLOYMENT 前端构建](../DEPLOYMENT.md)。
 
 > 2026-07-19 v2.0.1 端口策略调整：开发模式 Vite 占 :5000（用户入口）+ FastAPI 退到 :5001（API），**用户始终访问 :5000**。理由见 [HANDOFF §6.16](../../HANDOFF.md)（FastAPI 反代 Vite 内部路径含 null 字节转义 + 冒号失败）。
 
-> 🔒 **2026-07-20 v2.2.1 start.py 自动构建行为变更**：`python start.py`（无参数）默认行为从「dist 未构建 → 走开发模式」改为「dist 未构建 → 自动 `npm install + npm run build` 后走生产模式」。**开发模式现在必须显式 `python start.py --dev`**。理由：服务器端口代理已配好 :5000 指向 FastAPI，不能让 Vite 占 :5000。关键词 `--dev` / `自动构建` / `:5000 永远是 FastAPI` 在 6 份文档中都要出现。
+> 🔒 **2026-07-25 v2.2.2 start.py 默认应用模式**：`python start.py`（无参数）默认行为变更——**默认走应用/开发模式**（Vite :5000 HMR + FastAPI :5001 API 一起起），自动检测 `frontend/node_modules` 不存在则 `npm install`（约 7 分钟，仅首次）。**v2.2.1 的「dist 未构建 → 自动 build 后走生产模式」逻辑已移除**（应用模式用 Vite dev server 不需要构建产物）。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 `static/dist/` 已构建，未构建报错退出）。`--dev` 改为兼容别名（等同默认行为，向后兼容）。关键词 `--prod` / `默认应用模式` / `自动 npm install` / `前后端一起起` 在 6 份文档中都要出现。
 
-### 1.9.1 启动开发模式（Vite dev server :5000 + FastAPI :5001，v2.2.1 起需 --dev）
+### 1.9.1 启动开发模式（Vite dev server :5000 + FastAPI :5001，v2.2.2 起为默认行为）
 
 #### 方式 A：一键启动（推荐 ⭐）
 
 ```bash
 cd c:\Users\Administrator\Desktop\webwrold
-python start.py --dev           # 强制开发模式（Vite :5000 + FastAPI :5001）
-                                # v2.2.1 起：不加 --dev 时，dist 未构建会自动 npm install + build 后走生产模式
+python start.py         # 强制开发模式（Vite :5000 + FastAPI :5001）
+                        # v2.2.2 起：默认行为就是应用模式，无需 --dev
+                        # 自动检测 frontend/node_modules 不存在 → npm install（约 7 分钟，仅首次）
 ```
 
 [start.py](../../start.py) 在 dev 模式会：
-1. 后台启动 Vite dev server（监听 :5000）
-2. 设置环境变量 `QI_PORT=5001` 启动 FastAPI（监听 :5001）
-3. `python start.py status` 同时显示两个进程状态
+1. 检测 `frontend/node_modules` 不存在 → 自动 `npm install`（仅首次，约 7 分钟）
+2. 后台启动 Vite dev server（监听 :5000）
+3. 设置环境变量 `QI_PORT=5001` 启动 FastAPI（监听 :5001）
+4. `python start.py status` 同时显示两个进程状态
 
 #### 方式 B：手动两终端
 
@@ -139,13 +143,13 @@ npm run dev                    # http://127.0.0.1:5000
 # 终端 2：启动 FastAPI（退到 :5001，API 后端）
 cd c:\Users\Administrator\Desktop\webwrold
 set QI_PORT=5001
-python start.py fg             # http://127.0.0.1:5001（fg 前台，关终端即停；或用 python start.py --dev 后台双进程）
+python start.py fg             # http://127.0.0.1:5001（fg 前台，关终端即停；或用 python start.py 后台双进程）
 ```
 
 浏览器访问 **http://127.0.0.1:5000/**（即 Vite，不是 :5001）。
 - Vite 提供 HMR 热更新（改 `.vue` / `.js` / `.css` 浏览器自动刷新，**保留组件状态**）
 - 所有 `/api/*`、`/static/*`、`/admin/*`、`/docs`、`/openapi.json` 请求自动 proxy 到 FastAPI :5001
-- 改前端代码 → 浏览器秒级热更新；改后端代码 → 重启 `python start.py restart --dev`（注意是 :5001 的进程）
+- 改前端代码 → 浏览器秒级热更新；改后端代码 → 重启 `python start.py restart`（注意是 :5001 的进程）
 
 > ⚠️ Vite host 显式设 `127.0.0.1`（不写 `localhost`）避免 IPv6 `[::1]` 问题，详见 [HANDOFF §6.12](../../HANDOFF.md) / [§3.15](#315-vite-ipv6-localhost-连不上)。
 >
@@ -153,13 +157,13 @@ python start.py fg             # http://127.0.0.1:5001（fg 前台，关终端�
 >
 > ⚠️ **dev 模式 :5000 是 Vite，不是 FastAPI**：若用 `curl http://127.0.0.1:5000/api/...` 测试 API，会经 Vite proxy 转发到 :5001 的 FastAPI。直接打 FastAPI 用 :5001（如 `curl http://127.0.0.1:5001/docs` 看 Swagger）。
 >
-> ⚠️ **v2.2.1 行为变更**：`python start.py`（无 `--dev`）+ dist 未构建 → 自动 `npm install + npm run build` 后走生产模式（:5000 是 FastAPI）。只有 `python start.py --dev` 才走开发模式（:5000 是 Vite）。
+> ⚠️ **v2.2.2 行为变更**：`python start.py`（无参数）默认走应用模式（Vite :5000 + FastAPI :5001），自动 `npm install` 当 `frontend/node_modules` 不存在（不构建 dist，应用模式用 Vite dev server 不需要构建产物）。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 dist 已构建，未构建报错退出）。
 
 ### 1.9.2 开发模式 vs 生产模式
 
-| 维度 | 开发模式（dev，v2.0.1） | 生产模式（prod） |
+| 维度 | 应用模式（默认，v2.2.2 起） | 生产模式（--prod） |
 |---|---|---|
-| 启动命令 | `python start.py --dev`（v2.2.1 起需显式 --dev） | `python start.py`（dist 未构建时自动 build 后走生产；v2.2.1 起） |
+| 启动命令 | `python start.py`（默认）或 `python start.py --dev`（兼容别名） | `python start.py --prod` |
 | 浏览器访问 | `http://127.0.0.1:5000/`（Vite） | `http://127.0.0.1:5000/`（FastAPI） |
 | 谁服务 :5000 | Vite dev server（HMR + 源码） | FastAPI（服务 `static/dist/index.html` + SPA fallback） |
 | FastAPI 监听 | :5001（由 start.py 设 QI_PORT=5001） | :5000（从 .env 读 QI_PORT） |
@@ -334,7 +338,7 @@ build: {
 | `npm run build` | 构建生产产物到 `../static/dist/`（v2.0.1 起也可用 `python start.py build` 一键） |
 | `npm run preview` | 本地预览 build 产物（不常用，生产走 FastAPI SPA fallback） |
 
-> **start.py 子命令对照**（v2.2.1 起）：`python start.py`（dist 已构建走生产；未构建自动 `npm install + build` 后走生产）/ `python start.py --dev`（强制开发模式，Vite :5000 + FastAPI :5001）/ `python start.py build`（仅构建前端，不启动服务）/ `python start.py fg`（前台运行，systemd 用）/ `python start.py status`（查 Vite + FastAPI 双进程状态）/ `python start.py stop`（停双进程）/ `python start.py restart`（重启，可加 `--dev`）。
+> **start.py 子命令对照**（v2.2.2 起）：`python start.py`（默认应用模式：Vite :5000 + FastAPI :5001，自动 `npm install` 当 `frontend/node_modules` 不存在）/ `python start.py --prod`（显式生产模式，FastAPI :5000 单进程，需 dist 已构建）/ `python start.py --dev`（兼容别名，等同默认应用模式）/ `python start.py build`（仅构建前端到 `static/dist/`，不启动服务）/ `python start.py fg`（前台运行，systemd 用，默认应用模式，加 `--prod` 切生产）/ `python start.py status`（查 Vite + FastAPI 双进程状态）/ `python start.py stop`（停双进程）/ `python start.py restart`（重启，默认应用模式）。
 
 ### 1.9.7 调试技巧
 
@@ -513,14 +517,15 @@ onBeforeUnmount(() => { /* 见铁律 ④ */ })
 1. **判断需要哪层**：纯装饰背景 → CSS + Canvas2D 即可；要景深 / 光影 / 实例化 → Three.js；要音频可视化 → Web Audio API + Canvas2D
 2. **复制模板**：从 [AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue)（三层全有）或 [HeroScene.vue](../../frontend/src/components/HeroScene.vue)（Three.js + SVG 降级）开始改
 3. **配色一致性**：用治愈系 5 色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）+ 米白 `#F9F6F0` 背景，与 [tailwind.config.js](../../frontend/tailwind.config.js) token 一致
-4. **性能保护**：移动端粒子数减半 + `dpr` ≤ 1.5；`defineAsyncComponent` 异步加载 Three.js
+4. **性能保护**：移动端粒子数减半 + `dpr` ≤ 1.5 + 几何精度降档（Lathe/Cylinder/Icosahedron 段数与细分降低、花瓣网格 5×8→4×6、地面圆 64→32、AudioVisualizer 柱数减半）；`defineAsyncComponent` 异步加载 Three.js
 5. **降级路径**：每个 Three.js 组件必须有 CSS / SVG 静态降级；reduced-motion 用户不能看到闪烁 / 摇晃内容
 6. **验证清单**：
    - 桌面 Chrome 默认 motion：3D / Canvas2D 正常渲染
    - DevTools → Rendering → `prefers-reduced-motion: reduce`：降级为静态
-   - 移动端 Safari：粒子数减半、dpr ≤ 1.5
+   - 移动端 Safari：粒子数减半、dpr ≤ 1.5、几何精度降档（顶点数大幅减少）
    - 切走标签页 30s 后回切：GPU 占用应归零（smartRAF 生效）
    - 在该组件所在视图和其他 Three.js 视图间来回切 5 次：无 `Too many active WebGL contexts` 警告
+   - DevTools 模拟 iPhone 16（390×844）：topbar + 底部 tabbar + 「更多」抽屉 + 各视图差异化布局生效
 7. **文档同步**：新增视觉组件 = **同一 commit 同步更新 6 份文档**（详见 [HANDOFF §12](../../HANDOFF.md)）
 
 #### 视觉能力检测 API（[utils/visual.js](../../frontend/src/utils/visual.js)）

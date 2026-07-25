@@ -356,6 +356,13 @@ async function decryptText(cipherBase64, password, saltBase64) {
   padding: 32px 24px 80px;
 }
 
+/* 平板紧凑 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .pick-bottle-view {
+    padding: 28px 20px 72px;
+  }
+}
+
 .pick-header {
   margin-bottom: 24px;
 }
@@ -629,24 +636,50 @@ async function decryptText(cipherBase64, password, saltBase64) {
   transform: translateX(-50%) translateY(10px);
 }
 
-@media (max-width: 640px) {
+/* ── 移动端（≤768px）：差异化布局 ── */
+@media (max-width: 768px) {
   .pick-bottle-view {
-    padding: 20px 16px 60px;
+    padding: 20px 14px 60px;
+  }
+  .pick-title {
+    font-size: 24px;
   }
   .pick-hero {
-    padding: 40px 22px;
+    padding: 40px 18px;
   }
   .pick-hero__emoji {
     font-size: 52px;
   }
   .bottle-card {
-    padding: 22px 18px;
+    padding: 20px 16px;
+  }
+  .bottle-card__head {
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .bottle-card__emoji {
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+  }
+  .bottle-card__content {
+    padding: 14px 16px;
+    font-size: 14.5px;
   }
   .encourage-form__row {
     flex-direction: column;
   }
   .encourage-form__btn {
     padding: 12px;
+    width: 100%;
+  }
+  /* toast 上移避开 tabbar */
+  .toast {
+    bottom: calc(90px + env(safe-area-inset-bottom));
+  }
+  .modal-card {
+    max-width: calc(100vw - 32px);
+    padding: 24px 20px;
   }
 }
 </style>

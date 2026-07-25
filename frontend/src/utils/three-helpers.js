@@ -96,17 +96,17 @@ export function createEnvironment(renderer, size = 256) {
  * @param {THREE.WebGLRenderer} renderer
  * @param {Object} [opts]
  * @param {boolean} [opts.bloom=true] - 是否启用 Bloom
- * @param {number} [opts.strength=0.6] - Bloom 强度（柔和光晕，避免过曝）
+ * @param {number} [opts.strength=0.3] - Bloom 强度（柔和光晕，避免过曝泛白）
  * @param {number} [opts.radius=0.4] - Bloom 半径
- * @param {number} [opts.threshold=0.85] - 仅高亮区域参与 Bloom
+ * @param {number} [opts.threshold=0.9] - 仅高亮区域参与 Bloom（linear space，0.9 = 仅最亮像素）
  * @returns {EffectComposer}
  */
 export function createPostProcessing(scene, camera, renderer, opts = {}) {
   const {
     bloom = true,
-    strength = 0.6,
+    strength = 0.3,
     radius = 0.4,
-    threshold = 0.85,
+    threshold = 0.9,
   } = opts
 
   const composer = new EffectComposer(renderer)
@@ -262,7 +262,7 @@ export function createSoftSpriteTexture(size = 128, color = '#ffffff') {
  *
  * @param {Object} [opts]
  * @param {number[]} [opts.position=[8, 14, 6]]
- * @param {number} [opts.intensity=2.2]
+ * @param {number} [opts.intensity=1.5]
  * @param {number} [opts.color=0xfff4e0]
  * @param {Object} [opts.shadow]
  * @param {number} [opts.shadow.mapSize=2048]
@@ -278,7 +278,7 @@ export function createSoftSpriteTexture(size = 128, color = '#ffffff') {
 export function createKeyLight(opts = {}) {
   const {
     position = [8, 14, 6],
-    intensity = 2.2,
+    intensity = 1.5,
     color = 0xfff4e0,
     shadow = {},
   } = opts

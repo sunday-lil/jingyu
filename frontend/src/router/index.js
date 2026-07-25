@@ -55,12 +55,12 @@ const routes = [
     component: () => import('@/views/mood/MoodCalendarView.vue'),
     meta: { requiresAuth: true },
   },
-  // AI 树洞
+  // AI 树洞（全屏布局：移动端不显示底部 tabbar，让聊天区占满视口）
   {
     path: '/ai-chat',
     name: 'ai-chat',
     component: () => import('@/views/ai/AIChatView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, fullscreen: true },
   },
   // 精神花园
   {

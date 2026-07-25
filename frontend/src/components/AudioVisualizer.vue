@@ -307,6 +307,8 @@ const renderWave = (ctx, w, h, ts, energy) => {
 
 // ─── 模式 2：镜像柱状（上下对称） ───
 const renderMirror = (ctx, w, h, freqData, energy, dominantColor, isPlaying) => {
+  // 移动端降低柱数（48 → 32），减少 Canvas 绘制次数
+  const barsActive = isMobile() ? 32 : 48
   if (!freqData || !isPlaying) {
     // 待机：画 32 根静态柱
     const bars = 32
@@ -324,7 +326,7 @@ const renderMirror = (ctx, w, h, freqData, energy, dominantColor, isPlaying) => 
     return
   }
 
-  const bars = 48
+  const bars = barsActive
   const barW = w / bars * 0.7
   const gap = w / bars * 0.3
   const cy = h * 0.5
@@ -391,8 +393,8 @@ const renderRadial = (ctx, w, h, ts, freqData, energy, dominantColor, isPlaying)
   ctx.arc(cx, cy, breathR, 0, Math.PI * 2)
   ctx.fill()
 
-  // 径向柱
-  const bars = 64
+  // 径向柱：移动端减半（64 → 32），减少 lineTo 调用
+  const bars = isMobile() ? 32 : 64
   if (freqData && isPlaying) {
     for (let i = 0; i < bars; i++) {
       const idx = Math.floor((i / bars) * freqData.length * 0.8)
@@ -697,7 +699,7 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .audio-visualizer__mode-toast {
     padding: 8px 18px;
   }

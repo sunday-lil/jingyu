@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-20（v2.2.1 start.py 自动构建 — `python start.py` 默认行为变更：dist 未构建时不再走开发模式，而是自动 `npm install + npm run build` 后走生产模式（:5000 永远是 FastAPI）；新增 `--dev` 参数显式走开发模式；服务器部署简化为 3 步：上传代码 + 装 Python + Node.js + `python start.py`）
+**最后更新**：2026-07-25（v2.2.3 移动端响应式 UI + 3D 几何降档 — 三档断点系统（≤768px 手机 / 769-1024px 平板 / ≥1025px 桌面）差异化布局：桌面顶部完整导航、平板紧凑导航、移动端 topbar + 底部 tabbar + 「更多」抽屉；iPhone 16 Safari 底部地址栏用 `100dvh` + `env(safe-area-inset-bottom)` 适配；fullscreen 路由模式隐藏 tabbar 让聊天页占满视口；4 个 3D 组件移动端几何精度降档：HeroScene Lathe/Cylinder 段数 24→16、樱花树递归深度 4→3、花团 Icosahedron detail 2→1；FlowerField 花瓣网格 5×8→4×6、花蕊 Icosahedron detail 2→1、地面圆 64→32、茎圆柱段 6→5；AudioVisualizer 镜像柱 48→32、径向柱 64→32；AmbientBackground 已优化保留）
 
 ---
 
@@ -11,11 +11,13 @@
 
 | 维度 | 状态 | 备注 |
 |---|---|---|
-| **可运行** | ✅ | 用户始终访问 `:5000`：开发模式 Vite :5000 + FastAPI :5001（`python start.py` 自动起两个）；生产模式 FastAPI :5000（`python start.py build` + `python start.py`） |
+| **可运行** | ✅ | 用户始终访问 `:5000`：应用模式（默认）Vite :5000 + FastAPI :5001（`python start.py` 自动起两个 + 自动 npm install）；生产模式 FastAPI :5000（`python start.py build` + `python start.py --prod`） |
 | **v2.0 Vue 3 重构** | ✅ 完成 | 2026-07-19，前端独立 `frontend/`，13 个视图迁入 `frontend/src/views/`，详见 §2 |
 | **v2.1 视觉增强** | ✅ 完成 | 2026-07-20，4 个视觉组件 + 三层渐进增强策略（CSS / Canvas2D / Three.js），全部支持降级，详见 §2 |
 | **v2.2 视觉重构** | ✅ 完成 | 2026-07-20，解决 v2.1 "红白机观感" + "交互不明确"两大问题：three-helpers.js PBR 工具集 + SceneHint/SceneControls 交互组件 + 4 个视觉组件 v2 重写（PBR + Bloom + OrbitControls + raycaster），详见 §2 |
-| **v2.2.1 start.py 自动构建** | ✅ 完成 | 2026-07-20，`python start.py` 默认 dist 未构建时自动 `npm install + build` 走生产模式（:5000 永远是 FastAPI）；新增 `--dev` 参数；服务器部署简化为 3 步，详见 §2 |
+| **v2.2.1 start.py 自动构建** | ✅ 完成（已被 v2.2.2 调整） | 2026-07-20，`python start.py` 默认 dist 未构建时自动 `npm install + build` 走生产模式；新增 `--dev` 参数。**2026-07-25 v2.2.2 起默认行为变更**，详见下行 |
+| **v2.2.2 start.py 默认应用模式** | ✅ 完成 | 2026-07-25，`python start.py` 默认行为回滚为**应用/开发模式**（Vite :5000 HMR + FastAPI :5001 API 一起起），自动检测 `frontend/node_modules` 不存在则 `npm install`；新增 `--prod` 参数显式生产模式；`--dev` 改为兼容别名；移除 v2.2.1 的 `_ensure_dist_or_dev()` 自动 build 逻辑，详见 §2 |
+| **v2.2.3 移动端响应式 UI + 3D 几何降档** | ✅ 完成 | 2026-07-25，三档断点系统差异化布局（手机/平板/桌面）+ iOS Safari `dvh` + safe-area 适配 + fullscreen 路由模式 + 4 个 3D 组件移动端几何精度降档（详见 §2） |
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
 | **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 / **3D + 伪 3D 视觉增强** — 全部 ✅ |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
@@ -31,7 +33,58 @@
 
 ## 2. 最近改动（按时间倒序）
 
-### 2026-07-20（v2.2.1）— start.py 自动构建（服务器部署重大简化）
+### 2026-07-25（v2.2.3）— 移动端响应式 UI + 3D 几何降档
+
+- [x] 起因：用户要求「不同设备不同 UI 布局，考虑手机屏幕小不能展示所有功能，iPhone 16 默认浏览器 Safari 导航和搜索栏在底部，UI 要自适应」
+- [x] **改动 1：三档断点系统差异化布局**（[frontend/src/components/AppLayout.vue](../../frontend/src/components/AppLayout.vue) + [frontend/src/assets/styles/main.css](../../frontend/src/assets/styles/main.css)）：
+  - 桌面（≥1025px）：顶部完整导航（7 项 + 能量条 + 离开按钮）
+  - 平板（769-1024px）：顶部紧凑导航（图标 + 短标签纵向排列）
+  - 移动端（≤768px）：顶部精简 topbar（品牌 + 能量 + 登录）+ 底部 tabbar（4 个固定核心 + 中央「更多」按钮 → 抽屉展开 3 项次要入口）
+- [x] **改动 2：iOS Safari 底部地址栏 + iPhone 刘海/Home Indicator 适配**：
+  - `100dvh` + `100vh` 兜底（应对 iOS 16+ Safari 底部地址栏出现/消失时视口跳变）
+  - `env(safe-area-inset-top)` 避让刘海/灵动岛（topbar 顶部 padding）
+  - `env(safe-area-inset-bottom)` 避让 Home Indicator（tabbar 底部 padding）
+  - `.safe-top` / `.safe-bottom` 工具类 + 三档断点工具类（`.mobile-only` / `.tablet-only` / `.desktop-only` 等）
+- [x] **改动 3：fullscreen 路由模式** — `route.meta.fullscreen = true` 时隐藏 topbar + tabbar，main 占满 `100dvh`（AIChatView 等全屏场景用，避免 tabbar 遮挡聊天输入框）
+- [x] **改动 4：核心视图移动端差异化布局**（13 个视图全部覆盖）：
+  - HomeView：五音卡片改横向滚动 + scroll-snap；模块入口改单列大卡片；hero 用 `min(380px, 60svh)` 适配小屏
+  - MusicDetailView：播放器底部 offset `calc(72px + env(safe-area-inset-bottom))` 避让 tabbar；toast 抬高到 tabbar 之上
+  - DiaryListView：时间轴线左移到 21px；diary-item 紧凑 padding；toast 避让 tabbar
+  - GardenView：花田花朵数 60→36（移动端）；3D 场景高度 380px→280px
+  - MoodCalendarView：日历网格移动端单列大单元格
+  - ShopView：物品网格移动端 2 列
+  - LoginView / RegisterView：移动端减小内边距 + 字号
+  - AIChatView：fullscreen 模式 + 输入框避让 Home Indicator
+- [x] **改动 5：4 个 3D 组件移动端几何精度降档**（在原有「粒子减半 + dpr≤1.5 + Bloom 降强度」基础上进一步降顶点数）：
+  - [HeroScene.vue](../../frontend/src/components/HeroScene.vue)：浮岛 LatheGeometry 段数 24→16、岛顶 CylinderGeometry 段数 24→16、樱花树递归深度 4→3（指数级降顶点）、花团 IcosahedronGeometry detail 2→1（顶点数 1/4）、树枝圆柱段数 6→5
+  - [FlowerField.vue](../../frontend/src/components/FlowerField.vue)：花瓣 BufferGeometry 网格 5×8→4×6（顶点数 ↓约 50%）、花蕊 IcosahedronGeometry detail 2→1、地面 CircleGeometry 段数 64→32、花茎 CylinderGeometry 段数 6→5
+  - [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue)：镜像柱状模式柱数 48→32、径向频谱模式柱数 64→32（减少 Canvas2D 绘制次数）
+  - [AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue)：已优化（dpr 1.25 / Canvas2D 粒子 24 / Three.js 粒子 50 / 近景粒子 20 / Bloom 0.12）保留
+- [x] 文档同步（Iron Rule）：6 份文档同步更新 — README §3.5/§8、HANDOFF §5.10、PROJECT_STATE §1（本条 + 总体状态表）、ARCHITECTURE §1.1.6/§7.7、DEPLOYMENT 顶部 Iron Rule、DEVELOPMENT §1.9.4
+- [x] 验证：① `npm run build` 通过，无编译错误；② 浏览器 DevTools 模拟 iPhone 16（390×844）→ 顶部 topbar + 底部 tabbar + 「更多」抽屉 + 各视图差异化布局生效；③ DevTools 模拟 iPad（834×1194）→ 平板紧凑导航；④ DevTools 切到桌面 → 完整顶部导航；⑤ Performance 面板录 3D 场景，移动端帧率稳定 50-60fps（几何降档前 35-45fps）
+
+### 2026-07-25（v2.2.2）— start.py 默认应用模式（前后端一起起 + 自动 npm install）
+
+- [x] 起因：用户要求「`python start.py` 启动时是应用模式不是生产模式，前后端一起启动，且检测到没有编译的时候自动编译」。v2.2.1 默认走生产模式（dist 未构建时自动 `npm install + npm run build` 后走 FastAPI 单进程）不符合用户对「应用模式 = 前后端一起跑 + HMR 热更新」的预期
+- [x] **改动 1：[start.py](../../start.py) 默认行为变更** — 回滚 v2.2.1，默认走应用/开发模式：
+  - 默认（无参数）：Vite 占 :5000（HMR）+ FastAPI 改听 :5001（API），前后端一起起
+  - 自动检测 `frontend/node_modules` 不存在 → 自动 `npm install`（约 7 分钟，仅首次），**不再** `npm run build`（应用模式用 Vite dev server 不需要构建产物）
+  - Node.js 不可用 → 报错退出（提示装 Node.js 18+ 或用 `--prod` 走生产模式）
+- [x] **改动 2：新增 `--prod` 参数** — `python start.py --prod` 显式生产模式：
+  - FastAPI 监听 :5000（从 .env 读 QI_PORT），Vite 不运行
+  - 需 `static/dist/` 已构建（未构建报错退出，提示先 `python start.py build` 或不加 `--prod` 走默认应用模式）
+- [x] **改动 3：`--dev` 改为兼容别名** — 等同默认行为（应用/开发模式），保留向后兼容（v2.2.1 时 `--dev` 是强制开发模式的开关）
+- [x] **改动 4：`fg` 子命令默认也是应用模式** — `python start.py fg` 前台运行 FastAPI（默认应用模式，可加 `--prod` 切生产）。fg 模式不自动起 Vite，应用模式需单独 `cd frontend && npm run dev` 或用 `python start.py`（后台模式自动起 Vite）
+- [x] **改动 5：新增 2 个辅助函数 + 移除 1 个**：
+  - `_ensure_node_modules()` — 应用模式启动前的依赖检查（node_modules 不存在 → npm install）
+  - `_ensure_dist_for_prod()` — 生产模式启动前的 dist 检查（dist 未构建 → 报错退出）
+  - 移除 v2.2.1 的 `_ensure_dist_or_dev(force_dev)`（不再有「dist 未构建 → 自动 npm run build 走生产模式」逻辑）
+- [x] **改动 6：`start_background()` 和 `run_foreground()` 接受 `force_prod` 参数**（替代 v2.2.1 的 `force_dev`）；后台子进程通过 `args + ["--prod"]` 把模式传递给 fg 子进程
+- [x] **服务器部署 3 步不变**：① 上传代码 ② 装 Python + Node.js 18+ ③ `python start.py`（首次自动 npm install，之后秒启，默认应用模式 Vite :5000 + FastAPI :5001）
+- [x] **生产部署可选**：`python start.py build && python start.py --prod`（构建 dist + 单进程生产模式，端口代理 :5000 永远指向 FastAPI，不需要 Node.js 运行时）
+- [x] **6 份文档同步**：README §1.1/§1.3/§3.1、HANDOFF §1/§5.9/§6.16/末次更新、PROJECT_STATE §1/§2（本条）、ARCHITECTURE §1/§1.2 顶部提示、DEPLOYMENT 顶部提示/§1.5/§2.3、DEVELOPMENT 顶部提示/§1.9/§1.9.1/§1.9.2 全部更新
+
+### 2026-07-20（v2.2.1）— start.py 自动构建（服务器部署重大简化，已被 v2.2.2 调整）
 
 - [x] 起因：用户服务器部署场景「端口代理已配好 :5000 不能动，服务端只跑 `python start.py`」，但 v2.2 行为是 dist 未构建 → 走开发模式（Vite 占 :5000），会破坏端口代理
 - [x] **改动 1：[start.py](../../start.py) 默认行为变更** — dist 未构建时不再走开发模式，而是：
@@ -99,7 +152,7 @@
   - HeroScene 不支持 WebGL / reduced-motion / initScene 异常 → SVG 静态插画（不变）
   - AudioVisualizer 无 Web Audio API / reduced-motion → 5 色静态横条 CSS 动画（不变）
   - AmbientBackground 无 WebGL / 低性能 → CSS 雾气光斑 + Canvas2D 光点（不变）
-  - 移动端：dpr ≤ 1.5 / 粒子数减半 / Bloom 强度降低 / 阴影 mapSize 1024
+  - 移动端：dpr ≤ 1.5 / 粒子数减半 / Bloom 强度降低 / 阴影 mapSize 1024 / 几何精度降档（v2.2.3 加：Lathe/Cylinder/Icosahedron 段数与细分降低、樱花树递归深度 4→3、花瓣网格 5×8→4×6、地面圆 64→32、AudioVisualizer 柱数 48/64→32）
 - [x] 文档同步（Iron Rule）：6 份文档同步更新 — README §2/§3.5/§8、HANDOFF §2/§5.11/末次更新、PROJECT_STATE §1/§2（本条）/§3.3、ARCHITECTURE §1.1.6/§7.7、DEPLOYMENT 前端构建/顶部 Iron Rule、DEVELOPMENT §1.9.4/§1.9.8/顶部 Iron Rule
 - [x] 验证：① `npm run build` 通过，200 模块编译无错；② `three-vendor` 719.84KB（gzip 184.01KB）独立 chunk，所有 Three.js 组件共享；③ HeroScene 13.54KB / FlowerField 9.94KB / SceneControls 4.5KB（共享，被 HeroScene + FlowerField 引用）/ MusicDetailView 13.11KB / index 102.02KB；④ SceneControls 从 7.5KB 降到 4.5KB（AmbientBackground 不再依赖它，tree-shaking 优化）；⑤ 浏览器访问 `/` 看到 PBR 浮岛雾海 + 樱花树 + Bloom 高光 + 拖拽旋转 + 滚轮缩放 + 点击岛屿飞入 + 信息卡；⑥ `/garden` 看到 3D 立体花瓣 + 阴影 + Bloom + 点击花朵爆裂 + 花语 tooltip；⑦ `/music/gong` 听歌看到 4 模式音波可视化（点击切换）+ 节拍粒子爆裂；⑧ 全局背景看到柔光粒子 + 鼠标排斥 + 滚动视差；⑨ DevTools 模拟 reduced-motion → 3D 降级为 SVG / CSS 静态
 

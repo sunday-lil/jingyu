@@ -104,15 +104,18 @@ function makeVec2(x, y) {
 }
 
 // 樱花树生成（递归分枝）
-function buildSakuraTree(THREE, envMap, blossomMat, trunkMat) {
+function buildSakuraTree(THREE, envMap, blossomMat, trunkMat, mobile = false) {
   const tree = new THREE.Group()
+  // 移动端：花团细分降到 1（顶点数 1/4），树枝圆柱段数降到 5
+  const blossomDetail = mobile ? 1 : 2
+  const branchRadialSegs = mobile ? 5 : 6
 
   // 递归生成一根分枝
   const growBranch = (depth, len, radius, startPos, direction) => {
     if (depth <= 0 || len < 0.08) {
       // 末端：放一个花团
       const blossom = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(0.18 + Math.random() * 0.08, 2),
+        new THREE.IcosahedronGeometry(0.18 + Math.random() * 0.08, blossomDetail),
         blossomMat,
       )
       blossom.position.copy(startPos)
@@ -128,7 +131,7 @@ function buildSakuraTree(THREE, envMap, blossomMat, trunkMat) {
       Math.max(0.01, radius * 0.7),
       Math.max(0.01, radius),
       segLen,
-      6,
+      branchRadialSegs,
     )
     const branch = new THREE.Mesh(branchGeo, trunkMat)
     branch.castShadow = true
@@ -172,8 +175,8 @@ function buildSakuraTree(THREE, envMap, blossomMat, trunkMat) {
 
   // 从树根开始
   growBranch(
-    4,                    // 深度
-    0.55,                 // 初始长度
+    mobile ? 3 : 4,       // 移动端降低递归深度，减少树枝数（指数级降顶点）
+    mobile ? 0.6 : 0.55,  // 移动端稍长以补偿深度降低带来的稀疏感
     0.05,                 // 初始半径
     new THREE.Vector3(0, 0, 0),
     new THREE.Vector3(0, 1, 0),  // 向上
@@ -194,7 +197,7 @@ const initScene = async () => {
   // ─── 场景 ───
   const scene = new THREE.Scene()
   scene.background = null
-  scene.fog = new THREE.FogExp2(0xF9F6F0, mobile ? 0.05 : 0.035)
+  scene.fog = new THREE.FogExp2(0xE8DCC8, mobile ? 0.05 : 0.035)
 
   // ─── 相机 ───
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
@@ -207,7 +210,7 @@ const initScene = async () => {
   const renderer = createRenderer(container.appendChild(document.createElement('canvas')), {
     dpr: mobile ? 1.5 : 2,
     shadows: true,
-    toneMappingExposure: 1.08,
+    toneMappingExposure: 0.92,
   })
   renderer.setSize(width, height)
 
@@ -217,9 +220,9 @@ const initScene = async () => {
 
   // ─── 后处理（Bloom + ACES） ───
   const composer = createPostProcessing(scene, camera, renderer, {
-    strength: mobile ? 0.4 : 0.55,
+    strength: mobile ? 0.22 : 0.28,
     radius: 0.5,
-    threshold: 0.72,
+    threshold: 0.88,
   })
 
   // ─── OrbitControls ───
@@ -238,7 +241,7 @@ const initScene = async () => {
   // ─── 光照 ───
   const keyLight = createKeyLight({
     position: [8, 14, 6],
-    intensity: 2.4,
+    intensity: 1.4,
     color: 0xfff4e0,
     shadow: {
       mapSize: mobile ? 1024 : 2048,
@@ -249,11 +252,11 @@ const initScene = async () => {
   })
   scene.add(keyLight)
 
-  const fillLight = createFillLight({ intensity: 0.55 })
+  const fillLight = createFillLight({ intensity: 0.4 })
   scene.add(fillLight)
 
   // 一束逆光（边缘高光）
-  const rimLight = new THREE.DirectionalLight(0xE8B8C5, 0.6)
+  const rimLight = new THREE.DirectionalLight(0xE8B8C5, 0.35)
   rimLight.position.set(-6, 5, -8)
   scene.add(rimLight)
 
@@ -263,13 +266,13 @@ const initScene = async () => {
   seaGeo.rotateX(-Math.PI / 2)
 
   const seaMat = new THREE.MeshStandardMaterial({
-    color: 0xB8D4D8,
-    roughness: 0.12,
-    metalness: 0.35,
+    color: 0x8FB8C8,
+    roughness: 0.25,
+    metalness: 0.15,
     transparent: true,
-    opacity: 0.78,
+    opacity: 0.82,
     envMap,
-    envMapIntensity: 1.4,
+    envMapIntensity: 0.5,
   })
 
   // 保存原始 XZ 坐标，shader 中用于计算位移
@@ -324,6 +327,9 @@ const initScene = async () => {
       name: '花屿', verse: '落英缤纷处，一念即归途',
     },
   ]
+  // 移动端降低几何精度：lathe/cylinder 段数减半，节省顶点
+  const latheSegs = mobile ? 16 : 24
+  const cylinderSegs = mobile ? 16 : 24
 
   for (let i = 0; i < islandData.length; i++) {
     const d = islandData[i]
@@ -332,7 +338,7 @@ const initScene = async () => {
     // 浮岛底部：LatheGeometry 程序化轮廓
     const profilePts = makeIslandProfile(1.3, 1.4, 0.06)
     const lathePts = profilePts.map((p) => new THREE.Vector2(p.x, p.y))
-    const baseGeo = new THREE.LatheGeometry(lathePts, 24)
+    const baseGeo = new THREE.LatheGeometry(lathePts, latheSegs)
     const baseMat = new THREE.MeshStandardMaterial({
       color: d.baseColor,
       roughness: 0.85,
@@ -348,7 +354,7 @@ const initScene = async () => {
     islandGroup.add(base)
 
     // 岛顶平台（草地色，轻微凸起圆盘）
-    const topGeo = new THREE.CylinderGeometry(1.3, 1.28, 0.16, 24)
+    const topGeo = new THREE.CylinderGeometry(1.3, 1.28, 0.16, cylinderSegs)
     const topMat = new THREE.MeshStandardMaterial({
       color: d.topColor,
       roughness: 0.78,
@@ -379,7 +385,7 @@ const initScene = async () => {
         roughness: 0.92,
         metalness: 0.0,
       })
-      const tree = buildSakuraTree(THREE, envMap, blossomMat, trunkMat)
+      const tree = buildSakuraTree(THREE, envMap, blossomMat, trunkMat, mobile)
       tree.position.y = 0.16
       tree.scale.setScalar(1.1)
       tree.userData.isTree = true
@@ -400,7 +406,7 @@ const initScene = async () => {
         color: 0x5C4A38,
         roughness: 0.92,
       })
-      const tree = buildSakuraTree(THREE, envMap, blossomMat, trunkMat)
+      const tree = buildSakuraTree(THREE, envMap, blossomMat, trunkMat, mobile)
       tree.position.y = 0.16
       tree.scale.setScalar(0.7)
       islandGroup.add(tree)

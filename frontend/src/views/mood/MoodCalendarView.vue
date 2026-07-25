@@ -340,6 +340,13 @@ onBeforeUnmount(() => {
   padding: 32px 24px 80px;
 }
 
+/* 平板紧凑 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .mood-calendar-view {
+    padding: 28px 20px 72px;
+  }
+}
+
 /* 顶部标题 */
 .mood-header {
   text-align: center;
@@ -613,9 +620,9 @@ onBeforeUnmount(() => {
 }
 
 /* 响应式：移动端保持 7 列但缩小格子 */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .mood-calendar-view {
-    padding: 20px 14px 60px;
+    padding: 20px 12px 60px;
   }
   .mood-header__title {
     font-size: 24px;
@@ -635,7 +642,7 @@ onBeforeUnmount(() => {
     font-size: 24px;
   }
   .calendar {
-    padding: 14px 10px;
+    padding: 12px 8px;
   }
   .calendar__grid,
   .calendar__weekdays {
@@ -666,6 +673,10 @@ onBeforeUnmount(() => {
   .trend-chart {
     height: 110px;
     gap: 2px;
+  }
+  /* toast 上移避开 tabbar */
+  .toast {
+    bottom: calc(90px + env(safe-area-inset-bottom));
   }
 }
 </style>

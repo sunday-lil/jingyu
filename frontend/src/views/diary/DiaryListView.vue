@@ -266,6 +266,13 @@ async function decryptText(cipherBase64, password, saltBase64) {
   padding: 32px 24px 80px;
 }
 
+/* 平板紧凑 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .diary-list-view {
+    padding: 28px 20px 72px;
+  }
+}
+
 /* 顶部 */
 .diary-header {
   margin-bottom: 36px;
@@ -521,9 +528,10 @@ async function decryptText(cipherBase64, password, saltBase64) {
   transform: translateX(-50%) translateY(10px);
 }
 
-@media (max-width: 640px) {
+/* ── 移动端（≤768px）：差异化布局 ── */
+@media (max-width: 768px) {
   .diary-list-view {
-    padding: 20px 16px 60px;
+    padding: 20px 14px 60px;
   }
   .diary-header__title {
     font-size: 24px;
@@ -531,12 +539,45 @@ async function decryptText(cipherBase64, password, saltBase64) {
   .diary-header__inner {
     flex-direction: column;
     align-items: flex-start;
+    gap: 14px;
   }
   .diary-header__actions {
     width: 100%;
   }
   .diary-header__actions .btn {
     flex: 1;
+  }
+  /* 时间线左移，dot 缩小 */
+  .timeline__list::before {
+    left: 21px;
+  }
+  .diary-item {
+    gap: 12px;
+    padding: 14px 16px 14px 10px;
+  }
+  .diary-item__dot {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    box-shadow: 0 0 0 3px var(--color-bg-primary, #F9F6F0);
+  }
+  .diary-item__date {
+    font-size: 12px;
+  }
+  .diary-item__preview {
+    font-size: 13px;
+  }
+  /* toast 上移避开 tabbar */
+  .toast {
+    bottom: calc(90px + env(safe-area-inset-bottom));
+  }
+  /* 弹窗在小屏底部留空 */
+  .modal-card {
+    max-width: calc(100vw - 32px);
+    padding: 24px 20px;
+  }
+  .modal-card__title {
+    font-size: 18px;
   }
 }
 </style>

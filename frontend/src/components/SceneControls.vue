@@ -156,7 +156,7 @@ const positionClass = computed(() => `scene-controls--${props.position}`)
   height: 18px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .scene-controls {
     padding: 4px;
     gap: 4px;

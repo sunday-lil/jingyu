@@ -221,6 +221,17 @@ onBeforeUnmount(() => {
   padding: 32px 24px 80px;
 }
 
+/* 平板紧凑 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .shop-view {
+    padding: 28px 20px 72px;
+  }
+  .shop-group__grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+  }
+}
+
 /* 标题 */
 .shop-header {
   text-align: center;
@@ -420,7 +431,7 @@ onBeforeUnmount(() => {
 }
 
 /* 响应式 */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .shop-view {
     padding: 20px 14px 60px;
   }
@@ -441,17 +452,38 @@ onBeforeUnmount(() => {
     width: 100%;
   }
   .shop-group__grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    /* 移动端 2 列，紧凑展示 */
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
   .shop-card {
-    padding: 16px 12px;
+    padding: 14px 10px;
   }
   .shop-card__emoji {
-    font-size: 36px;
+    font-size: 34px;
   }
   .shop-card__name {
+    font-size: 13.5px;
+  }
+  .shop-card__desc {
+    font-size: 11px;
+    min-height: 28px;
+    -webkit-line-clamp: 2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .shop-card__btn {
+    min-width: 64px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .shop-card__cost-num {
     font-size: 14px;
+  }
+  /* toast 上移避开 tabbar */
+  .toast {
+    bottom: calc(90px + env(safe-area-inset-bottom));
   }
 }
 </style>

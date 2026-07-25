@@ -1,7 +1,11 @@
 <script setup>
 import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import gsap from 'gsap'
 import api from '@/api'
+
+const router = useRouter()
+const goBack = () => router.back()
 
 // 对话历史（仅浏览器内存，刷新即清空，不落库）
 // 每条结构：{ role: 'user' | 'assistant', content: string }
@@ -222,6 +226,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;  /* iOS 16+ Safari 底部地址栏出现/消失时视口自动适配 */
   max-width: 760px;
   margin: 0 auto;
   padding: 0 16px;
@@ -372,6 +377,38 @@ onBeforeUnmount(() => {
   background: linear-gradient(180deg, rgba(249, 246, 240, 0) 0%, rgba(249, 246, 240, 0.92) 35%, rgba(249, 246, 240, 1) 100%);
   padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
 }
+
+/* 桌面端：输入框固定在视口底部，避开顶部导航 */
+@media (min-width: 1025px) {
+  .chat-input-wrap {
+    /* 桌面端无底部 tabbar，直接 0 + safe-area 即可 */
+    bottom: 0;
+  }
+}
+
+/* 平板：同桌面 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .chat-input-wrap {
+    bottom: 0;
+  }
+}
+
+/* 移动端：输入框需避开底部 tabbar（72px）+ safe-area */
+@media (max-width: 768px) {
+  .chat-input-wrap {
+    /* 上移避开 AppLayout 的 tabbar */
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    padding-bottom: 12px;
+  }
+  .chat-list {
+    /* 移动端底部留空：输入框 + tabbar */
+    padding-bottom: calc(180px + env(safe-area-inset-bottom));
+  }
+  /* 顶部留空避开 mobile-topbar */
+  .chat-header {
+    padding-top: calc(20px + env(safe-area-inset-top));
+  }
+}
 .chat-input-inner {
   max-width: 760px;
   margin: 0 auto;
@@ -458,8 +495,8 @@ onBeforeUnmount(() => {
   transform: translateY(8px);
 }
 
-/* 响应式 */
-@media (max-width: 640px) {
+/* 响应式：移动端紧凑样式（合并原 640px 段，统一用 768px 断点） */
+@media (max-width: 768px) {
   .chat-view {
     padding: 0 12px;
   }

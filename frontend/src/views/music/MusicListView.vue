@@ -126,6 +126,13 @@ onMounted(() => {
   padding: 32px 24px 80px;
 }
 
+/* 平板紧凑 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .music-list-view {
+    padding: 28px 20px 72px;
+  }
+}
+
 /* AI 推荐区 */
 .ai-section {
   margin-bottom: 48px;

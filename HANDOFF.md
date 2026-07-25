@@ -26,18 +26,19 @@ python start.py
 
 服务管理：
 ```bash
-python start.py start     # 后台启动（默认，自动检测 dist 切换端口策略）
+python start.py start     # 后台启动（默认 = 应用模式，前后端一起起：Vite :5000 + FastAPI :5001）
+python start.py --prod    # 后台启动（显式生产模式，FastAPI :5000 单进程，需 dist 已构建）
 python start.py stop      # 停止（同时停 FastAPI + Vite）
-python start.py restart   # 重启
+python start.py restart   # 重启（默认应用模式）
 python start.py status    # 查 PID + 端口（显示 FastAPI / Vite 两个进程状态）
-python start.py fg        # 前台运行 FastAPI（systemd / 调试，不自动起 Vite）
+python start.py fg        # 前台运行 FastAPI（systemd / 调试；fg 默认应用模式，可加 --prod 切生产）
 python start.py build     # 构建前端到 static/dist/（自动 npm install + npm run build）
 python start.py --init-db # 启动前重置数据库
 ```
 
 > 📌 **端口策略**（用户始终访问 :5000，由 `start.py` 自动切换）：
-> - **生产模式**（dist 已构建）：FastAPI 监听 :5000（从 `.env` 读 `QI_PORT`），Vite 不运行
-> - **开发模式**（dist 未构建）：Vite 监听 :5000（用户入口，HMR 热更新）+ FastAPI 改听 :5001（API 后端，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001
+> - **应用模式**（默认，v2.2.2 起）：Vite 监听 :5000（用户入口，HMR 热更新）+ FastAPI 改听 :5001（API 后端，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001；自动检测 `frontend/node_modules` 不存在则 `npm install`（约 7 分钟，仅首次）
+> - **生产模式**（`--prod`）：FastAPI 监听 :5000（从 `.env` 读 `QI_PORT`），Vite 不运行，需 `static/dist/` 已构建（未构建报错退出，提示先 `python start.py build`）
 > - 详见 [HANDOFF §5.9](#59-为什么开发模式让-vite-占5000-fastapi-改50012026-07-19-加) 决策 + [§6.16](#616-fastapi-代理转发-vite-内部路径含特殊字符失败2026-07-19-加) 踩坑
 
 **秘密后台**：`http://127.0.0.1:5000/admin`（默认入口）
@@ -49,17 +50,18 @@ python start.py --init-db # 启动前重置数据库
 
 **GitHub**：`https://github.com/sunday-lil/jingyu`（public, MIT 友好，私有项目只发了一次）
 
-**前端开发模式**（2026-07-19 Vue 3 重构后）：
+**前端应用/开发模式**（2026-07-19 Vue 3 重构后；2026-07-25 v2.2.2 起为 `python start.py` 默认行为）：
 
-**推荐：`python start.py` 一键起**（自动检测 dist 未构建 → 启动 Vite :5000 + FastAPI :5001）
+**推荐：`python start.py` 一键起**（默认应用模式：自动 npm install + 启动 Vite :5000 + FastAPI :5001）
 ```bash
-python start.py         # 自动起 Vite :5000（用户入口）+ FastAPI :5001（API）
+python start.py         # 默认应用模式：自动起 Vite :5000（用户入口）+ FastAPI :5001（API）
+                        # frontend/node_modules 不存在时自动 npm install（约 7 分钟，仅首次）
 # 浏览器打开 http://127.0.0.1:5000（Vite dev server，HMR 热更新）
 ```
 
 **备选：手动分两个终端**（调试时方便看各自日志）
 ```bash
-# 终端 1：FastAPI（开发模式手动设置 QI_PORT=5001）
+# 终端 1：FastAPI（应用模式手动设置 QI_PORT=5001）
 $env:QI_PORT="5001"; python start.py fg       # Windows PowerShell
 # 或：QI_PORT=5001 python start.py fg          # Linux/macOS
 
@@ -69,7 +71,7 @@ npm install         # 首次：含 three.js 大包，约 7 分钟
 npm run dev         # Vite dev server :5000
 ```
 - dev proxy `/api` / `/static` / `/admin` / `/docs` / `/openapi.json` → FastAPI `:5001`（[frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js)）
-- 生产：`python start.py build`（或手动 `cd frontend && npm run build`）→ 输出到 `static/dist/` → `python start.py` → FastAPI :5000 SPA fallback（详见 [docs/DEPLOYMENT.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEPLOYMENT.md)「前端构建」）
+- 生产（部署用）：`python start.py build`（或手动 `cd frontend && npm run build`）→ 输出到 `static/dist/` → `python start.py --prod` → FastAPI :5000 单进程 SPA fallback（详见 [docs/DEPLOYMENT.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEPLOYMENT.md)「前端构建」）
 
 ---
 
@@ -108,7 +110,7 @@ npm run dev         # Vite dev server :5000
 
 ```
 webwrold/
-├── start.py                  ← 服务管理脚本（start/stop/restart/status/fg/build；自动检测 dist 切换端口策略）
+├── start.py                  ← 服务管理脚本（start/stop/restart/status/fg/build；默认应用模式 Vite :5000 + FastAPI :5001，--prod 走生产模式）
 ├── README.md                 ← 用户主文档
 ├── HANDOFF.md                ← 【当前文件】AI 交接说明
 ├── .env.example              ← 环境变量模板
@@ -386,8 +388,9 @@ webwrold/
 - **决策**：开发模式让 **Vite 直接占 :5000**（用户访问入口），**FastAPI 改听 :5001**（API 后端，由 [start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 设置 `QI_PORT=5001`），Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001
 - **为什么不让 Vite 仍占 :5173 + FastAPI :5000**：① 用户要记两个端口（:5173 看前端 / :5000 看 API），心智负担大；② Vite proxy 转发到 FastAPI 的方向是稳定的（FastAPI 是普通 HTTP JSON，无特殊字符），但反过来 FastAPI 转发到 Vite 就会踩坑
 - **生产模式不变**：dist 已构建时 FastAPI 监听 :5000（从 `.env` 读 `QI_PORT`），Vite 不运行，FastAPI 提供 SPA fallback + API + 静态资源
-- **用户体验**：用户始终访问 `http://127.0.0.1:5000`，无需关心是开发还是生产模式，[start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 自动检测 `static/dist/index.html` 是否存在来切换
+- **用户体验**：用户始终访问 `http://127.0.0.1:5000`，无需关心是应用还是生产模式，[start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 自动切换
 - **start.py 改动**：① `start` 子命令自动检测 dist，未构建时设置 `QI_PORT=5001` 启动 FastAPI + 启动 Vite :5000；② `stop` 同时停 FastAPI 和 Vite；③ `status` 显示两个进程状态 + 端口；④ 新增 `build` 子命令一键构建前端到 `static/dist/`（自动 `npm install` + `npm run build`）；⑤ `fg` 子命令只前台运行 FastAPI（生产模式用，不自动起 Vite）
+- **2026-07-25 v2.2.2 行为变更**：默认走应用/开发模式（Vite :5000 + FastAPI :5001，自动 `npm install` 当 `frontend/node_modules` 不存在），不再因 dist 已构建就走生产模式。生产模式需显式 `python start.py --prod`（需 dist 已构建）。详见末次更新行 v2.2.2 段。
 - **vite.config.js 改动**：① dev server port 5173 → 5000；② proxy target :5000 → :5001；③ 移除 `hmr.clientPort`（Vite 直接占 :5000 后 HMR 走本地不需要）；④ 新增 `/docs` 和 `/openapi.json` 代理
 - **main.py 改动**：① SPA fallback 移除回退代理到 Vite 的逻辑（开发态不再转发，返回提示页引导用户访问 Vite :5000）；② 新增 `EXT_TO_MIME` 映射（`.js` / `.css` / `.woff2` 等正确设置 `Content-Type`），生产态从 dist 读取静态资源时不再被 Starlette 默认当成 `application/octet-stream` 让浏览器拒绝执行
 
@@ -409,7 +412,7 @@ webwrold/
   - 所有 Three.js 组件用 `defineAsyncComponent(() => import(...))` 异步加载，**不进首屏包**（vite.config.js `manualChunks` 把 `three` 单独打成 `three-vendor` chunk，gzip 后 175KB，仅访问 `/`（HeroScene）或 `/garden`（FlowerField）时按需拉取）
   - Three.js 对象用 `shallowRef` 持有，避免 Vue 深度代理拖累性能
   - `smartRAF(callback)` 在 `document.hidden` 时暂停 rAF、可见时自动恢复，避免标签页隐藏时浪费 GPU
-  - 移动端降粒子数（Three.js 80→40，Canvas2D 60→24）、降分辨率（HeroScene 海面 128×128 → 64×64）、降帧率（AudioVisualizer 30fps → 24fps）
+  - 移动端降粒子数（Three.js 80→40，Canvas2D 60→24）、降分辨率（HeroScene 海面 128×128 → 64×64）、降帧率（AudioVisualizer 30fps → 24fps）、降几何精度（v2.2.3 加：HeroScene Lathe/Cylinder 段数 24→16、樱花树递归深度 4→3、花团 Icosahedron detail 2→1；FlowerField 花瓣网格 5×8→4×6、花蕊 Icosahedron detail 2→1、地面圆 64→32、茎圆柱段 6→5；AudioVisualizer 镜像柱 48→32、径向柱 64→32）
   - 所有 Three.js 组件 `onBeforeUnmount` 释放 geometry / material / renderer / 事件监听 / ResizeObserver，避免切走后 WebGL 上下文泄漏
 - **Web Audio API 一次性约束**：`createMediaElementSource(audioEl)` 对同一 `<audio>` 元素**只能调用一次**，AudioVisualizer 用 `if (!sourceNode)` 守卫；MusicDetailView 用 `visualizerConnected` ref 标记是否已连接，首次 `playIndex` 时调 `visualizerRef.value.connect(audioEl)`，后续切歌不重连
 - **配色一致性**：4 个视觉组件全部用治愈系 5 色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）+ 米白 `#F9F6F0` 背景，与 [tailwind.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/tailwind.config.js) token 一致；AudioVisualizer 5 条曲线对应宫商角徵羽 5 音色
@@ -679,7 +682,7 @@ async def spa_fallback(path: str):
 - 反过来 Vite proxy 转发到 FastAPI 是稳定的（FastAPI 是普通 HTTP JSON API，路径不含特殊字符）
 
 **修复**：让 **Vite 直接占 :5000**（用户访问入口），**FastAPI 改听 :5001**（API 后端）：
-- [start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 开发模式（dist 未构建）自动设置 `QI_PORT=5001` 启动 FastAPI + 启动 Vite :5000
+- [start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 应用模式（默认，v2.2.2 起）自动设置 `QI_PORT=5001` 启动 FastAPI + 启动 Vite :5000；自动检测 `frontend/node_modules` 不存在则 `npm install`
 - [frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js) dev server port 5173 → 5000，proxy target :5000 → :5001，移除 `hmr.clientPort`（HMR 走本地），新增 `/docs` 和 `/openapi.json` 代理
 - [app/main.py](file:///c:/Users/Administrator/Desktop/webwrold/app/main.py) SPA fallback 移除回退代理到 Vite 的逻辑，开发态（dist 未构建）返回提示页引导用户访问 Vite :5000
 
@@ -1319,3 +1322,7 @@ Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yello
 > 末次更新 2026-07-20（v2.2 3D 元素与动效全面重构）：用户反馈 v2.1 上线后两个核心问题：① **交互体验缺失**——用户不知道 3D 场景可以拖拽 / 缩放 / 点击，以为是静态背景；② **视觉粗糙过时**——`PointsMaterial` 方形粒子 + `MeshBasicMaterial` 平面着色 + 无环境映射，整体观感类似 80/90 年代红白机低品质视觉。**决策**：① 4 个视觉组件全部升级到 PBR（Physically Based Rendering）渲染管线（`ACESFilmicToneMapping` + `SRGBColorSpace` + `PCFSoftShadowMap` + `RoomEnvironment` PMREM + `UnrealBloomPass`）；② 抽出 [utils/three-helpers.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/three-helpers.js) 集中 9 个共享 PBR 工具函数（createRenderer / createEnvironment / createPostProcessing / createOrbitControls / createKeyLight / createFillLight / createSoftSpriteTexture / disposeObject3D / disposeRenderer）；③ 新增 [SceneHint.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/SceneHint.vue) 交互指引横幅 + [SceneControls.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/SceneControls.vue) 视图控制工具栏；④ HeroScene 改用 `LatheGeometry` 旋转曲面浮岛 + 递归樱花树 + 水面 `onBeforeCompile` 顶点位移 shader；FlowerField 改用自定义 `BufferGeometry` 立体花瓣 + `MeshPhysicalMaterial`（透射 + sheen）；AudioVisualizer 升级 4 模式（wave/mirror/radial/particles）+ 节拍检测；AmbientBackground 升级 Canvas2D 柔光 sprite + 鼠标排斥 + 滚动视差 + 轻量 Bloom；⑤ 所有 3D 场景统一 `OrbitControls`（拖拽旋转 + 滚轮缩放）+ `raycaster` 点击拾取。**降级路径保留**：v2.1 三层渐进增强 + SVG / CSS 静态降级 + `prefers-reduced-motion` + 移动端粒子减半 + dpr ≤ 1.5 全部保留。**构建产物体积变化**：HeroScene 7.5KB → 13.54KB、FlowerField 9.94KB、SceneControls 4.5KB、three-vendor 175KB → 719.84KB（含 addons：OrbitControls / EffectComposer / UnrealBloomPass / RoomEnvironment），首屏不加载。§2 技术栈表 Three.js 行更新、§5.11 加 v2.2 决策、DEVELOPMENT §1.9.8 加 v2.2 新 3 大铁律（⑤ PBR 用 three-helpers / ⑥ 必须 SceneHint+SceneControls / ⑦ 必须 OrbitControls+raycaster）。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
 >
 > 末次更新 2026-07-20（v2.2.1 start.py 自动构建）：用户反馈服务器部署场景「端口代理已配好 :5000 不能动，服务端只跑 `python start.py`」，但 v2.2 行为是 dist 未构建 → 走开发模式（Vite 占 :5000），会破坏端口代理。**决策**：改 [start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 默认行为——dist 未构建时**不再走开发模式**，而是：① 检测 Node.js 是否可用 → 可用则自动 `npm install + npm run build` 后走生产模式（:5000 永远是 FastAPI）；② Node.js 不可用 → 报错退出（不让 Vite 占 :5000）。**新增 `--dev` 参数**：`python start.py --dev` 显式走开发模式（Vite :5000 + FastAPI :5001），本地开发用。**新增 2 个辅助函数**：`_check_node_available()` 检测 node + npm 版本 / `_ensure_dist_or_dev(force_dev)` 决策启动模式。**服务器部署简化为 3 步**：① 上传代码 ② 装 Python 依赖 + Node.js 18+ ③ `python start.py`（首次自动构建约 7 分钟，之后秒启）。DEVELOPMENT §1.9.1 / §1.9.2 / §1.9.6 更新（开发模式现在需 `--dev`）、DEPLOYMENT §1.5 / §2.3 更新（前端构建可选，start.py 自动）。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
+>
+> 末次更新 2026-07-25（v2.2.2 start.py 默认应用模式）：用户要求「`python start.py` 启动时是应用模式不是生产模式，前后端一起启动，且检测到没有编译的时候自动编译」。**决策**：改 [start.py](file:///c:/Users/Administrator/Desktop/webwrold/start.py) 默认行为回滚 v2.2.1 —— **默认走应用/开发模式**（前后端一起起：Vite :5000 HMR + FastAPI :5001 API）。**新增 `_ensure_node_modules()` 函数**：检测 `frontend/node_modules` 不存在则自动 `npm install`（约 7 分钟，仅首次），不构建 dist（应用模式用 Vite dev server 不需要构建产物）。**新增 `--prod` 参数**：显式生产模式，FastAPI :5000 单进程 + 需 `static/dist/` 已构建（未构建报错退出，提示先 `python start.py build`）。**`--dev` 改为兼容别名**（等同默认行为，保留向后兼容）。**新增 `_ensure_dist_for_prod()` 函数**：生产模式启动前的 dist 检查。**移除 v2.2.1 的 `_ensure_dist_or_dev()`**（不再有「dist 未构建 → 自动 npm run build 走生产模式」逻辑）。**服务器部署 3 步不变**：① 上传代码 ② 装 Python + Node.js 18+ ③ `python start.py`（首次自动 npm install，之后秒启）；生产部署可选 `python start.py build && python start.py --prod` 走单进程模式。README §1.1/§1.3/§3.1、HANDOFF §1、PROJECT_STATE §1/§2、ARCHITECTURE §1/§1.2 顶部提示、DEPLOYMENT 顶部提示/§1.5/§2.3、DEVELOPMENT 顶部提示/§1.9/§1.9.1/§1.9.2 全部更新。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
+>
+> 末次更新 2026-07-25（v2.2.3 移动端响应式 UI + 3D 几何降档）：用户要求「不同设备不同 UI 布局，考虑手机屏幕小不能展示所有功能，iPhone 16 默认浏览器 Safari 导航和搜索栏在底部，UI 要自适应」。**决策**：① **三档断点系统差异化布局**（[AppLayout.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AppLayout.vue) + [main.css](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/assets/styles/main.css)）：桌面 ≥1025px 顶部完整导航 / 平板 769-1024px 紧凑导航（图标 + 短标签纵向）/ 移动端 ≤768px topbar + 底部 tabbar（4 固定 + 中央「更多」按钮 → 抽屉展开 3 项次要入口）。② **iOS Safari 适配**：`100dvh` + `100vh` 兜底应对底部地址栏跳变；`env(safe-area-inset-top)` 避让刘海/灵动岛；`env(safe-area-inset-bottom)` 避让 Home Indicator；`.safe-top` / `.safe-bottom` 工具类 + 三档断点工具类（`.mobile-only` / `.tablet-only` / `.desktop-only`）。③ **fullscreen 路由模式**：`route.meta.fullscreen = true` 隐藏 topbar + tabbar，main 占满 `100dvh`（AIChatView 用，避免 tabbar 遮挡输入框）。④ **13 个视图移动端差异化布局**：HomeView 五音卡片横向滚动 + scroll-snap；MusicDetailView 播放器避让 tabbar；DiaryListView 时间轴左移；GardenView 花朵数 60→36 + 3D 高度 380→280px；MoodCalendarView 单列；ShopView 2 列；LoginView/RegisterView 减小内边距；AIChatView fullscreen。⑤ **4 个 3D 组件移动端几何精度降档**（在原有「粒子减半 + dpr≤1.5 + Bloom 降强度」基础上）：HeroScene Lathe/Cylinder 段数 24→16 + 樱花树递归深度 4→3 + 花团 Icosahedron detail 2→1 + 树枝圆柱段 6→5；FlowerField 花瓣网格 5×8→4×6 + 花蕊 Icosahedron detail 2→1 + 地面圆 64→32 + 茎圆柱段 6→5；AudioVisualizer 镜像柱 48→32 + 径向柱 64→32；AmbientBackground 已优化保留。§5.10 性能保护行更新、§1 总体状态加 v2.2.3 行、ARCHITECTURE §1.1.6 移动端降级 + 降级矩阵更新、DEVELOPMENT §1.9.4 性能保护 + 验证清单更新、DEPLOYMENT 顶部加 v2.2.3 提示。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。

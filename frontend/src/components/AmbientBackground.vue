@@ -238,16 +238,16 @@ const initThreeDust = async () => {
     const renderer = createRenderer(canvas, {
       dpr: mobile ? 1.25 : 1.75,
       shadows: false,  // 全局背景不需要阴影
-      toneMappingExposure: 1.05,
+      toneMappingExposure: 0.92,
     })
     renderer.setSize(w, h)
     renderer.setClearColor(0x000000, 0)  // 透明背景，让 CSS 雾气透出来
 
     // ─── 轻量 Bloom（弱强度，避免抢戏） ───
     const composer = createPostProcessing(scene, camera, renderer, {
-      strength: mobile ? 0.18 : 0.3,
+      strength: mobile ? 0.12 : 0.18,
       radius: 0.6,
-      threshold: 0.75,
+      threshold: 0.9,
     })
 
     // ─── 远景柔光粒子（sprite 纹理） ───

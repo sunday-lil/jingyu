@@ -71,12 +71,13 @@ let tooltipTimer = null
 const three = shallowRef(null)
 
 // ─── 自定义立体花瓣 BufferGeometry ───
-// 4×6 顶点网格，沿 Y 轴从 0（根部）到 1（尖端），
-// Z 轴中间凸起（花瓣向上翘），顶部宽度收窄（花瓣尖端）
-function createPetalGeometry(THREE) {
-  const widthSegs = 4
-  const heightSegs = 6
-  const width = 0.55
+// 水滴形花瓣：根部窄（接花蕊）→ 中部最宽 → 尖端收窄
+// 沿 +Y 方向生长，Z 方向有柔和弧度（花瓣向前凸）
+function createPetalGeometry(THREE, mobile = false) {
+  // 移动端降低网格细分（顶点数减少约 50%）
+  const widthSegs = mobile ? 4 : 5
+  const heightSegs = mobile ? 6 : 8
+  const maxWidth = 0.45
   const height = 1.0
   const vertices = []
   const uvs = []
@@ -85,16 +86,18 @@ function createPetalGeometry(THREE) {
   for (let iy = 0; iy <= heightSegs; iy++) {
     const v = iy / heightSegs
     const y = v * height
-    // 顶部尖（宽度收窄）
-    const widthAtY = width * (1 - v * 0.65)
-    // 向上翘起的弧度
-    const zBulge = Math.sin(v * Math.PI) * 0.22
+    // 水滴形宽度曲线：根部 0.2 → 中部 1.0 → 尖端 0.1
+    const widthFactor = 0.2 + Math.sin(v * Math.PI) * 0.8 + (1 - v) * 0.0
+    const widthAtY = maxWidth * Math.max(0.05, widthFactor)
+    // Z 方向弧度：中部凸起，根部和尖端平
+    const zBulge = Math.sin(v * Math.PI) * 0.18
     for (let ix = 0; ix <= widthSegs; ix++) {
       const u = ix / widthSegs
       const x = (u - 0.5) * widthAtY
-      // 中间凸起，边缘平
-      const z = zBulge * (1 - Math.abs(u - 0.5) * 1.6)
-      vertices.push(x, y, Math.max(0, z))
+      // 中间凸起多，边缘凸起少（形成弧面）
+      const edgeFactor = 1 - Math.abs(u - 0.5) * 1.8
+      const z = zBulge * Math.max(0, edgeFactor)
+      vertices.push(x, y, z)
       uvs.push(u, v)
     }
   }
@@ -126,8 +129,8 @@ const initScene = async () => {
 
   // ─── 场景 ───
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(0xF9F6F0)
-  scene.fog = new THREE.Fog(0xF9F6F0, 10, 32)
+  scene.background = new THREE.Color(0xE8DCC8)
+  scene.fog = new THREE.Fog(0xE8DCC8, 10, 32)
 
   // ─── 相机 ───
   const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100)
@@ -142,7 +145,7 @@ const initScene = async () => {
   const renderer = createRenderer(canvas, {
     dpr: mobile ? 1.5 : 2,
     shadows: true,
-    toneMappingExposure: 1.1,
+    toneMappingExposure: 0.92,
   })
   renderer.setSize(width, height)
 
@@ -152,9 +155,9 @@ const initScene = async () => {
 
   // ─── 后处理 ───
   const composer = createPostProcessing(scene, camera, renderer, {
-    strength: mobile ? 0.35 : 0.5,
+    strength: mobile ? 0.18 : 0.25,
     radius: 0.5,
-    threshold: 0.7,
+    threshold: 0.88,
   })
 
   // ─── OrbitControls ───
@@ -173,7 +176,7 @@ const initScene = async () => {
   // ─── 光照 ───
   const keyLight = createKeyLight({
     position: [6, 12, 5],
-    intensity: 2.0,
+    intensity: 1.3,
     color: 0xfff4e0,
     shadow: {
       mapSize: mobile ? 1024 : 2048,
@@ -183,11 +186,12 @@ const initScene = async () => {
     },
   })
   scene.add(keyLight)
-  const fillLight = createFillLight({ intensity: 0.55 })
+  const fillLight = createFillLight({ intensity: 0.4 })
   scene.add(fillLight)
 
   // ─── 地面（草地色，receiveShadow） ───
-  const groundGeo = new THREE.CircleGeometry(22, 64)
+  // 移动端降低圆形分段（64 → 32）
+  const groundGeo = new THREE.CircleGeometry(22, mobile ? 32 : 64)
   const groundMat = new THREE.MeshStandardMaterial({
     color: 0xE4E9DC,
     roughness: 0.92,
@@ -202,7 +206,7 @@ const initScene = async () => {
   scene.add(ground)
 
   // ─── 花瓣 InstancedMesh（立体 PBR 花瓣） ───
-  const petalGeo = createPetalGeometry(THREE)
+  const petalGeo = createPetalGeometry(THREE, mobile)
   const petalMat = new THREE.MeshPhysicalMaterial({
     roughness: 0.45,
     metalness: 0.0,
@@ -226,7 +230,8 @@ const initScene = async () => {
   )
 
   // ─── 花蕊 InstancedMesh（小球，emissive 黄色，Bloom 高亮） ───
-  const centerGeo = new THREE.IcosahedronGeometry(0.09, 2)
+  // 移动端降低 icosahedron 细分（2 → 1，顶点数减少 75%）
+  const centerGeo = new THREE.IcosahedronGeometry(0.11, mobile ? 1 : 2)
   const centerMat = new THREE.MeshStandardMaterial({
     color: 0xF5C870,
     roughness: 0.4,
@@ -240,7 +245,8 @@ const initScene = async () => {
   centers.castShadow = true
 
   // ─── 花茎 InstancedMesh（细圆柱） ───
-  const stemGeo = new THREE.CylinderGeometry(0.025, 0.03, 1.0, 6)
+  // 移动端降低圆柱段数（6 → 5）
+  const stemGeo = new THREE.CylinderGeometry(0.025, 0.03, 1.0, mobile ? 5 : 6)
   const stemMat = new THREE.MeshStandardMaterial({
     color: 0x7A9B68,
     roughness: 0.85,
@@ -255,6 +261,11 @@ const initScene = async () => {
   const dummy = new THREE.Object3D()
   const color = new THREE.Color()
   const flowerData = []
+  // 花瓣倾斜角度（绕局部 X 轴，负值 = 向外张开，形成杯状）
+  // -55 度 ≈ -Math.PI / 3.27，花瓣从中心向上+向外张开
+  const petalTilt = -Math.PI / 3.2
+  const petalEuler = new THREE.Euler(petalTilt, 0, 0, 'YXZ')
+  const petalQuat = new THREE.Quaternion().setFromEuler(petalEuler)
 
   let instanceIdx = 0
   for (let i = 0; i < props.flowerCount; i++) {
@@ -280,12 +291,19 @@ const initScene = async () => {
       burstEnd: 0,  // 爆裂动画结束时间戳（秒）
     })
 
-    // 5 片花瓣
+    // 花朵中心 Y 坐标（花瓣根部 + 花蕊位置）
+    const flowerCenterY = fy + flowerHeight
+
+    // 5 片花瓣（杯状分布：绕 Y 轴均匀分布 + 绕局部 X 轴倾斜向外张开）
     for (let p = 0; p < 5; p++) {
       const petalYaw = flowerYaw + (p / 5) * Math.PI * 2
-      dummy.position.set(fx, fy + flowerHeight, fz)
-      dummy.rotation.set(0, petalYaw, 0)
-      dummy.scale.set(0.3, 0.3, 0.3)
+      dummy.position.set(fx, flowerCenterY, fz)
+      // 用 Quaternion 组合：先绕 Y 轴分布，再绕局部 X 轴倾斜
+      const yawQuat = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0), petalYaw,
+      )
+      dummy.quaternion.copy(yawQuat).multiply(petalQuat)
+      dummy.scale.set(0.42, 0.42, 0.42)
       dummy.updateMatrix()
       flowers.setMatrixAt(instanceIdx, dummy.matrix)
 
@@ -296,17 +314,18 @@ const initScene = async () => {
       instanceIdx++
     }
 
-    // 花蕊
-    dummy.position.set(fx, fy + flowerHeight, fz)
-    dummy.rotation.set(0, 0, 0)
-    dummy.scale.set(0.3, 0.3, 0.3)
+    // 花蕊（在花朵中心，稍微低于花瓣顶部）
+    dummy.position.set(fx, flowerCenterY + 0.04, fz)
+    dummy.quaternion.identity()
+    dummy.scale.set(1, 1, 1)
     dummy.updateMatrix()
     centers.setMatrixAt(i, dummy.matrix)
 
-    // 花茎（从地面到花朵底部，长度=flowerHeight）
-    dummy.position.set(fx, fy + flowerHeight * 0.5, fz)
-    dummy.rotation.set(0, 0, 0)
-    dummy.scale.set(1, flowerHeight, 1)
+    // 花茎（从地面到花朵底部，长度=flowerHeight - 0.1）
+    const stemLen = flowerHeight - 0.1
+    dummy.position.set(fx, fy + stemLen * 0.5, fz)
+    dummy.quaternion.identity()
+    dummy.scale.set(1, stemLen, 1)
     dummy.updateMatrix()
     stems.setMatrixAt(i, dummy.matrix)
   }
@@ -391,6 +410,12 @@ const initScene = async () => {
   renderer.domElement.addEventListener('wheel', onFirstInteract, { once: true })
 
   // ─── 渲染循环 ───
+  // 预计算复用对象（避免每帧 new）
+  const yAxis = new THREE.Vector3(0, 1, 0)
+  const swayAxisX = new THREE.Vector3(1, 0, 0)
+  const tmpYawQuat = new THREE.Quaternion()
+  const tmpSwayQuat = new THREE.Quaternion()
+
   const render = () => {
     const elapsed = clock.getElapsedTime()
 
@@ -401,7 +426,7 @@ const initScene = async () => {
       // 绽放动画
       const bloomT = Math.max(0, Math.min(1, (elapsed - fd.bloomDelay) / 1.5))
       const bloomEase = bloomT < 0.5 ? 2 * bloomT * bloomT : 1 - Math.pow(-2 * bloomT + 2, 2) / 2
-      let currentHeight = fd.height * bloomEase
+      const currentHeight = fd.height * bloomEase
       let currentScale = 0.3 + 0.7 * bloomEase
 
       // 爆裂动画（点击后 1.5s 内放大脉冲）
@@ -412,28 +437,37 @@ const initScene = async () => {
 
       // 风摆动
       const sway = Math.sin(elapsed * 1.2 + fd.swayPhase) * fd.swayAmplitude
+      // 花瓣最终 scale = bloomScale × 0.42（0.42 是花瓣基础大小）
+      const petalScale = currentScale * 0.42
+      const flowerCenterY = fd.y + currentHeight
 
+      // 5 片花瓣（杯状分布 + 风摆）
       for (let p = 0; p < 5; p++) {
         const petalYaw = fd.yaw + (p / 5) * Math.PI * 2
-        dummy.position.set(fd.x, fd.y + currentHeight, fd.z)
-        dummy.rotation.set(sway * 0.4, petalYaw + sway * 0.2, sway * 0.3)
-        dummy.scale.set(currentScale, currentScale, currentScale)
+        dummy.position.set(fd.x, flowerCenterY, fd.z)
+        // Quaternion 组合：yaw 分布 × tilt 倾斜 × sway 风摆
+        tmpYawQuat.setFromAxisAngle(yAxis, petalYaw + sway * 0.2)
+        tmpSwayQuat.setFromAxisAngle(swayAxisX, sway * 0.4)
+        dummy.quaternion.copy(tmpYawQuat).multiply(petalQuat).multiply(tmpSwayQuat)
+        dummy.scale.set(petalScale, petalScale, petalScale)
         dummy.updateMatrix()
         flowers.setMatrixAt(instIdx, dummy.matrix)
         instIdx++
       }
 
-      // 花蕊
-      dummy.position.set(fd.x, fd.y + currentHeight, fd.z)
-      dummy.rotation.set(0, 0, 0)
+      // 花蕊（在花朵中心，稍微高于花瓣根部）
+      dummy.position.set(fd.x, flowerCenterY + 0.04, fd.z)
+      dummy.quaternion.identity()
       dummy.scale.set(currentScale, currentScale, currentScale)
       dummy.updateMatrix()
       centers.setMatrixAt(i, dummy.matrix)
 
-      // 花茎
-      dummy.position.set(fd.x, fd.y + currentHeight * 0.5, fd.z)
-      dummy.rotation.set(sway * 0.3, 0, 0)
-      dummy.scale.set(1, currentHeight, 1)
+      // 花茎（从地面到花朵底部，长度=currentHeight - 0.1）
+      const stemLen = Math.max(0.1, currentHeight - 0.1)
+      dummy.position.set(fd.x, fd.y + stemLen * 0.5, fd.z)
+      // 花茎随风摆动（绕 X 轴轻微倾斜）
+      dummy.quaternion.setFromAxisAngle(swayAxisX, sway * 0.3)
+      dummy.scale.set(1, stemLen, 1)
       dummy.updateMatrix()
       stems.setMatrixAt(i, dummy.matrix)
     }
@@ -705,7 +739,7 @@ onBeforeUnmount(() => {
 }
 
 /* 响应式 */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .flower-field {
     border-radius: var(--radius-md, 12px);
   }
@@ -714,6 +748,12 @@ onBeforeUnmount(() => {
   }
   .flower-tip__text {
     font-size: 12px;
+  }
+  .flower-field__loading-icon {
+    font-size: 36px;
+  }
+  .flower-field__loading-text {
+    font-size: 13px;
   }
 }
 </style>

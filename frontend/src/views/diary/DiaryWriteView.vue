@@ -226,6 +226,13 @@ function generateSalt() {
   padding: 32px 24px 80px;
 }
 
+/* 平板紧凑 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .diary-write-view {
+    padding: 28px 20px 72px;
+  }
+}
+
 .write-header {
   margin-bottom: 24px;
 }
@@ -420,19 +427,43 @@ function generateSalt() {
   transform: translateX(-50%) translateY(10px);
 }
 
-@media (max-width: 640px) {
+/* ── 移动端（≤768px）：差异化布局 ── */
+@media (max-width: 768px) {
   .diary-write-view {
-    padding: 20px 16px 60px;
+    padding: 20px 14px 60px;
+  }
+  .write-title {
+    font-size: 24px;
   }
   .write-form {
-    padding: 22px 18px;
+    padding: 20px 16px;
+  }
+  .mood-row {
+    gap: 8px;
+    justify-content: space-between;
   }
   .mood-chip {
-    min-width: 56px;
-    padding: 10px 12px;
+    min-width: 0;
+    flex: 1;
+    padding: 10px 6px;
   }
   .mood-chip__emoji {
-    font-size: 20px;
+    font-size: 22px;
+  }
+  .mood-chip__label {
+    font-size: 11px;
+  }
+  .content-area {
+    min-height: 200px;
+    font-size: 15px;
+  }
+  /* toast 上移避开 tabbar */
+  .toast {
+    bottom: calc(90px + env(safe-area-inset-bottom));
+  }
+  .modal-card {
+    max-width: calc(100vw - 32px);
+    padding: 24px 20px;
   }
 }
 </style>

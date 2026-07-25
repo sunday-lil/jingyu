@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import gsap from 'gsap'
 import api from '@/api'
 import { useUserStore } from '@/stores/user'
+import { isMobile } from '@/utils/visual'
 
 // 异步加载 Three.js 花田组件（按需加载，减小首屏包）
 const FlowerField = defineAsyncComponent(() =>
@@ -12,6 +13,9 @@ const FlowerField = defineAsyncComponent(() =>
 
 const router = useRouter()
 const userStore = useUserStore()
+
+// 移动端降低花田花朵数（性能优化）
+const flowerCount = isMobile() ? 36 : 60
 
 // 物品类型映射（前端展示用）
 const ITEM_TYPE_INFO = {
@@ -168,9 +172,9 @@ onBeforeUnmount(() => {
 
     <!-- 3D 花田场景（异步加载 Three.js） -->
     <section class="garden-hero">
-      <FlowerField :flower-count="60" height="380px" />
+      <FlowerField :flower-count="flowerCount" height="380px" />
       <div class="garden-hero__overlay">
-        <p class="garden-hero__hint">移动鼠标，看花田随风摆动</p>
+        <p class="garden-hero__hint">{{ flowerCount === 36 ? '轻触花田，看花朵绽放' : '移动鼠标，看花田随风摆动' }}</p>
       </div>
     </section>
 
@@ -272,6 +276,17 @@ onBeforeUnmount(() => {
   max-width: 960px;
   margin: 0 auto;
   padding: 32px 24px 80px;
+}
+
+/* 平板紧凑 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .garden-view {
+    padding: 28px 20px 72px;
+  }
+  .item-group__grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 12px;
+  }
 }
 
 /* 标题 */
@@ -571,12 +586,19 @@ onBeforeUnmount(() => {
 }
 
 /* 响应式 */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .garden-view {
     padding: 20px 14px 60px;
   }
   .garden-header__title {
     font-size: 24px;
+  }
+  /* 3D 花田移动端降低高度 */
+  .garden-hero {
+    margin-bottom: 22px;
+  }
+  .garden-hero :deep(.flower-field) {
+    height: 280px !important;
   }
   .energy-card {
     flex-direction: column;
@@ -587,23 +609,42 @@ onBeforeUnmount(() => {
   .energy-card__cta {
     width: 100%;
   }
+  .source-section {
+    padding: 18px 16px;
+  }
   .source-row__label {
-    flex: 0 0 76px;
+    flex: 0 0 72px;
     font-size: 12px;
   }
   .source-row__value {
-    flex: 0 0 44px;
+    flex: 0 0 40px;
     font-size: 13px;
   }
   .item-group__grid {
-    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
     gap: 10px;
   }
+  .garden-item {
+    padding: 12px 8px;
+  }
   .garden-item__emoji {
-    font-size: 30px;
+    font-size: 28px;
   }
   .garden-item__name {
+    font-size: 12.5px;
+  }
+  .records-section {
+    padding: 18px 16px;
+  }
+  .record-row__source {
     font-size: 13px;
+  }
+  .record-row__amount {
+    font-size: 14px;
+  }
+  /* toast 上移避开 tabbar */
+  .toast {
+    bottom: calc(90px + env(safe-area-inset-bottom));
   }
 }
 </style>

@@ -54,13 +54,16 @@ html, body {
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* iOS 安全区 */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* iOS Safari 安全区：由具体元素（如顶部 nav / 底部 tabbar）按需 padding，
+   不在 body 全局加 padding（避免页面内部布局双倍 padding）。
+   通过 .safe-top / .safe-bottom 工具类应用到固定/粘性元素上。 */
+
 #app {
+  /* 用 dvh 应对 iOS 16+ Safari 底部地址栏出现/消失时的视口跳变 */
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 a {
@@ -92,6 +95,52 @@ input, textarea {
   background: rgba(139, 123, 94, 0.2);
   border-radius: 3px;
 }
+
+/* ── 三档断点工具类（手机 / 平板 / 桌面差异化 UI） ──
+ * mobile  : ≤ 768px（手机竖屏，iPhone 16 / Android）
+ * tablet  : 769px - 1024px（iPad / 大屏手机横屏）
+ * desktop : ≥ 1025px（桌面 / 大屏）
+ *
+ * 用法：.mobile-only / .tablet-only / .desktop-only / .tablet-and-up / .mobile-and-up
+ */
+.mobile-only { display: none; }
+.tablet-only { display: none; }
+.desktop-only { display: none; }
+
+@media (max-width: 768px) {
+  .mobile-only { display: revert; }
+  .tablet-only { display: none !important; }
+  .desktop-only { display: none !important; }
+  .tablet-and-up { display: none !important; }
+  .desktop-and-up { display: none !important; }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .tablet-only { display: revert; }
+  .mobile-only { display: none !important; }
+  .desktop-only { display: none !important; }
+  .mobile-only, .desktop-only { display: none !important; }
+}
+
+@media (min-width: 1025px) {
+  .desktop-only { display: revert; }
+  .mobile-only { display: none !important; }
+  .tablet-only { display: none !important; }
+  .tablet-and-down { display: none !important; }
+}
+
+@media (min-width: 769px) {
+  .tablet-and-up { display: revert; }
+  .mobile-only { display: none !important; }
+}
+
+@media (max-width: 1024px) {
+  .tablet-and-down { display: revert; }
+  .desktop-only { display: none !important; }
+}
+
+/* mobile-and-up = 总是显示（mobile 及以上） */
+.mobile-and-up { display: revert; }
 
 /* ── 通用组件类 ── */
 @layer components {
