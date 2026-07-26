@@ -2,14 +2,16 @@
 
 >>> 一句话用法：
     python start.py                # 后台启动：默认应用模式（Vite :5000 + FastAPI :5001 一起起，HMR 热更新）
-    python start.py --prod         # 显式生产模式（FastAPI :5000 单进程，需 dist 已构建）
+    python start.py --prod         # 显式生产模式（FastAPI :5000 单进程；v2.3.1 起源码更新会自动重建 dist）
     python start.py fg             # 前台运行（systemd / 调试用，关掉终端就停）
     python start.py --init-db      # 启动前重置数据库
 
 --- 全部子命令：
     python start.py                # 后台启动（默认 = 应用/开发模式）：Vite 占 :5000 + FastAPI 退 :5001，前后端一起起
     python start.py start          # 同上
-    python start.py --prod         # 显式生产模式：FastAPI 监听 :5000，需 static/dist/ 已构建
+    python start.py --prod         # 显式生产模式：FastAPI 监听 :5000
+                                   #   v2.3.1 起：检测到 frontend/src/ 比 static/dist/ 新时自动重建（需 Node.js）
+                                   #   FileZilla 上传新代码后直接 restart 即可，无需手动 build
     python start.py --dev          # 兼容别名，等同默认行为（应用/开发模式）
     python start.py stop           # 优雅停止（同时停 FastAPI + Vite）
     python start.py restart        # 重启
@@ -33,8 +35,8 @@
         dist 未构建 → 报错退出（提示先跑 `python start.py build` 或不要加 --prod 走默认应用模式）
 
 --- 服务器开机启动 + 端口转发（生产场景，端口代理已配好 :5000 不能动）：
-    前提：服务器装 Node.js 18+（默认应用模式需要 Vite dev server 运行）
-          或本地构建好 dist 后用 `python start.py --prod` 走生产模式（则服务器不需要 Node.js）
+    前提：服务器装 Node.js 18+（v2.3.1 起 --prod 模式会自动构建，需要 Node.js）
+          或本地构建好 dist 后把 static/dist/ 一起上传（则服务器不需要 Node.js）
 
     方式 A（宝塔面板，默认应用模式）：
       项目类型  : Python
@@ -43,11 +45,12 @@
       端口      : 5000（Vite dev server，用户入口）+ 5001（FastAPI，API 后端）
       反向代理  : 宝塔站点 → 反向代理 → 目标 URL http://127.0.0.1:5000
       首次启动  : 自动 npm install（约 7 分钟），之后秒启
-    方式 B（systemd，生产模式推荐）：
+    方式 B（systemd，生产模式推荐 ⭐ v2.3.1）：
       ExecStart=/home/healing/app/venv/bin/python start.py fg --prod  # fg 前台运行 + 显式生产模式
       Environment=QI_PORT=5000
       Nginx 反代 80/443 → 127.0.0.1:5000
-      部署前   : 先 `python start.py build` 构建 dist，再启 --prod 模式
+      更新流程  : git pull 或 FileZilla 上传新代码 → python start.py --prod restart
+                  （v2.3.1 起：自动检测 frontend/src/ 新于 static/dist/ 时自动 npm install + build）
 
 环境变量（与 .env 一致）：
     QI_HOST, QI_PORT, QI_DEBUG, QI_SECRET_KEY, QI_DATABASE_URL,
@@ -211,6 +214,83 @@ def is_dist_built() -> bool:
     return DIST_INDEX.exists()
 
 
+# 哈希标记文件：构建完成后记录当时 frontend 源码的内容哈希
+DIST_HASH_FILE = ROOT / "static" / "dist" / ".built_hash"
+
+
+def _compute_src_hash() -> str:
+    """计算 frontend 源码 + 关键配置文件的内容哈希（MD5）。
+
+    不依赖 mtime / .git，只看文件内容。FileZilla 上传新代码后
+    内容变了 → 哈希变 → 触发自动重建。
+
+    哈希范围：
+      - frontend/package.json / vite.config.js / tailwind.config.js / postcss.config.js
+      - frontend/src/ 下所有 .vue / .js / .ts / .css / .json 文件
+      - 用「相对路径 + 文件内容」一起哈希（重命名/新增/删除都能检测）
+    """
+    import hashlib
+    h = hashlib.md5()
+
+    # 关键配置文件
+    key_files = [
+        FRONTEND_DIR / "package.json",
+        FRONTEND_DIR / "vite.config.js",
+        FRONTEND_DIR / "tailwind.config.js",
+        FRONTEND_DIR / "postcss.config.js",
+    ]
+    for f in key_files:
+        if f.exists():
+            h.update(str(f.relative_to(ROOT)).encode("utf-8"))
+            h.update(b"\x00")
+            h.update(f.read_bytes())
+            h.update(b"\x01")
+
+    # frontend/src/ 下所有源码文件（sorted 保证跨平台一致）
+    src_dir = FRONTEND_DIR / "src"
+    if src_dir.exists():
+        files = []
+        for pattern in ("**/*.vue", "**/*.js", "**/*.ts", "**/*.css", "**/*.json"):
+            files.extend(src_dir.glob(pattern))
+        for f in sorted(files, key=lambda x: str(x)):
+            if f.is_file():
+                h.update(str(f.relative_to(ROOT)).encode("utf-8"))
+                h.update(b"\x00")
+                h.update(f.read_bytes())
+                h.update(b"\x01")
+
+    return h.hexdigest()
+
+
+def _is_dist_stale() -> bool:
+    """检测 dist 是否过期（frontend 源码内容哈希变化）。
+
+    不依赖 mtime / .git，只看文件内容：
+      - dist 不存在 → True
+      - .built_hash 标记文件不存在 → True（首次或老 dist）
+      - 当前源码哈希 != .built_hash 里存的哈希 → True
+      - 哈希一致 → False（无需重建）
+
+    FileZilla 上传新代码 → 内容变 → 哈希变 → 自动重建
+    没改前端 → 哈希一致 → 跳过构建，秒启
+    """
+    if not DIST_INDEX.exists():
+        return True
+    if not DIST_HASH_FILE.exists():
+        return True  # 老构建没有标记文件，强制重建一次
+    try:
+        stored = DIST_HASH_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+        return True
+    return stored != _compute_src_hash()
+
+
+def _save_dist_hash() -> None:
+    """构建完成后保存当前源码哈希到 static/dist/.built_hash。"""
+    DIST_HASH_FILE.parent.mkdir(parents=True, exist_ok=True)
+    DIST_HASH_FILE.write_text(_compute_src_hash(), encoding="utf-8")
+
+
 def _check_node_available() -> tuple[bool, str]:
     """检测 node + npm 是否可用。返回 (是否可用, 版本信息字符串)。"""
     npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
@@ -260,18 +340,40 @@ def _ensure_node_modules() -> bool:
 
 
 def _ensure_dist_for_prod() -> None:
-    """生产模式启动前的 dist 检查。
+    """生产模式启动前的 dist 检查 + 自动构建（v2.3.1 增强）。
 
-    dist 未构建 → 报错退出（提示先 build 或走默认应用模式）。
+    - dist 已构建且最新 → 通过
+    - dist 不存在 OR 源码新于 dist → 自动构建（需 Node.js）
+    - Node.js 不可用且 dist 不存在 → 报错退出
+
+    这样用户在服务器上用 FileZilla 上传新代码后，直接跑
+    `python start.py --prod restart` 就能自动重建前端 + 启动服务，
+    不需要手动跑 `python start.py build`。
     """
-    if is_dist_built():
-        return
+    if is_dist_built() and not _is_dist_stale():
+        return  # dist 已构建且最新
 
-    print("[FAIL] 生产模式（--prod）要求 static/dist/ 已构建，但未找到 static/dist/index.html")
-    print("       解决方案（任选其一）：")
-    print("         A. 先构建前端：python start.py build（自动 npm install + npm run build）")
-    print("         B. 不加 --prod 走默认应用模式：python start.py（Vite :5000 + FastAPI :5001）")
-    sys.exit(1)
+    # 需要构建
+    if not is_dist_built():
+        print("[INFO] 生产模式（--prod）：static/dist/ 未构建，尝试自动构建...")
+    else:
+        print("[INFO] 生产模式（--prod）：检测到前端源码已更新，自动重建 dist...")
+
+    node_ok, node_ver = _check_node_available()
+    if not node_ok:
+        print("[FAIL] 需要构建前端但 Node.js 不可用")
+        print("       解决方案（任选其一）：")
+        print("         A. 在服务器上装 Node.js 18+，再跑 python start.py --prod restart")
+        print("         B. 在本地构建好 dist 后，把 static/dist/ 整个目录上传到服务器")
+        print("         C. 不加 --prod 走默认应用模式：python start.py（需 Node.js）")
+        sys.exit(1)
+
+    print(f"[INFO] 检测到 {node_ver}，开始构建前端...")
+    if not build_frontend():
+        print("[FAIL] 前端构建失败，请手动执行：cd frontend && npm install && npm run build")
+        sys.exit(1)
+
+    print("[OK] 前端构建完成，继续启动服务")
 
 
 def start_vite_background() -> int | None:
@@ -349,6 +451,8 @@ def build_frontend() -> bool:
     if not DIST_INDEX.exists():
         print(f"[FAIL] 构建完成但 {DIST_INDEX} 不存在")
         return False
+    # 保存源码哈希，下次启动时 _is_dist_stale() 用它判断是否需要重建
+    _save_dist_hash()
     print(f"[OK] 前端构建完成 → {DIST_INDEX}")
     return True
 
@@ -538,25 +642,25 @@ def maybe_reset_db() -> None:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="start.py",
-        description="静屿 — 治愈系身心疗愈平台 一键启动（前后端一起）",
+        description="静屿 — 治愈系身心疗愈平台 一键启动（默认 = 生产模式，自动构建 + FastAPI :5000）",
     )
     p.add_argument(
         "action",
         nargs="?",
         default="start",
         choices=["start", "stop", "restart", "status", "fg", "foreground", "build"],
-        help="操作：start 后台启动（默认 = 应用模式，前后端一起起）/ stop / restart / status / fg 前台 / build 构建前端",
+        help="操作：start 后台启动（默认 = 生产模式，自动构建 + FastAPI :5000）/ stop / restart / status / fg 前台 / build 构建前端",
     )
     mode_group = p.add_mutually_exclusive_group()
     mode_group.add_argument(
         "--prod",
         action="store_true",
-        help="显式生产模式：FastAPI 监听 :5000，需 static/dist/ 已构建（部署用）",
+        help="显式生产模式（默认就是生产模式，加不加效果一样）",
     )
     mode_group.add_argument(
         "--dev",
         action="store_true",
-        help="兼容别名，等同默认行为（应用/开发模式：Vite :5000 + FastAPI :5001）",
+        help="应用/开发模式：Vite :5000（HMR）+ FastAPI :5001，本地开发用",
     )
     p.add_argument(
         "--init-db",
@@ -574,8 +678,9 @@ def main() -> None:
 
     action = "fg" if args.action in ("fg", "foreground") else args.action
 
-    # --dev 是兼容别名（默认就是应用模式）；--prod 显式生产模式
-    force_prod = args.prod
+    # v2.3.1 起默认 = 生产模式（force_prod=True）
+    # --dev 才走应用模式（Vite + FastAPI 双进程，本地开发用）
+    force_prod = not args.dev
 
     if action == "start":
         start_background(force_prod=force_prod)
