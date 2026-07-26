@@ -26,7 +26,10 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import SessionLocal, init_db
-from app.routers import auth, music, diary, mood, energy, garden, pages, admin, admin_pages, ai
+from app.routers import (
+    auth, music, diary, mood, energy, garden, pages,
+    admin, admin_pages, ai, notification, profile,
+)
 from app.seed import run_seed
 
 
@@ -90,6 +93,10 @@ def create_app() -> FastAPI:
     app.include_router(pages.router)
     # AI（NVIDIA NIM 接入：树洞对话 / 漂流瓶鼓励语 / 情绪日历治愈语 / 音乐推荐）
     app.include_router(ai.router)
+    # 站内通知（v2.3：漂流瓶评论返回提醒）
+    app.include_router(notification.router)
+    # 个人主页（v2.3）
+    app.include_router(profile.router)
     # 秘密后台：API + 页面
     app.include_router(admin.router)
     app.include_router(admin_pages.router)

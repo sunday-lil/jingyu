@@ -27,6 +27,11 @@ const goToDetail = (key) => {
   router.push(`/music/${key}`)
 }
 
+// v2.3：跳转古琴弹西洋曲谱子板块
+const goWestern = () => {
+  router.push('/music/western')
+}
+
 // AI 推荐选音
 const recommendMusic = async () => {
   const text = userInput.value.trim()
@@ -66,6 +71,9 @@ onMounted(() => {
       duration: 0.8,
       stagger: 0.12,
       ease: 'power3.out',
+    })
+    gsap.from('.western-card', {
+      y: 24, opacity: 0, duration: 0.7, ease: 'power3.out', delay: 0.4,
     })
   })
 })
@@ -114,6 +122,22 @@ onMounted(() => {
         </div>
         <p class="yin-card__desc">{{ item.description }}</p>
         <div class="yin-card__enter">进入 →</div>
+      </div>
+    </section>
+
+    <!-- v2.3 新增：古琴弹西洋曲谱子板块入口 -->
+    <section class="western-section">
+      <h2 class="western-section__title">古琴弹西洋</h2>
+      <p class="western-section__subtitle">用古琴演绎西洋旋律 · 中西合璧</p>
+      <div class="western-card" @click="goWestern">
+        <div class="western-card__left">
+          <div class="western-card__emoji">🎻</div>
+          <div class="western-card__body">
+            <div class="western-card__name">古琴弹西洋曲谱</div>
+            <div class="western-card__desc">绿袖子 · 卡农 · 致爱丽丝 · 月光奏鸣曲 · 天鹅湖 · 昨日重现</div>
+          </div>
+        </div>
+        <div class="western-card__arrow">进入 →</div>
       </div>
     </section>
   </div>
@@ -270,6 +294,76 @@ onMounted(() => {
   letter-spacing: 1px;
   position: relative;
 }
+
+/* 古琴弹西洋入口 */
+.western-section {
+  margin-top: 56px;
+  text-align: center;
+}
+.western-section__title {
+  font-family: var(--font-serif, serif);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--color-text-primary, #5a4a3a);
+  margin: 0 0 6px;
+  letter-spacing: 0.15em;
+}
+.western-section__subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary, #8a7a6a);
+  margin: 0 0 22px;
+  letter-spacing: 0.05em;
+}
+.western-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, rgba(168, 197, 232, 0.25) 0%, rgba(232, 184, 168, 0.2) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 28px;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(150, 130, 110, 0.15);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+  text-align: left;
+}
+.western-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(150, 130, 110, 0.22);
+}
+.western-card__left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: 1;
+  min-width: 0;
+}
+.western-card__emoji {
+  font-size: 44px;
+  line-height: 1;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 12px rgba(168, 197, 232, 0.4));
+}
+.western-card__name {
+  font-family: var(--font-serif, serif);
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--color-text-primary, #5a4a3a);
+  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+}
+.western-card__desc {
+  font-size: 12.5px;
+  color: var(--color-text-secondary, #8a7a6a);
+  line-height: 1.5;
+}
+.western-card__arrow {
+  font-size: 14px;
+  color: var(--color-text-muted, #8a7a6a);
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
 @media (max-width: 768px) {
   .yin-card__glyph {
     font-size: 44px;
@@ -291,6 +385,28 @@ onMounted(() => {
   }
   .ai-section__btn {
     padding: 12px;
+  }
+  /* 古琴弹西洋入口移动端紧凑 */
+  .western-section {
+    margin-top: 36px;
+  }
+  .western-section__title {
+    font-size: 18px;
+  }
+  .western-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px 18px;
+    gap: 10px;
+  }
+  .western-card__emoji {
+    font-size: 36px;
+  }
+  .western-card__name {
+    font-size: 17px;
+  }
+  .western-card__arrow {
+    align-self: flex-end;
   }
 }
 </style>

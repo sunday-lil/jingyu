@@ -122,28 +122,45 @@ DAILY_ENERGY_LIMITS: Final[dict[str, int]] = {
 
 class ItemType(str, Enum):
     """花园物品类型。"""
-    FLOWER = "flower"      # 花种
-    COSTUME = "costume"    # 装扮
-    BADGE = "badge"        # 徽章
+    FLOWER = "flower"      # 花种（用落叶兑换）
+    COSTUME = "costume"    # 装扮（用露水兑换）
+    BADGE = "badge"        # 徽章（自动触发）
 
 
 # 默认兑换商店
+# v2.3：花种用落叶（leaves）兑换，装饰物用露水（dew）兑换
 DEFAULT_SHOP_ITEMS: Final[list[dict]] = [
-    # 花种
-    {"name": "向日葵", "item_type": "flower", "cost": 5,  "image": "🌻", "description": "阳光之子"},
-    {"name": "竹子",   "item_type": "flower", "cost": 10, "image": "🎋", "description": "虚心有节"},
-    {"name": "莲花",   "item_type": "flower", "cost": 15, "image": "🪷", "description": "出淤泥而不染"},
-    {"name": "梅花",   "item_type": "flower", "cost": 20, "image": "🌸", "description": "凌寒独自开"},
-    {"name": "青松",   "item_type": "flower", "cost": 30, "image": "🌲", "description": "岁寒三友"},
-    # 装扮
-    {"name": "竹编帽", "item_type": "costume", "cost": 8,  "image": "👒", "description": "山间采药人的帽子"},
-    {"name": "茶具",   "item_type": "costume", "cost": 12, "image": "🍵", "description": "一套素雅茶具"},
-    {"name": "折扇",   "item_type": "costume", "cost": 18, "image": "🪭", "description": "清风徐来"},
-    # 徽章
-    {"name": "古琴初学者", "item_type": "badge", "cost": 0, "image": "🎼", "description": "听满 10 首曲子自动获得", "trigger": "listen_10"},
-    {"name": "日记达人",   "item_type": "badge", "cost": 0, "image": "📖", "description": "写满 30 篇日记自动获得", "trigger": "diary_30"},
-    {"name": "七日静心",   "item_type": "badge", "cost": 0, "image": "✨", "description": "连续 7 天打卡自动获得", "trigger": "streak_7"},
+    # 花种（落叶兑换 —— 落叶归根能施肥种花）
+    {"name": "向日葵", "item_type": "flower", "cost": 3,  "cost_currency": "leaves", "image": "🌻", "description": "阳光之子"},
+    {"name": "竹子",   "item_type": "flower", "cost": 5,  "cost_currency": "leaves", "image": "🎋", "description": "虚心有节"},
+    {"name": "莲花",   "item_type": "flower", "cost": 8,  "cost_currency": "leaves", "image": "🪷", "description": "出淤泥而不染"},
+    {"name": "梅花",   "item_type": "flower", "cost": 12, "cost_currency": "leaves", "image": "🌸", "description": "凌寒独自开"},
+    {"name": "青松",   "item_type": "flower", "cost": 18, "cost_currency": "leaves", "image": "🌲", "description": "岁寒三友"},
+    # 装扮（露水兑换）
+    {"name": "竹编帽", "item_type": "costume", "cost": 8,  "cost_currency": "dew", "image": "👒", "description": "山间采药人的帽子"},
+    {"name": "茶具",   "item_type": "costume", "cost": 12, "cost_currency": "dew", "image": "🍵", "description": "一套素雅茶具"},
+    {"name": "折扇",   "item_type": "costume", "cost": 18, "cost_currency": "dew", "image": "🪭", "description": "清风徐来"},
+    # 徽章（自动触发，cost=0）
+    {"name": "古琴初学者", "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🎼", "description": "听满 10 首曲子自动获得", "trigger": "listen_10"},
+    {"name": "日记达人",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "📖", "description": "写满 30 篇日记自动获得", "trigger": "diary_30"},
+    {"name": "七日静心",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "✨", "description": "连续 7 天打卡自动获得", "trigger": "streak_7"},
 ]
+
+
+# ─────────────────────────────────────────────────────────────
+# 古琴曲谱分类（v2.3 新增：古琴弹西洋曲谱子板块）
+# ─────────────────────────────────────────────────────────────
+
+class MusicCategory(str, Enum):
+    """古琴曲目分类。"""
+    CLASSIC = "classic"    # 五音传统古曲（宫商角徵羽）
+    WESTERN = "western"    # 古琴弹西洋曲谱
+
+
+MUSIC_CATEGORY_INFO: Final[dict[str, dict]] = {
+    "classic": {"name": "五音古曲", "desc": "宫商角徵羽 · 入五脏 · 调情志"},
+    "western": {"name": "古琴弹西洋", "desc": "用古琴演绎西洋旋律 · 中西合璧"},
+}
 
 
 # 能量显示文案

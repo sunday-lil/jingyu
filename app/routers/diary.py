@@ -1,10 +1,9 @@
 """漂流瓶日记 API。
 
-⚠️ 隐私关键点：
-- 创建日记：客户端**先在浏览器用 PBKDF2 派生密钥 + Fernet 加密**，后端只收密文。
-- 我的瓶子列表：后端**只返回密文**；前端用用户密码派生密钥解密。
-- 拾取陌生人：后端返回**密文 + 对方 salt**，前端派生密钥解密。
-- 后端**永远不接触明文**。
+v2.3 调整：
+- 移除密码加密，日记改明文存储。
+- 新增发布选项：is_public（放入漂流瓶）/ send_to_ai_hole（同步树洞）。
+- 拾取漂流瓶直接返回明文 content。
 """
 
 from __future__ import annotations
@@ -15,11 +14,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import get_current_user
 from app.models.user import User
-from app.models.encouragement import Encouragement
 from app.schemas.diary import (
     DiaryCreateIn,
     EncouragementIn,
-    DiaryPublicOut,
 )
 from app.services.diary_service import (
     create_diary,
@@ -41,20 +38,23 @@ def create_my_diary(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """投入一个漂流瓶。客户端负责加密。"""
+    """写一篇日记。
+
+    - is_public=True：放入漂流瓶，公开可见，允许评论。
+    - send_to_ai_hole=True：同步至树洞（仅自己可见 + AI 对话依据）。
+    """
     diary = create_diary(
         db, user,
-        content_encrypted=body.content_encrypted,
+        content=body.content,
         mood_type=body.mood_type,
         is_public=body.is_public,
+        send_to_ai_hole=body.send_to_ai_hole,
     )
 
-    # 发 +2 阳光
+    # 写日记发 +2 露水
     grant_energy(db, user, amount=2, source="write_diary", note="写日记")
-    # 检查成就
     check_achievements(db, user)
     db.commit()
-    # expire_on_commit=False，user.total_energy 仍是旧值，必须重新查 DB
     new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
 
     return {
@@ -72,7 +72,7 @@ def list_mine(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """我的瓶子列表（密文）。前端用密码派生密钥解密后展示。"""
+    """我的日记列表（明文）。"""
     diaries, total = list_my_diaries(db, user.id, page=page, per_page=per_page)
     return {
         "total": total,
@@ -81,10 +81,10 @@ def list_mine(
         "items": [
             {
                 "id": d.id,
-                "content_encrypted": d.content_encrypted,
-                "salt": user.encryption_salt,
+                "content": d.content,
                 "mood_type": d.mood_type,
                 "is_public": d.is_public,
+                "send_to_ai_hole": d.send_to_ai_hole,
                 "created_at": d.created_at.isoformat() if d.created_at else None,
                 "encouragement_count": len(list_diary_encouragements(db, d.id)),
             }
@@ -99,15 +99,15 @@ def get_diary(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """单个瓶子详情（密文 + 收到的鼓励）。"""
+    """单个日记详情（明文 + 收到的鼓励）。"""
     diary = get_diary_detail(db, user, diary_id)
     encs = list_diary_encouragements(db, diary.id)
     return {
         "id": diary.id,
-        "content_encrypted": diary.content_encrypted,
-        "salt": user.encryption_salt,
+        "content": diary.content,
         "mood_type": diary.mood_type,
         "is_public": diary.is_public,
+        "send_to_ai_hole": diary.send_to_ai_hole,
         "created_at": diary.created_at.isoformat() if diary.created_at else None,
         "encouragements": [
             {"id": e.id, "content": e.content, "created_at": e.created_at.isoformat()}
@@ -121,7 +121,7 @@ def pick_random(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """随机拾取一条公开漂流瓶。返回密文 + 对方 salt。"""
+    """随机拾取一条公开漂流瓶（明文）。"""
     result = pick_random_bottle(db, user)
     if result is None:
         raise HTTPException(status_code=404, detail="海面上暂时没有瓶子")
@@ -134,7 +134,7 @@ def delete_diary(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """删除自己的漂流瓶。"""
+    """删除自己的日记。"""
     diary = get_diary_detail(db, user, diary_id)
     db.delete(diary)
     db.commit()
@@ -148,7 +148,7 @@ def encourage(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """给一条漂流瓶留匿名鼓励语。"""
+    """给一条漂流瓶留匿名鼓励语（评论返回发布者 + 消息提醒）。"""
     enc = leave_encouragement(db, user, diary_id, body.content)
     db.commit()
     return {
@@ -156,3 +156,4 @@ def encourage(
         "content": enc.content,
         "created_at": enc.created_at.isoformat(),
     }
+

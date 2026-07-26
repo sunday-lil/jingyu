@@ -10,6 +10,7 @@ export const useUserStore = defineStore('user', {
   getters: {
     isLoggedIn: (state) => !!state.user,
     energy: (state) => state.user?.total_energy ?? 0,
+    leaves: (state) => state.user?.leaves ?? 0,
     nickname: (state) => state.user?.nickname || '',
     userId: (state) => state.user?.id ?? null,
     encryptionSalt: (state) => state.user?.encryption_salt ?? null,
@@ -52,6 +53,14 @@ export const useUserStore = defineStore('user', {
         this.user.total_energy = newTotal
         localStorage.setItem('qi_user', JSON.stringify(this.user))
       }
+    },
+
+    // 更新本地资源（露水 + 落叶）
+    updateResources({ total_energy, leaves } = {}) {
+      if (!this.user) return
+      if (typeof total_energy === 'number') this.user.total_energy = total_energy
+      if (typeof leaves === 'number') this.user.leaves = leaves
+      localStorage.setItem('qi_user', JSON.stringify(this.user))
     },
 
     async logout() {

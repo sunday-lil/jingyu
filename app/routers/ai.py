@@ -1,10 +1,14 @@
 """AI API — NVIDIA NIM 接入。
 
 端点：
-- POST /api/ai/chat             树洞多轮对话
+- POST /api/ai/chat             树洞多轮对话（v2.3：文件历史 + 心情/日记上下文）
 - POST /api/ai/encouragement    漂流瓶 AI 鼓励语
 - POST /api/ai/healing          情绪日历打卡治愈语
 - POST /api/ai/recommend-music  音乐 AI 心情推荐
+- GET  /api/ai/conversations    树洞对话历史列表
+- POST /api/ai/conversations     新建一段对话
+- GET  /api/ai/conversations/{id}  加载某段对话
+- DELETE /api/ai/conversations/{id} 删除某段对话（不保留）
 
 所有端点都需要登录。AI 功能未启用（无 API key）或调用失败时，
 返回 200 + available=false + 友好提示，前端优雅降级，不报错。
@@ -13,14 +17,17 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user
 from app.models.user import User
+from app.models.diary import Diary
+from app.models.mood import MoodCheckin
 from app.schemas.ai import (
     AIChatIn, AIChatOut,
     AIEncouragementIn,
@@ -34,6 +41,7 @@ from app.services.ai_service import (
     generate_healing_message,
     recommend_music,
 )
+from app.services import chat_history_service
 
 
 logger = logging.getLogger("qi.ai")
@@ -52,6 +60,43 @@ _UNAVAILABLE_MUSIC_REASON = "去听一听，让心慢下来。"
 
 
 # ─────────────────────────────────────────────────────────────
+# 辅助：拉取用户今日心情 + 今日日记片段（用于树洞上下文）
+# ─────────────────────────────────────────────────────────────
+
+def _get_today_mood_label(db: Session, user_id: int) -> str | None:
+    """从情绪日历拉今日心情标签。"""
+    from app.utils.constants import MOOD_INFO
+    today = date.today()
+    row = (
+        db.query(MoodCheckin)
+        .filter(MoodCheckin.user_id == user_id, MoodCheckin.check_date == today)
+        .first()
+    )
+    if row is None:
+        return None
+    info = MOOD_INFO.get(row.mood_emoji)
+    return info.get("label") if info else row.mood_emoji
+
+
+def _get_today_diary_preview(db: Session, user_id: int) -> str | None:
+    """拉今日最新一篇日记内容片段（前 80 字）。"""
+    today_start = date.today().isoformat()
+    row = (
+        db.query(Diary)
+        .filter(Diary.user_id == user_id)
+        .order_by(Diary.created_at.desc())
+        .first()
+    )
+    if row is None or not row.content:
+        return None
+    # 只取今日的
+    created_str = row.created_at.date().isoformat() if row.created_at else None
+    if created_str != today_start:
+        return None
+    return row.content[:80]
+
+
+# ─────────────────────────────────────────────────────────────
 # 端点
 # ─────────────────────────────────────────────────────────────
 
@@ -61,14 +106,81 @@ def chat(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """树洞多轮对话。前端传最近几轮 messages。"""
+    """树洞多轮对话。
+
+    v2.3：
+    - 基于 conversation_id 的文件历史存储。
+    - 自动注入用户今日心情 + 今日日记作为上下文（让树洞针对性陪伴）。
+    """
+    # 获取或创建 conversation
+    conv_id = chat_history_service.get_or_create_conversation(
+        user.id, body.conversation_id
+    )
+
+    # 拉取今日上下文（若前端未显式传）
+    today_mood = body.today_mood or _get_today_mood_label(db, user.id)
+    today_diary = body.today_diary or _get_today_diary_preview(db, user.id)
+
     messages = [{"role": m.role, "content": m.content} for m in body.messages]
     try:
-        reply = ai_chat(messages)
-        return AIChatOut(reply=reply, model=settings.ai_model, available=True)
+        reply = ai_chat(messages, today_mood=today_mood, today_diary=today_diary)
+        # 写入历史：用户最后一条 + AI 回复
+        last_user = next((m for m in reversed(messages) if m["role"] == "user"), None)
+        if last_user:
+            chat_history_service.append_message(user.id, conv_id, "user", last_user["content"])
+        chat_history_service.append_message(user.id, conv_id, "assistant", reply)
+        return AIChatOut(
+            reply=reply,
+            model=settings.ai_model,
+            available=True,
+            conversation_id=conv_id,
+        )
     except AIServiceUnavailable as e:
         logger.info("AI chat 不可用: %s", e)
-        return AIChatOut(reply=_UNAVAILABLE_REPLY, model="", available=False)
+        return AIChatOut(
+            reply=_UNAVAILABLE_REPLY,
+            model="",
+            available=False,
+            conversation_id=conv_id,
+        )
+
+
+@router.get("/conversations")
+def list_conversations(
+    user: User = Depends(get_current_user),
+):
+    """树洞对话历史列表。"""
+    items = chat_history_service.list_conversations(user.id)
+    return {"count": len(items), "items": items}
+
+
+@router.post("/conversations")
+def new_conversation(
+    user: User = Depends(get_current_user),
+):
+    """新建一段树洞对话。"""
+    conv_id = chat_history_service.create_conversation(user.id)
+    return {"conversation_id": conv_id}
+
+
+@router.get("/conversations/{conversation_id}")
+def get_conversation(
+    conversation_id: str,
+    user: User = Depends(get_current_user),
+):
+    """加载某段对话的所有消息。"""
+    msgs = chat_history_service.load_messages(user.id, conversation_id)
+    return {"conversation_id": conversation_id, "messages": msgs}
+
+
+@router.delete("/conversations/{conversation_id}")
+def delete_conversation(
+    conversation_id: str,
+    user: User = Depends(get_current_user),
+):
+    """删除一段对话（用户选择"不保留"时调用）。"""
+    ok = chat_history_service.delete_conversation(user.id, conversation_id)
+    return {"success": ok}
 
 
 @router.post("/encouragement")

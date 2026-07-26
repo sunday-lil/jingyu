@@ -20,4 +20,5 @@ class ExchangeIn(BaseModel):
 class ExchangeOut(BaseModel):
     success: bool
     new_total_energy: int
+    new_leaves: int = 0
     garden_item: dict

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import gsap from 'gsap'
 import api from '@/api'
@@ -7,14 +7,25 @@ import api from '@/api'
 const router = useRouter()
 const goBack = () => router.back()
 
-// 对话历史（仅浏览器内存，刷新即清空，不落库）
+// 当前对话 ID（后端文件存储用）
+const conversationId = ref(null)
+
+// 对话消息（内存中显示）
 // 每条结构：{ role: 'user' | 'assistant', content: string }
 const messages = ref([
-  { role: 'assistant', content: '我在这里。想说什么都可以，不用整理好情绪再来。' },
+  { role: 'assistant', content: '🌳 我在这里。想说什么都可以，不用整理好情绪再来。' },
 ])
 
 const input = ref('')
 const loading = ref(false)
+
+// 历史对话列表（来自后端文件存储）
+const conversations = ref([])
+const historyDrawerOpen = ref(false)
+const historyLoading = ref(false)
+
+// 结束对话弹窗
+const endDialogOpen = ref(false)
 
 // 简易 toast
 const toastVisible = ref(false)
@@ -58,6 +69,120 @@ const onKeyDown = (e) => {
   }
 }
 
+// 拉取历史对话列表
+const fetchConversations = async () => {
+  historyLoading.value = true
+  try {
+    const res = await api.get('/ai/conversations')
+    conversations.value = res?.items || []
+  } catch (e) {
+    // 静默
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+// 时间格式化
+const formatTime = (str) => {
+  if (!str) return ''
+  const d = new Date(str)
+  if (isNaN(d.getTime())) return str
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${day} ${hh}:${mm}`
+}
+
+// 开启新对话（如果当前对话已有内容，会被保留在文件中）
+const startNewConversation = async () => {
+  // 调后端创建新对话
+  try {
+    const res = await api.post('/ai/conversations')
+    conversationId.value = res?.conversation_id || null
+  } catch (e) {
+    // 静默：后端会在首次 chat 时自动创建
+    conversationId.value = null
+  }
+  messages.value = [
+    { role: 'assistant', content: '🌳 新的一段对话开始了。想说什么都可以，我会一直在这里听。' },
+  ]
+  historyDrawerOpen.value = false
+  await scrollToBottom()
+}
+
+// 加载历史对话
+const loadConversation = async (convId) => {
+  if (!convId) return
+  try {
+    const res = await api.get(`/ai/conversations/${convId}`)
+    const msgs = res?.messages || []
+    conversationId.value = convId
+    if (msgs.length === 0) {
+      messages.value = [
+        { role: 'assistant', content: '🌳 这段对话还没有开始。' },
+      ]
+    } else {
+      messages.value = msgs.map(m => ({ role: m.role, content: m.content }))
+    }
+    historyDrawerOpen.value = false
+    await scrollToBottom()
+  } catch (e) {
+    showToast(e.message || '加载历史失败')
+  }
+}
+
+// 删除历史对话
+const deleteConversation = async (convId) => {
+  if (!convId) return
+  if (!confirm('确定要放下这段对话吗？此操作不可恢复。')) return
+  try {
+    await api.delete(`/ai/conversations/${convId}`)
+    conversations.value = conversations.value.filter(c => c.conversation_id !== convId)
+    if (conversationId.value === convId) {
+      await startNewConversation()
+    }
+    showToast('已放下这段对话 🍃')
+  } catch (e) {
+    showToast(e.message || '删除失败')
+  }
+}
+
+// 打开"结束对话"弹窗
+const openEndDialog = () => {
+  // 如果当前对话只有开场白，无需结束
+  const realMsgs = messages.value.filter(m => m.role === 'user')
+  if (realMsgs.length === 0) {
+    showToast('还没有开始对话呢')
+    return
+  }
+  endDialogOpen.value = true
+}
+
+// 选择"保留" → 不删除文件，直接开新对话
+const endWithKeep = async () => {
+  endDialogOpen.value = false
+  await startNewConversation()
+  showToast('这段对话已保留 🌳')
+  fetchConversations()
+}
+
+// 选择"不保留" → 删除文件，开新对话
+const endWithDiscard = async () => {
+  endDialogOpen.value = false
+  if (conversationId.value) {
+    try {
+      await api.delete(`/ai/conversations/${conversationId.value}`)
+    } catch (e) {
+      // 静默
+    }
+  }
+  await startNewConversation()
+  showToast('这段对话已随风而去 🍃')
+  fetchConversations()
+}
+
 // 发送消息
 const send = async () => {
   const text = input.value.trim()
@@ -76,29 +201,35 @@ const send = async () => {
   loading.value = true
   await scrollToBottom()
 
-  // 3. 调 AI 端点（超时 60s，由 axios 实例统一配置）
+  // 3. 调 AI 端点
   try {
     const res = await api.post('/ai/chat', {
       messages: messages.value
         .filter((m) => m.content) // 过滤空内容
         .map((m) => ({ role: m.role, content: m.content })),
       scene: 'treehole',
+      conversation_id: conversationId.value,
+      // today_mood / today_diary 由后端自动注入
     })
 
-    // 兼容返回：{ reply, model, available } 或 { data: {...} }
+    // 兼容返回：{ reply, model, available, conversation_id } 或 { data: {...} }
     const data = res && res.data ? res.data : res
     const available = data?.available !== false
     const reply = data?.reply || ''
 
+    // 保存 conversation_id（后端可能新建了对话）
+    if (data?.conversation_id) {
+      conversationId.value = data.conversation_id
+    }
+
     if (!available) {
-      // 降级：AI 不在岛上
+      // 降级：AI 不在岛上 —— 但后端已把降级 reply 也写入历史，前端直接展示
       showToast('AI 暂时不在岛上')
-      return
     }
 
     if (reply) {
       messages.value.push({ role: 'assistant', content: reply })
-    } else {
+    } else if (available) {
       showToast('AI 没有回声，再试一次吧')
     }
   } catch (e) {
@@ -110,7 +241,12 @@ const send = async () => {
 }
 
 // GSAP 入场动画
-onMounted(() => {
+onMounted(async () => {
+  // 拉历史对话列表
+  fetchConversations()
+  // 自动开一段新对话
+  await startNewConversation()
+
   nextTick(() => {
     gsap.from('.chat-header', { y: -16, opacity: 0, duration: 0.6, ease: 'power2.out' })
     gsap.from('.chat-privacy', {
@@ -146,14 +282,24 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="chat-view">
-    <!-- 顶部标题 + 隐私提示 -->
+    <!-- 顶部标题 + 操作 -->
     <header class="chat-header">
-      <h1 class="chat-title">树洞 🌿</h1>
-      <p class="chat-subtitle">说给一棵树听，它不会告诉任何人</p>
+      <div class="chat-header__left">
+        <h1 class="chat-title">🌳 心语树洞</h1>
+        <p class="chat-subtitle">说给一棵树听，它不会告诉任何人</p>
+      </div>
+      <div class="chat-header__actions">
+        <button class="chat-action-btn" @click="historyDrawerOpen = true" title="历史对话">
+          📜
+        </button>
+        <button class="chat-action-btn" @click="openEndDialog" title="结束对话">
+          🍃
+        </button>
+      </div>
     </header>
 
     <div class="chat-privacy">
-      对话不存历史，刷新即清空 · 若遇危机，请寻求专业帮助
+      树洞会参考你今日的心情与日记，给出针对性的陪伴 · 对话可选择保留或随风去
     </div>
 
     <!-- 消息列表 -->
@@ -167,7 +313,7 @@ onBeforeUnmount(() => {
         >
           <!-- 头像 -->
           <div class="msg-avatar">
-            {{ msg.role === 'user' ? '🙂' : '🌿' }}
+            {{ msg.role === 'user' ? '🙂' : '🌳' }}
           </div>
           <!-- 气泡 -->
           <div class="msg-bubble" :class="msg.role === 'user' ? 'msg-bubble--user' : 'msg-bubble--ai'">
@@ -178,7 +324,7 @@ onBeforeUnmount(() => {
         <!-- typing 动效 -->
         <transition name="fade">
           <div v-if="loading" class="msg-row msg-row--ai">
-            <div class="msg-avatar">🌿</div>
+            <div class="msg-avatar">🌳</div>
             <div class="msg-bubble msg-bubble--ai msg-typing">
               <span class="typing-label">正在听</span>
               <span class="typing-dots">
@@ -214,6 +360,71 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <!-- 历史对话抽屉 -->
+    <transition name="drawer">
+      <div v-if="historyDrawerOpen" class="drawer-mask" @click.self="historyDrawerOpen = false">
+        <aside class="drawer">
+          <div class="drawer__head">
+            <h3 class="drawer__title">📜 历史对话</h3>
+            <button class="drawer__close" @click="historyDrawerOpen = false">×</button>
+          </div>
+          <div class="drawer__body">
+            <button class="drawer__new" @click="startNewConversation">
+              ＋ 开启新对话
+            </button>
+            <div v-if="historyLoading" class="drawer__empty">加载中…</div>
+            <div v-else-if="conversations.length === 0" class="drawer__empty">
+              还没有保留的对话
+            </div>
+            <ul v-else class="drawer__list">
+              <li
+                v-for="c in conversations"
+                :key="c.conversation_id"
+                class="drawer__item"
+                :class="{ 'is-active': c.conversation_id === conversationId }"
+                @click="loadConversation(c.conversation_id)"
+              >
+                <div class="drawer__item-preview">
+                  {{ c.preview || '（空对话）' }}
+                </div>
+                <div class="drawer__item-meta">
+                  <span>{{ formatTime(c.updated_at || c.created_at) }}</span>
+                  <span>· {{ c.message_count }} 条</span>
+                  <button
+                    class="drawer__item-del"
+                    title="放下这段对话"
+                    @click.stop="deleteConversation(c.conversation_id)"
+                  >×</button>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </transition>
+
+    <!-- 结束对话弹窗：保留 / 不保留 -->
+    <transition name="modal">
+      <div v-if="endDialogOpen" class="modal-mask" @click.self="endDialogOpen = false">
+        <div class="modal-card card">
+          <div class="modal-card__icon">🍃</div>
+          <h3 class="modal-card__title">结束这段对话？</h3>
+          <p class="modal-card__hint">树洞会询问你：是否保留这段对话？</p>
+          <div class="modal-actions modal-actions--column">
+            <button class="btn btn--primary" @click="endWithKeep">
+              🌳 保留 · 留在历史中
+            </button>
+            <button class="btn btn--ghost" @click="endWithDiscard">
+              🍃 不保留 · 随风而去
+            </button>
+            <button class="btn btn--ghost modal-cancel" @click="endDialogOpen = false">
+              继续聊一会儿
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <!-- toast -->
     <transition name="toast">
       <div v-if="toastVisible" class="toast">{{ toastText }}</div>
@@ -237,12 +448,19 @@ onBeforeUnmount(() => {
 
 /* 顶部 */
 .chat-header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   padding: 20px 0 8px;
+  gap: 12px;
+}
+.chat-header__left {
+  flex: 1;
+  min-width: 0;
 }
 .chat-title {
   font-family: var(--font-serif, serif);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 500;
   color: var(--color-text-primary, #3D3327);
   margin: 0 0 4px;
@@ -254,6 +472,27 @@ onBeforeUnmount(() => {
   margin: 0;
   font-family: var(--font-serif, serif);
   font-style: italic;
+}
+.chat-header__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.chat-action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--color-border, rgba(139, 123, 94, 0.15));
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-soft, ease);
+  display: grid;
+  place-items: center;
+}
+.chat-action-btn:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: scale(1.05);
 }
 
 .chat-privacy {
@@ -434,6 +673,7 @@ onBeforeUnmount(() => {
   padding: 6px 0;
   max-height: 160px;
   min-height: 24px;
+  font-family: inherit;
 }
 .chat-input::placeholder {
   color: var(--color-text-muted, #8B7B5E);
@@ -448,6 +688,8 @@ onBeforeUnmount(() => {
   font-size: 14px;
   font-weight: 500;
   transition: all 0.3s var(--ease-soft, cubic-bezier(0.22, 1, 0.36, 1));
+  border: none;
+  cursor: pointer;
 }
 .chat-send:hover:not(:disabled) {
   transform: translateY(-1px);
@@ -456,6 +698,229 @@ onBeforeUnmount(() => {
 .chat-send:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 历史抽屉 */
+.drawer-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(60, 50, 40, 0.45);
+  backdrop-filter: blur(6px);
+  z-index: 150;
+  display: flex;
+  justify-content: flex-end;
+}
+.drawer {
+  width: 320px;
+  max-width: 85vw;
+  background: var(--color-bg-primary, #F9F6F0);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.1);
+}
+.drawer__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--color-border, rgba(139, 123, 94, 0.15));
+}
+.drawer__title {
+  font-family: var(--font-serif, serif);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-primary, #3D3327);
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+.drawer__close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  color: var(--color-text-muted, #8B7B5E);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.drawer__close:hover {
+  background: rgba(139, 123, 94, 0.08);
+}
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+.drawer__new {
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(184, 213, 186, 0.3), rgba(232, 246, 233, 0.5));
+  border: 1.5px dashed rgba(90, 138, 110, 0.4);
+  color: #5A8A6E;
+  font-family: var(--font-serif, serif);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  margin-bottom: 14px;
+  transition: all 0.25s var(--ease-soft, ease);
+}
+.drawer__new:hover {
+  background: linear-gradient(135deg, rgba(184, 213, 186, 0.45), rgba(232, 246, 233, 0.7));
+  transform: translateY(-1px);
+}
+.drawer__empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--color-text-muted, #8B7B5E);
+  font-size: 13px;
+}
+.drawer__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.drawer__item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--color-border, rgba(139, 123, 94, 0.12));
+  cursor: pointer;
+  transition: all 0.2s var(--ease-soft, ease);
+}
+.drawer__item:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateX(-2px);
+}
+.drawer__item.is-active {
+  background: linear-gradient(135deg, rgba(184, 213, 186, 0.25), rgba(255, 255, 255, 0.7));
+  border-color: rgba(90, 138, 110, 0.4);
+}
+.drawer__item-preview {
+  font-size: 13px;
+  color: var(--color-text-secondary, #5C4F3E);
+  line-height: 1.5;
+  margin-bottom: 6px;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.drawer__item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-muted, #8B7B5E);
+}
+.drawer__item-del {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted, #8B7B5E);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.drawer__item-del:hover {
+  background: rgba(197, 120, 120, 0.15);
+  color: #C57878;
+}
+
+.drawer-enter-active,
+.drawer-leave-active {
+  transition: opacity 0.3s var(--ease-soft);
+}
+.drawer-enter-active .drawer,
+.drawer-leave-active .drawer {
+  transition: transform 0.3s var(--ease-soft);
+}
+.drawer-enter-from,
+.drawer-leave-to {
+  opacity: 0;
+}
+.drawer-enter-from .drawer,
+.drawer-leave-to .drawer {
+  transform: translateX(100%);
+}
+
+/* 结束对话弹窗 */
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(60, 50, 40, 0.45);
+  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  z-index: 160;
+  padding: 20px;
+}
+.modal-card {
+  max-width: 420px;
+  width: 100%;
+  padding: 32px 28px;
+  text-align: center;
+}
+.modal-card__icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+.modal-card__title {
+  font-family: var(--font-serif, serif);
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 6px;
+  color: var(--color-text-primary, #3D3327);
+}
+.modal-card__hint {
+  font-size: 13px;
+  color: var(--color-text-muted, #8B7B5E);
+  margin: 0 0 20px;
+  line-height: 1.6;
+}
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.modal-actions--column {
+  flex-direction: column;
+}
+.modal-actions--column .btn {
+  width: 100%;
+}
+.modal-cancel {
+  margin-top: 6px;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s var(--ease-soft);
+}
+.modal-enter-active .modal-card,
+.modal-leave-active .modal-card {
+  transition: transform 0.3s var(--ease-soft), opacity 0.3s var(--ease-soft);
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+.modal-enter-from .modal-card,
+.modal-leave-to .modal-card {
+  transform: translateY(12px) scale(0.98);
+  opacity: 0;
 }
 
 /* toast */
@@ -472,7 +937,9 @@ onBeforeUnmount(() => {
   z-index: 200;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(6px);
-  white-space: nowrap;
+  max-width: 80%;
+  text-align: center;
+  line-height: 1.5;
 }
 .toast-enter-active,
 .toast-leave-active {
@@ -495,13 +962,16 @@ onBeforeUnmount(() => {
   transform: translateY(8px);
 }
 
-/* 响应式：移动端紧凑样式（合并原 640px 段，统一用 768px 断点） */
+/* 响应式：移动端紧凑样式 */
 @media (max-width: 768px) {
   .chat-view {
     padding: 0 12px;
   }
   .chat-title {
-    font-size: 21px;
+    font-size: 19px;
+  }
+  .chat-subtitle {
+    font-size: 12px;
   }
   .msg-bubble {
     max-width: 80%;
@@ -518,6 +988,14 @@ onBeforeUnmount(() => {
   .chat-send {
     padding: 7px 14px;
     font-size: 13.5px;
+  }
+  .chat-action-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+  .drawer {
+    width: 280px;
   }
 }
 </style>

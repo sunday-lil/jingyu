@@ -1,9 +1,9 @@
 """日记 / 漂流瓶服务。
 
-- 创建漂流瓶：接收客户端加密后的密文（不接触明文）。
-- 我的瓶子列表：本人可看密文，由前端用密码派生密钥解密（前端加密 / 解密，后端只管存密文）。
-- 拾取陌生人漂流瓶：随机选一条 is_public=True 的日记，**服务端用该用户密码的派生密钥解密后**返回明文（仅当时可见，不缓存，不入库明文）。
-- 鼓励语：匿名留言，对方在「我的瓶子」详情页可见「收到 N 个陌生人的拥抱」。
+v2.3 调整：
+- 移除密码加密，日记改明文存储（content 字段）。
+- 拾取漂流瓶直接返回明文 content（不再需要前端解密）。
+- 鼓励语留言后创建 Notification，通知漂流瓶所有者。
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.models.diary import Diary
 from app.models.encouragement import Encouragement
-from app.utils.crypto import decrypt_diary
+from app.models.notification import Notification
 
 
 # ─────────────────────────────────────────────────────────────
@@ -29,16 +29,24 @@ from app.utils.crypto import decrypt_diary
 def create_diary(
     db: Session,
     user: User,
-    content_encrypted: str,
+    content: str,
     mood_type: Optional[str] = None,
     is_public: bool = False,
+    send_to_ai_hole: bool = False,
 ) -> Diary:
-    """写入一条漂流瓶。客户端负责加密，本服务只存密文。"""
+    """写入一条日记（明文）。
+
+    - is_public=True：放入漂流瓶，公开可见，允许评论。
+    - is_public=False & send_to_ai_hole=True：仅自己可见，同步至树洞。
+    - is_public=False & send_to_ai_hole=False：仅自己可见。
+    """
     diary = Diary(
         user_id=user.id,
-        content_encrypted=content_encrypted,
+        content=content,
+        content_encrypted="",  # 老库 NOT NULL 兼容占位，新代码不使用
         mood_type=mood_type,
         is_public=is_public,
+        send_to_ai_hole=send_to_ai_hole,
     )
     db.add(diary)
     db.flush()
@@ -56,7 +64,7 @@ def list_my_diaries(
     page: int = 1,
     per_page: int = 20,
 ) -> tuple[list[Diary], int]:
-    """我的漂流瓶列表（时间倒序）。"""
+    """我的日记列表（时间倒序）。"""
     q = db.query(Diary).filter(Diary.user_id == user_id)
     total = q.count()
     diaries = (
@@ -82,21 +90,17 @@ def get_diary_detail(db: Session, user: User, diary_id: int) -> Diary:
 def pick_random_bottle(
     db: Session,
     current_user: User,
-    *,
-    current_password: Optional[str] = None,
 ) -> Optional[dict]:
-    """随机拾取一条公开漂流瓶。
+    """随机拾取一条公开漂流瓶（明文返回）。
 
     - 不取自己的。
-    - 解密需要**当前用户密码**（用于派生密钥），所以需要登录用户在请求中带明文密码。
-      出于安全考虑，这里采用**前端方案**：前端拿到密文后，在浏览器用 PBKDF2 派生密钥再解密。
-      因此本服务只返回密文 + 元数据，**不返回明文**。
-
-    返回 dict: {id, mood_type, content_encrypted, salt, created_at, encouragement_count}
+    - v2.3 起漂流瓶明文存储，直接返回 content。
     """
     candidates = (
         db.query(Diary)
         .filter(Diary.is_public == True, Diary.user_id != current_user.id)  # noqa: E712
+        .order_by(Diary.created_at.desc())
+        .limit(50)
         .all()
     )
     if not candidates:
@@ -107,20 +111,17 @@ def pick_random_bottle(
         .filter(Encouragement.diary_id == chosen.id)
         .scalar()
     )
-    # 返回日记所有者的 encryption_salt（让前端派生密钥解密）
-    owner = db.get(User, chosen.user_id)
     return {
         "id": chosen.id,
         "mood_type": chosen.mood_type,
-        "content_encrypted": chosen.content_encrypted,
-        "salt": owner.encryption_salt if owner else None,
+        "content": chosen.content,
         "created_at": chosen.created_at.isoformat() if chosen.created_at else None,
         "encouragement_count": int(enc_count or 0),
     }
 
 
 # ─────────────────────────────────────────────────────────────
-# 鼓励语
+# 鼓励语（评论）
 # ─────────────────────────────────────────────────────────────
 
 def leave_encouragement(
@@ -129,7 +130,7 @@ def leave_encouragement(
     diary_id: int,
     content: str,
 ) -> Encouragement:
-    """给一条漂流瓶留一条匿名鼓励。"""
+    """给一条漂流瓶留一条匿名鼓励，并通知漂流瓶所有者。"""
     diary = db.get(Diary, diary_id)
     if diary is None:
         raise HTTPException(status_code=404, detail="漂流瓶不存在")
@@ -142,6 +143,15 @@ def leave_encouragement(
         content=content[:200],
     )
     db.add(enc)
+    db.flush()
+    # 创建站内通知（v2.3 新增：评论返回发布者 + 消息提醒）
+    notif = Notification(
+        user_id=diary.user_id,
+        type="encouragement",
+        content=f"你的漂流瓶收到了一条匿名鼓励：「{content[:30]}{'…' if len(content) > 30 else ''}」",
+        related_id=diary_id,
+    )
+    db.add(notif)
     db.flush()
     return enc
 

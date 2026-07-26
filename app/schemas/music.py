@@ -1,5 +1,6 @@
 """古琴音乐相关 Pydantic。"""
 
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -9,6 +10,7 @@ class MusicOut(BaseModel):
     audio_url: str
     cover_image: str
     yin_type: str
+    category: str = "classic"
     duration: float
     tags: list[str]
 

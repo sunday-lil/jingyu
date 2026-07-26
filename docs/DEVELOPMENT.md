@@ -8,6 +8,8 @@
 
 > 🔒 **2026-07-25 v2.2.2 start.py 默认应用模式**：`python start.py` 默认行为变更——**默认走应用/开发模式**（Vite :5000 HMR + FastAPI :5001 API 一起起），自动检测 `frontend/node_modules` 不存在则 `npm install`。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 dist 已构建）。`--dev` 改为兼容别名（等同默认行为）。关键词 `--prod` / `默认应用模式` / `自动 npm install` / `前后端一起起` 在 6 份文档中都要出现。
 
+> 🔒 **2026-07-25 v2.3 六大四字名模块 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱**：13 项大改全部完成。**开发新功能必须遵守 pre-commit 5 项 checklist**（详见 [§1.8](#18-改完代码必须同步更新文档自动同步铁律) / [HANDOFF §12.4](../../HANDOFF.md)）：① Pydantic Out schema 同步 ② `_migrate_legacy_columns()` 加列 ③ `constants.py` 业务常量同步 ④ `.env.example` 配置同步 ⑤ README+HANDOFF 速查表同步。新增模型 `UserFlower` / `Notification` + service `flower_service` + routers `notifications.py` / `profile.py` + 前端视图 `HealingView` / `WesternMusicListView` / `ProfileView`；双资源系统 `User.dew` + `User.leaves` 替代单一 `total_energy`；情绪日历 emoji 字符统一；树洞文件式聊天历史 `data/chats/{user_id}/{session_id}.json`；五音疗愈盘独立为顶级模块（`/healing`）；古琴弹西洋曲谱子菜单（`musics.is_western_score` + `/music/western`）。关键词 `双资源` / `露水` / `落叶` / `UserFlower` / `Notification` / `ProfileView` / `古琴弹西洋曲谱` / `visibility` / `树洞` / `漂流瓶社交` / `五音疗愈盘` / `pre-commit 5 项` 在 6 份文档中都要出现。
+
 ---
 
 ## 1. 开发铁律
@@ -224,18 +226,23 @@ frontend/
     │   │   └── RegisterView.vue
     │   ├── music/
     │   │   ├── MusicListView.vue
-    │   │   └── MusicDetailView.vue
+    │   │   ├── MusicDetailView.vue
+    │   │   └── WesternMusicListView.vue   ← v2.3 加：古琴弹西洋曲谱子菜单 /music/western
     │   ├── diary/
     │   │   ├── DiaryListView.vue
-    │   │   ├── DiaryWriteView.vue
+    │   │   ├── DiaryWriteView.vue        ← v2.3 加：visibility（仅自己/漂流瓶/朋友）+ category 下拉
     │   │   └── PickBottleView.vue
     │   ├── mood/
-    │   │   └── MoodCalendarView.vue
+    │   │   └── MoodCalendarView.vue     ← v2.3 修复：mood_emoji 统一为 emoji 字符
     │   ├── ai/
-    │   │   └── AIChatView.vue
-    │   └── garden/
-    │       ├── GardenView.vue
-    │       └── ShopView.vue
+    │   │   └── AIChatView.vue            ← v2.3 改：SVG 灯笼图标 + textarea + 文件式聊天历史
+    │   ├── garden/
+    │   │   ├── GardenView.vue            ← v2.3 加：花田生长网格（种花/浇水按钮）
+    │   │   └── ShopView.vue              ← v2.3 加：双资源条（dew/leaves）显示
+    │   ├── healing/                       ← v2.3 加：五音疗愈盘独立顶级模块
+    │   │   └── HealingView.vue           ←   /healing 路由，原 /music 重定向到此
+    │   └── profile/                       ← v2.3 加：个人主页
+    │       └── ProfileView.vue           ←   /profile 路由，requiresAuth 守卫
     └── assets/
         └── styles/
             └── main.css      ← Tailwind 入口 + 系统字体栈（无 Google Fonts）
@@ -1156,6 +1163,101 @@ curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
 - 改完 AI 代码必须跑测试 1（不配 key 降级）+ 测试 2（配 key 正常）—— 两个状态都要测
 - 失败原因走 `logger.warning`，**不**暴露给前端（避免泄露内部信息）
 - `_call_nvidia()` 超时 60s（模型默认 `meta/llama-3.1-8b-instruct`，8B 实际 1-10s，60s 纯兜底；原默认 `nvidia/llama-3.1-nemotron-70b-instruct` 在用户 NVIDIA 账户下 404 不可用）；超时也走降级返回 `available:false`，不报 500
+
+---
+
+### 3.15 v2.3 双资源系统迁移（露水 + 落叶替代单一 total_energy，2026-07-25 加）
+
+**场景**（v2.3 重构核心改动）：
+- 原单一 `users.total_energy` 拆为 `users.dew`（露水，向内获得）+ `users.leaves`（落叶，向外获得）
+- `EnergyRecord` 加 `resource_type` 列（`"dew"` / `"leaves"`）
+- `ShopItem` 加 `cost_resource` 列决定兑换时扣哪种资源
+- `total_energy` 字段保留作兼容总能量（= dew + leaves），**不删**
+
+**铁律**（v2.3 加，违反任何一条都会导致资源显示不一致）：
+
+1. **grant_energy 必须显式传 resource_type**（[app/services/energy_service.py](../../app/services/energy_service.py)）：
+```python
+# ✅ 正确：显式指定 resource_type
+grant_energy(db, user, amount=1, source="listen_music", resource_type="dew")
+grant_energy(db, user, amount=2, source="write_diary", resource_type="leaves")
+
+# ❌ 错误：漏掉 resource_type（默认 "dew"，但写日记应该是 leaves）
+grant_energy(db, user, amount=2, source="write_diary")
+```
+
+2. **能量累加用 `db.query(User).filter(...).update(...)` 而非对象属性赋值**（沿用 §3.7 铁律，v2.3 强调双资源都要这样）：
+```python
+# ✅ 正确：按 resource_type 选列，显式 UPDATE
+column = User.dew if resource_type == "dew" else User.leaves
+db.query(User).filter(User.id == user.id).update(
+    {column: column + amount}, synchronize_session=False,
+)
+
+# ❌ 错误：对象属性赋值不会写回 DB（FastAPI 一请求一 session）
+user.dew += amount
+db.add(user)
+```
+
+3. **兑换商店物品按 `ShopItem.cost_resource` 扣对应资源**（[app/services/energy_service.py](../../app/services/energy_service.py) `exchange_item`）：
+```python
+# ✅ 正确：按 item.cost_resource 决定扣 dew 还是 leaves
+column = User.dew if item.cost_resource == "dew" else User.leaves
+db.query(User).filter(User.id == user.id).update(
+    {column: column - item.cost}, synchronize_session=False,
+)
+
+# ❌ 错误：硬编码扣 dew（落叶物品会扣错资源）
+db.query(User).filter(User.id == user.id).update(
+    {User.dew: User.dew - item.cost}, synchronize_session=False,
+)
+```
+
+4. **Pydantic Out schema 必须同步 dew + leaves 字段**（pre-commit 第 1 项，沿用 §3.10 铁律）：
+```python
+# app/schemas/energy.py / auth.py
+class EnergySummaryOut(BaseModel):
+    dew: int          # ← v2.3 加
+    leaves: int       # ← v2.3 加
+    total_energy: int # ← 兼容字段，= dew + leaves
+    resource_type: Optional[str] = None  # EnergyRecordOut 用
+```
+漏掉 dew / leaves → 前端 `data.dew` 永远 `undefined` → 双资源条不显示（沿用 §3.10 静默过滤坑）。
+
+5. **`_migrate_legacy_columns()` 必须加 4 个新列**（pre-commit 第 2 项，详见 [ARCHITECTURE §1.1.7.10](../ARCHITECTURE.md)）：
+   - `users.dew INTEGER DEFAULT 0` + `users.leaves INTEGER DEFAULT 0`
+   - `energy_records.resource_type VARCHAR DEFAULT 'dew'`
+   - `shop_items.cost_resource VARCHAR DEFAULT 'dew'`
+   老库重启后自动加列，**不需要**手动 ALTER TABLE。
+
+**验证矩阵**（v2.3 双资源系统）：
+```bash
+# 1. 老库迁移成功
+sqlite3 data/healing.db
+sqlite> .schema users | grep -E "dew|leaves"           # 应看到两列
+sqlite> .schema energy_records | grep resource_type    # 应看到 resource_type
+sqlite> .schema shop_items | grep cost_resource        # 应看到 cost_resource
+
+# 2. 听歌后露水 +1，落叶不变
+curl -b c.txt -X POST http://127.0.0.1:5000/api/music/listen-complete \
+  -H "Content-Type: application/json" -d '{"music_id":1,"progress":0.95}'
+curl -b c.txt http://127.0.0.1:5000/api/profile/me | python -m json.tool
+# 期望: {"dew": 1, "leaves": 0, "total_energy": 1, ...}
+
+# 3. 写日记后落叶 +2，露水不变
+curl -b c.txt -X POST http://127.0.0.1:5000/api/diary \
+  -H "Content-Type: application/json" -d '{"content_encrypted":"...","visibility":"public"}'
+curl -b c.txt http://127.0.0.1:5000/api/profile/me | python -m json.tool
+# 期望: {"dew": 1, "leaves": 2, "total_energy": 3, ...}
+
+# 4. 兑换露水物品后 dew 减少，leaves 不变；兑换落叶物品反之
+```
+
+**铁律汇总**：
+- 双资源系统下，所有 `grant_energy` / `exchange_item` 调用必须显式传 `resource_type` / 检查 `item.cost_resource`
+- Pydantic Out schema 必须同步 dew + leaves + resource_type 三个字段（沿用 §3.10）
+- `_migrate_legacy_columns()` 必须加 4 个新列（pre-commit 第 2 项）
+- 前端双资源条（GardenView / ShopView / ProfileView）必须同时显示 dew + leaves，不能只显示一个
 
 ---
 

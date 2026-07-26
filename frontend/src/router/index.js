@@ -23,6 +23,12 @@ const routes = [
     name: 'music-list',
     component: () => import('@/views/music/MusicListView.vue'),
   },
+  // 古琴弹西洋曲谱子板块（v2.3 新增，必须放在 :yin 动态段前面）
+  {
+    path: '/music/western',
+    name: 'music-western',
+    component: () => import('@/views/music/MusicWesternView.vue'),
+  },
   {
     path: '/music/:yin',
     name: 'music-detail',
@@ -73,6 +79,20 @@ const routes = [
     path: '/shop',
     name: 'shop',
     component: () => import('@/views/garden/ShopView.vue'),
+    meta: { requiresAuth: true },
+  },
+  // 个人主页（v2.3 新增）
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('@/views/profile/ProfileView.vue'),
+    meta: { requiresAuth: true },
+  },
+  // 通知中心（v2.3 新增）
+  {
+    path: '/notifications',
+    name: 'notifications',
+    component: () => import('@/views/notification/NotificationsView.vue'),
     meta: { requiresAuth: true },
   },
   // 404

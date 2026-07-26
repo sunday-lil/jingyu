@@ -1,32 +1,41 @@
-"""日记 / 漂流瓶相关 Pydantic。"""
+"""日记 / 漂流瓶相关 Pydantic。
+
+v2.3 调整：
+- 移除密码保护，日记改明文存储（content 字段）。
+- 新增发布选项：is_public（放入漂流瓶，公开可见可评论）/ send_to_ai_hole（不放入漂流瓶，仅自己可见 + 同步树洞）。
+"""
 
 from typing import Optional
 from pydantic import BaseModel, Field
 
 
 class DiaryCreateIn(BaseModel):
-    """客户端加密后只传密文；后端永远不接触明文（端到端加密）。"""
+    """创建日记。v2.3 起改明文，移除密码加密。"""
+    content: str = Field(..., min_length=1, description="日记明文内容")
     mood_type: Optional[str] = Field(None, max_length=20)
-    is_public: bool = False
-    content_encrypted: str = Field(..., min_length=1, description="客户端加密后的密文")
+    is_public: bool = Field(False, description="是否放入漂流瓶（公开可见，允许评论）")
+    send_to_ai_hole: bool = Field(False, description="不放入漂流瓶时，是否同步至树洞")
 
 
 class DiaryOut(BaseModel):
+    """日记详情（明文，仅本人查看自己的 / 拾取公开漂流瓶时返回）。"""
     id: int
     user_id: int
-    content: str  # 解密后的明文（仅本人查看时返回）
+    content: str
     mood_type: Optional[str] = None
     is_public: bool
+    send_to_ai_hole: bool = False
     created_at: str
     encouragement_count: int = 0
 
 
 class DiaryPublicOut(BaseModel):
-    """陌生人视角的漂流瓶：脱敏后只给前 20 字。"""
+    """陌生人视角的漂流瓶：完整明文（v2.3 起漂流瓶公开可见）。"""
     id: int
     mood_type: Optional[str] = None
-    preview: str
+    content: str
     created_at: str
+    encouragement_count: int = 0
 
 
 class EncouragementIn(BaseModel):

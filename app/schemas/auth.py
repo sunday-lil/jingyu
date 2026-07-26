@@ -17,5 +17,6 @@ class AuthOut(BaseModel):
     id: int
     nickname: str
     total_energy: int
+    leaves: int = 0
     is_admin: bool = False
     created_at: str

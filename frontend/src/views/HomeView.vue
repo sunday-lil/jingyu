@@ -13,35 +13,64 @@ const HeroScene = defineAsyncComponent(() =>
 const router = useRouter()
 const userStore = useUserStore()
 
-// 五音数据
-const yinList = [
-  { key: 'gong', name: '宫', element: '土', organ: '脾', color: '#E8B8A8', desc: '安神厚德' },
-  { key: 'shang', name: '商', element: '金', organ: '肺', color: '#E8C5A8', desc: '肃降清心' },
-  { key: 'jue', name: '角', element: '木', organ: '肝', color: '#A8C5A0', desc: '疏达生发' },
-  { key: 'zhi', name: '徵', element: '火', organ: '心', color: '#E8A8B8', desc: '温养喜悦' },
-  { key: 'yu', name: '羽', element: '水', organ: '肾', color: '#A8B8C5', desc: '润下守静' },
-]
-
-// 模块入口
+// 六个功能板块入口（v2.3：四字文艺命名 + 岛屿图标）
+// 名字已确认：琴音疗心 / 漂流日记 / 情绪日历 / 心语树洞 / 落叶画坊 / 屿上花田
 const modules = [
-  { label: '漂流瓶', desc: '把心事写进瓶子，让它漂向远方', icon: '🍶', to: '/diary/pick', color: 'linear-gradient(135deg, #A8C5E8 0%, #C5D5E8 100%)' },
-  { label: '情绪日历', desc: '记录每天的心情轨迹', icon: '🌙', to: '/calendar', color: 'linear-gradient(135deg, #C5C5E8 0%, #E8D5E8 100%)' },
-  { label: 'AI 树洞', desc: '一个会倾听你的小岛', icon: '💭', to: '/ai-chat', color: 'linear-gradient(135deg, #B8C5E8 0%, #A8D5BA 100%)' },
-  { label: '精神花园', desc: '用露水浇灌你的秘密花园', icon: '🌸', to: '/garden', color: 'linear-gradient(135deg, #E8B8C5 0%, #F5D5C5 100%)' },
+  {
+    label: '琴音疗心',
+    desc: '宫商角徵羽 · 古琴五音调情志',
+    icon: '🎵',
+    to: '/music',
+    color: 'linear-gradient(135deg, #E8D5A8 0%, #D4C18A 100%)',
+  },
+  {
+    label: '漂流日记',
+    desc: '把心事写进瓶子 · 让它漂向远方',
+    icon: '🍶',
+    to: '/diary/pick',
+    color: 'linear-gradient(135deg, #A8C5E8 0%, #C5D5E8 100%)',
+  },
+  {
+    label: '情绪日历',
+    desc: '记录每天的心情轨迹',
+    icon: '🌙',
+    to: '/calendar',
+    color: 'linear-gradient(135deg, #C5C5E8 0%, #E8D5E8 100%)',
+  },
+  {
+    label: '心语树洞',
+    desc: '说给一棵树听 · 它不会告诉任何人',
+    icon: '🌳',
+    to: '/ai-chat',
+    color: 'linear-gradient(135deg, #B8C5E8 0%, #A8D5BA 100%)',
+  },
+  {
+    label: '落叶画坊',
+    desc: '落叶归根 · 化作春泥换花种',
+    icon: '🍂',
+    to: '/shop',
+    color: 'linear-gradient(135deg, #E8C5A8 0%, #D5A875 100%)',
+  },
+  {
+    label: '屿上花田',
+    desc: '在静屿种下你的花朵',
+    icon: '🌸',
+    to: '/garden',
+    color: 'linear-gradient(135deg, #E8B8C5 0%, #F5D5C5 100%)',
+  },
 ]
 
-// ─── 五音卡片 3D 鼠标倾斜 ───
-const TILT_MAX = 8  // 最大倾斜角度
-const onYinCardMove = (e) => {
+// ─── 模块卡片 3D 鼠标倾斜 ───
+const TILT_MAX = 6
+const onModuleCardMove = (e) => {
   if (prefersReducedMotion()) return
   const card = e.currentTarget
   const rect = card.getBoundingClientRect()
   const x = (e.clientX - rect.left) / rect.width - 0.5
   const y = (e.clientY - rect.top) / rect.height - 0.5
-  // 反向：鼠标在右上，卡片向左下倾斜（透视感）
-  card.style.transform = `perspective(800px) rotateY(${x * TILT_MAX}deg) rotateX(${-y * TILT_MAX}deg) translateY(-6px)`
+  card.style.transform = `perspective(800px) rotateY(${x * TILT_MAX}deg) rotateX(${-y * TILT_MAX}deg) translateY(-4px)`
 }
-const onYinCardLeave = (e) => {
+const onModuleCardLeave = (e) => {
   const card = e.currentTarget
   card.style.transform = ''
 }
@@ -52,64 +81,35 @@ onMounted(() => {
   tl.from('.hero-verse', { y: 20, opacity: 0, duration: 1, ease: 'power3.out' })
     .from('.hero-title', { y: 30, opacity: 0, duration: 1.2, ease: 'power4.out' }, '-=0.6')
     .from('.hero-subtitle', { y: 20, opacity: 0, duration: 1, ease: 'power3.out' }, '-=0.7')
-    .from('.yin-card', {
-      y: 40, opacity: 0, duration: 0.8, stagger: 0.08, ease: 'power3.out'
-    }, '-=0.5')
     .from('.module-card', {
-      y: 30, opacity: 0, duration: 0.7, stagger: 0.06, ease: 'power3.out'
+      y: 30, opacity: 0, duration: 0.7, stagger: 0.08, ease: 'power3.out'
     }, '-=0.4')
 
-  // 持续呼吸动效
+  // 岛屿图标持续呼吸
   gsap.to('.hero-icon', {
     scale: 1.06, duration: 4, repeat: -1, yoyo: true, ease: 'sine.inOut'
   })
 })
-
-function goToMusic(yinKey) {
-  router.push(`/music/${yinKey}`)
-}
 </script>
 
 <template>
   <div class="home">
-    <!-- Hero 区：3D 浮岛雾海 + 文字叠加 -->
+    <!-- Hero 区：3D 浮岛雾海 + 静屿名称与介绍 -->
     <section class="hero">
       <HeroScene class="hero__scene" height="520px" />
       <div class="hero__content">
-        <div class="hero-icon">🌿</div>
+        <!-- v2.3：岛屿/山形图标（替代原草本🌿） -->
+        <div class="hero-icon">🏝️</div>
         <p class="hero-verse">"海上有座岛，岛上有人听。"</p>
         <h1 class="hero-title">静屿</h1>
         <p class="hero-subtitle">
-          古琴五音 · 漂流瓶日记 · 情绪手帐 · AI 树洞<br>
+          古琴五音 · 漂流日记 · 情绪手帐 · AI 树洞<br>
           一个属于你的治愈系身心疗愈空间
         </p>
       </div>
       <div class="hero__scroll-hint">
         <span>向下沉入海面</span>
         <span class="hero__scroll-arrow">↓</span>
-      </div>
-    </section>
-
-    <!-- 五音入口 -->
-    <section class="yin-section">
-      <h2 class="section-title">五音疗愈</h2>
-      <p class="section-subtitle">宫商角徵羽 · 入五脏 · 调情志</p>
-      <div class="yin-grid">
-        <div
-          v-for="yin in yinList"
-          :key="yin.key"
-          class="yin-card"
-          :style="{ '--card-color': yin.color }"
-          @click="goToMusic(yin.key)"
-          @mousemove="onYinCardMove"
-          @mouseleave="onYinCardLeave"
-        >
-          <div class="yin-card__char">{{ yin.name }}</div>
-          <div class="yin-card__info">
-            <div class="yin-card__name">{{ yin.element }}音 · 入{{ yin.organ }}</div>
-            <div class="yin-card__desc">{{ yin.desc }}</div>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -123,19 +123,25 @@ function goToMusic(yinKey) {
       </router-link>
     </section>
 
-    <!-- 模块入口 -->
+    <!-- v2.3：六个功能板块入口（四字文艺命名） -->
     <section class="module-section">
       <h2 class="section-title">岛上各处</h2>
+      <p class="section-subtitle">六个去处 · 任选一处歇脚</p>
       <div class="module-grid">
         <router-link
           v-for="m in modules"
           :key="m.label"
           :to="m.to"
           class="module-card"
+          @mousemove="onModuleCardMove"
+          @mouseleave="onModuleCardLeave"
         >
           <div class="module-card__icon" :style="{ background: m.color }">{{ m.icon }}</div>
-          <div class="module-card__title">{{ m.label }}</div>
-          <div class="module-card__desc">{{ m.desc }}</div>
+          <div class="module-card__body">
+            <div class="module-card__title">{{ m.label }}</div>
+            <div class="module-card__desc">{{ m.desc }}</div>
+          </div>
+          <div class="module-card__arrow">→</div>
         </router-link>
       </div>
     </section>
@@ -189,7 +195,7 @@ function goToMusic(yinKey) {
   font-size: 56px;
   display: inline-block;
   margin-bottom: 16px;
-  filter: drop-shadow(0 4px 12px rgba(168, 197, 160, 0.4));
+  filter: drop-shadow(0 4px 12px rgba(168, 197, 232, 0.5));
 }
 .hero-verse {
   font-family: var(--font-serif);
@@ -257,78 +263,6 @@ function goToMusic(yinKey) {
   letter-spacing: 0.1em;
 }
 
-/* 五音入口 */
-.yin-section {
-  margin: 60px 0;
-}
-.yin-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
-}
-.yin-card {
-  position: relative;
-  aspect-ratio: 3/4;
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  cursor: pointer;
-  overflow: hidden;
-  /* 3D 倾斜过渡：transform 由 JS 实时控制，transition 用 slower 避免抖动 */
-  transition: transform 0.4s var(--ease-apple), box-shadow 0.4s var(--ease-apple);
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-.yin-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--card-color);
-  opacity: 0.5;
-  z-index: 0;
-  transition: opacity 0.4s;
-}
-.yin-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
-  z-index: 1;
-  pointer-events: none;
-}
-.yin-card:hover {
-  box-shadow: var(--shadow-lg);
-}
-.yin-card:hover::before {
-  opacity: 0.75;
-}
-.yin-card > * {
-  position: relative;
-  z-index: 2;
-}
-.yin-card__char {
-  font-family: var(--font-serif);
-  font-size: 56px;
-  line-height: 1;
-  color: var(--color-text-primary);
-  text-shadow: 0 2px 8px rgba(255, 255, 255, 0.5);
-  transform: translateZ(20px);  /* 3D 凸出 */
-}
-.yin-card__name {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  margin-bottom: 4px;
-  transform: translateZ(12px);
-}
-.yin-card__desc {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  transform: translateZ(8px);
-}
-
 /* 今日心情条 */
 .today-strip {
   display: flex;
@@ -358,44 +292,63 @@ function goToMusic(yinKey) {
 }
 .module-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 20px;
 }
 .module-card {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 28px 20px;
-  text-align: center;
-  transition: all 0.4s var(--ease-apple);
+  gap: 16px;
+  padding: 22px 24px;
+  text-align: left;
+  transition: transform 0.4s var(--ease-apple), box-shadow 0.4s var(--ease-apple);
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 .module-card:hover {
-  transform: translateY(-4px);
   box-shadow: var(--shadow-md);
   color: var(--color-text-primary);
 }
 .module-card__icon {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 32px;
-  margin-bottom: 6px;
+  font-size: 28px;
+  flex-shrink: 0;
+  transform: translateZ(12px);
+}
+.module-card__body {
+  flex: 1;
+  min-width: 0;
+  transform: translateZ(6px);
 }
 .module-card__title {
   font-family: var(--font-serif);
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 500;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
 }
 .module-card__desc {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--color-text-muted);
-  line-height: 1.6;
+  line-height: 1.5;
+}
+.module-card__arrow {
+  color: var(--color-text-muted);
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: transform 0.3s var(--ease-apple);
+  transform: translateZ(8px);
+}
+.module-card:hover .module-card__arrow {
+  transform: translateX(4px) translateZ(8px);
+  color: var(--color-accent-dark);
 }
 
 /* 未登录引导 */
@@ -441,21 +394,12 @@ function goToMusic(yinKey) {
   .hero-title {
     font-size: clamp(44px, 7vw, 64px);
   }
-  .yin-grid {
-    gap: 12px;
-  }
-  .yin-card {
-    padding: 16px;
-  }
-  .yin-card__char {
-    font-size: 44px;
-  }
   .module-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 14px;
   }
   .module-card {
-    padding: 24px 16px;
+    padding: 18px 20px;
   }
   .guest-cta__btns {
     flex-wrap: wrap;
@@ -470,7 +414,6 @@ function goToMusic(yinKey) {
   }
   .hero {
     min-height: 380px;
-    /* 100svh = small viewport height，确保 iOS Safari 底部地址栏出现时 Hero 也能完整显示 */
     min-height: min(380px, 60svh);
     margin: 8px 0 0;
     border-radius: var(--radius-lg, 20px);
@@ -499,47 +442,12 @@ function goToMusic(yinKey) {
     font-size: 11px;
   }
 
-  /* 五音卡片：横向滚动，5 张排一行，节省垂直空间 */
-  .yin-section {
-    margin: 32px 0;
-  }
   .section-title {
     font-size: 20px;
   }
   .section-subtitle {
     font-size: 12px;
     margin-bottom: 20px;
-  }
-  .yin-grid {
-    display: flex;
-    gap: 12px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    padding: 4px 0 12px;
-    margin: 0 -12px;
-    padding-left: 12px;
-    padding-right: 12px;
-    scrollbar-width: none;
-  }
-  .yin-grid::-webkit-scrollbar { display: none; }
-  .yin-card {
-    flex: 0 0 120px;  /* 固定宽度，横向滚动 */
-    aspect-ratio: 3/4;
-    scroll-snap-align: start;
-    padding: 14px 10px;
-  }
-  .yin-card__char {
-    font-size: 38px;
-    transform: translateZ(0);  /* 移动端关闭 3D 凸出，省 GPU */
-  }
-  .yin-card__name {
-    font-size: 13px;
-    transform: translateZ(0);
-  }
-  .yin-card__desc {
-    font-size: 11px;
-    transform: translateZ(0);
   }
 
   /* 今日心情条：紧凑 */
@@ -565,9 +473,6 @@ function goToMusic(yinKey) {
     gap: 12px;
   }
   .module-card {
-    flex-direction: row;
-    align-items: center;
-    text-align: left;
     padding: 16px 18px;
     gap: 14px;
   }
@@ -575,11 +480,9 @@ function goToMusic(yinKey) {
     width: 48px;
     height: 48px;
     font-size: 24px;
-    margin-bottom: 0;
-    flex-shrink: 0;
   }
   .module-card__title {
-    font-size: 16px;
+    font-size: 17px;
     margin-bottom: 2px;
   }
   .module-card__desc {
@@ -609,7 +512,7 @@ function goToMusic(yinKey) {
 
 /* reduced-motion：关 3D 倾斜 + 关滚动提示动画 */
 @media (prefers-reduced-motion: reduce) {
-  .yin-card {
+  .module-card {
     transition: box-shadow 0.4s;
   }
   .hero__scroll-hint {

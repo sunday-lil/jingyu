@@ -67,13 +67,17 @@ def exchange(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """兑换商店物品。"""
+    """兑换商店物品。
+
+    v2.3：花种用落叶兑换（直接种到屿上花田），装扮用露水兑换。
+    """
     gi = exchange_item(db, user, body.item_id)
     db.commit()
-    # expire_on_commit=False，user.total_energy 仍是旧值，必须重新查 DB
-    new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
+    # expire_on_commit=False，user 字段仍是旧值，必须重新查 DB
+    row = db.query(User.total_energy, User.leaves).filter(User.id == user.id).one()
     return ExchangeOut(
         success=True,
-        new_total_energy=new_total or 0,
+        new_total_energy=row[0] or 0,
+        new_leaves=row[1] or 0,
         garden_item=gi.to_dict(),
     )

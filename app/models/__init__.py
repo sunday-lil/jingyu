@@ -5,8 +5,9 @@ from app.models.diary import Diary
 from app.models.mood import MoodCheckin
 from app.models.music import Music
 from app.models.energy import EnergyRecord
-from app.models.garden import ShopItem, GardenItem
+from app.models.garden import ShopItem, GardenItem, UserFlower
 from app.models.encouragement import Encouragement
+from app.models.notification import Notification
 
 __all__ = [
     "User",
@@ -16,5 +17,7 @@ __all__ = [
     "EnergyRecord",
     "ShopItem",
     "GardenItem",
+    "UserFlower",
     "Encouragement",
+    "Notification",
 ]

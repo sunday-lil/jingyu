@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, onBeforeUnmount } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import AmbientBackground from '@/components/AmbientBackground.vue'
+import api from '@/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -11,15 +12,37 @@ const userStore = useUserStore()
 // 移动端「更多」抽屉
 const mobileMenuOpen = ref(false)
 
-// 导航项（五音 + 核心模块，共 7 个）
+// v2.3：通知未读数（登录后定时拉取）
+const unreadCount = ref(0)
+let notifTimer = null
+const fetchUnread = async () => {
+  if (!userStore.isLoggedIn) return
+  try {
+    const res = await api.get('/notifications/unread')
+    unreadCount.value = res?.unread || 0
+  } catch {
+    // 静默
+  }
+}
+onMounted(() => {
+  fetchUnread()
+  notifTimer = setInterval(fetchUnread, 60_000)  // 每分钟拉一次
+})
+onBeforeUnmount(() => {
+  if (notifTimer) clearInterval(notifTimer)
+})
+
+// 导航项（v2.3：四字文艺命名 + 岛屿图标 + 商店/Profile 入口）
 const navItems = [
-  { name: 'home', label: '静屿', path: '/', icon: '🌿' },
-  { name: 'music-list', label: '五音', path: '/music', icon: '🎶' },
-  { name: 'diary-list', label: '日记', path: '/diary', icon: '📖' },
+  { name: 'home', label: '静屿', path: '/', icon: '🏝️' },
+  { name: 'music-list', label: '琴音疗心', path: '/music', icon: '🎵' },
+  { name: 'diary-list', label: '漂流日记', path: '/diary', icon: '📖' },
   { name: 'diary-pick', label: '拾瓶', path: '/diary/pick', icon: '🍶' },
-  { name: 'calendar', label: '日历', path: '/calendar', icon: '🌙' },
-  { name: 'ai-chat', label: '树洞', path: '/ai-chat', icon: '💭' },
-  { name: 'garden', label: '花园', path: '/garden', icon: '🌸' },
+  { name: 'calendar', label: '情绪日历', path: '/calendar', icon: '🌙' },
+  { name: 'ai-chat', label: '心语树洞', path: '/ai-chat', icon: '🌳' },
+  { name: 'shop', label: '落叶画坊', path: '/shop', icon: '🍂' },
+  { name: 'garden', label: '屿上花田', path: '/garden', icon: '🌸' },
+  { name: 'profile', label: '我的', path: '/profile', icon: '👤' },
 ]
 
 // 当前激活的导航项
@@ -29,18 +52,20 @@ const activeNav = computed(() => route.name)
 const isFullscreen = computed(() => !!route.meta?.fullscreen)
 
 // 移动端 tabbar：4 个固定核心 + 中央「更多」按钮
-// 固定：静屿 / 日记 / [更多] / 日历 / 花园
-// 「更多」展开后访问：五音 / 拾瓶 / 树洞
+// v2.3 调整：固定 静屿 / 漂流日记 / [更多] / 情绪日历 / 我的
+// 「更多」展开后访问：琴音疗心 / 拾瓶 / 心语树洞 / 落叶画坊 / 屿上花田
 const tabbarFixed = computed(() => [
   navItems[0],  // 静屿
-  navItems[2],  // 日记
-  navItems[4],  // 日历
-  navItems[6],  // 花园
+  navItems[2],  // 漂流日记
+  navItems[4],  // 情绪日历
+  navItems[8],  // 我的
 ])
 const tabbarMore = computed(() => [
-  navItems[1],  // 五音
+  navItems[1],  // 琴音疗心
   navItems[3],  // 拾瓶
-  navItems[5],  // 树洞
+  navItems[5],  // 心语树洞
+  navItems[6],  // 落叶画坊
+  navItems[7],  // 屿上花田
 ])
 
 // 路由变化时关闭抽屉
@@ -89,7 +114,7 @@ onBeforeUnmount(() => {
     <header class="desktop-nav safe-top">
       <div class="nav-inner nav-inner--desktop">
         <router-link to="/" class="nav-brand">
-          <span class="nav-brand__icon">🌿</span>
+          <span class="nav-brand__icon">🏝️</span>
           <span class="nav-brand__name">静屿</span>
         </router-link>
 
@@ -108,6 +133,14 @@ onBeforeUnmount(() => {
 
         <div class="nav-user">
           <template v-if="userStore.isLoggedIn">
+            <button
+              class="nav-bell"
+              @click="router.push('/notifications')"
+              :title="`未读通知 ${unreadCount} 条`"
+              aria-label="通知"
+            >
+              🔔<span v-if="unreadCount > 0" class="nav-bell__badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+            </button>
             <div class="nav-energy" :title="`露水: ${userStore.energy}`">
               <span class="nav-energy__icon">💧</span>
               <span class="nav-energy__num">{{ userStore.energy }}</span>
@@ -125,7 +158,7 @@ onBeforeUnmount(() => {
     <header class="tablet-nav safe-top">
       <div class="nav-inner nav-inner--tablet">
         <router-link to="/" class="nav-brand">
-          <span class="nav-brand__icon">🌿</span>
+          <span class="nav-brand__icon">🏝️</span>
           <span class="nav-brand__name">静屿</span>
         </router-link>
 
@@ -145,6 +178,14 @@ onBeforeUnmount(() => {
 
         <div class="nav-user">
           <template v-if="userStore.isLoggedIn">
+            <button
+              class="nav-bell"
+              @click="router.push('/notifications')"
+              :title="`未读通知 ${unreadCount} 条`"
+              aria-label="通知"
+            >
+              🔔<span v-if="unreadCount > 0" class="nav-bell__badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+            </button>
             <div class="nav-energy" :title="`露水: ${userStore.energy}`">
               <span class="nav-energy__icon">💧</span>
               <span class="nav-energy__num">{{ userStore.energy }}</span>
@@ -161,11 +202,18 @@ onBeforeUnmount(() => {
     <!-- ── 移动端（≤768px）顶部精简状态栏（fullscreen 模式隐藏） ── -->
     <header v-if="!isFullscreen" class="mobile-topbar safe-top">
       <router-link to="/" class="mobile-topbar__brand">
-        <span class="mobile-topbar__icon">🌿</span>
+        <span class="mobile-topbar__icon">🏝️</span>
         <span class="mobile-topbar__name">静屿</span>
       </router-link>
       <div class="mobile-topbar__right">
         <template v-if="userStore.isLoggedIn">
+          <button
+            class="mobile-topbar__bell"
+            @click="router.push('/notifications')"
+            aria-label="通知"
+          >
+            🔔<span v-if="unreadCount > 0" class="mobile-topbar__bell-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+          </button>
           <div class="mobile-topbar__energy">
             <span>💧</span>
             <span>{{ userStore.energy }}</span>
@@ -344,6 +392,44 @@ onBeforeUnmount(() => {
 }
 .nav-energy__icon { font-size: 14px; }
 
+/* 通知铃铛 */
+.nav-bell {
+  position: relative;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(200, 180, 160, 0.25);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s var(--ease-soft);
+  flex-shrink: 0;
+}
+.nav-bell:hover {
+  background: rgba(255, 255, 255, 0.85);
+  transform: translateY(-1px);
+}
+.nav-bell__badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #E89A9A;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(232, 154, 154, 0.4);
+}
+
 .nav-user__btn {
   padding: 6px 14px;
   border-radius: var(--radius-full, 999px);
@@ -454,6 +540,35 @@ onBeforeUnmount(() => {
     background: rgba(168, 197, 160, 0.18);
     font-size: 12px;
     color: var(--color-text-secondary);
+  }
+  .mobile-topbar__bell {
+    position: relative;
+    background: rgba(255, 255, 255, 0.5);
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mobile-topbar__bell-badge {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 8px;
+    background: #E89A9A;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .mobile-topbar__logout,
   .mobile-topbar__login {

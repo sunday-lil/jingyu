@@ -22,12 +22,18 @@ router = APIRouter(prefix="/api/music", tags=["music"])
 @router.get("", response_model=List[MusicOut])
 def list_music(
     yin_type: Optional[str] = None,
+    category: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    """列出所有曲目（或按 yin_type 过滤）。"""
+    """列出所有曲目（可按 yin_type / category 过滤）。
+
+    v2.3：新增 category 参数（classic 五音古曲 / western 古琴弹西洋）。
+    """
     q = db.query(Music)
     if yin_type:
         q = q.filter(Music.yin_type == yin_type)
+    if category:
+        q = q.filter(Music.category == category)
     rows = q.order_by(Music.id.asc()).all()
     return [
         MusicOut(
@@ -36,6 +42,7 @@ def list_music(
             audio_url=m.audio_url,
             cover_image=m.cover_image,
             yin_type=m.yin_type,
+            category=m.category,
             duration=m.duration,
             tags=m.tag_list(),
         )
@@ -50,7 +57,7 @@ def get_music(music_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="这首曲子找不到了")
     return MusicOut(
         id=m.id, title=m.title, audio_url=m.audio_url, cover_image=m.cover_image,
-        yin_type=m.yin_type, duration=m.duration, tags=m.tag_list(),
+        yin_type=m.yin_type, category=m.category, duration=m.duration, tags=m.tag_list(),
     )
 
 

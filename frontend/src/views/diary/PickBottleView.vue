@@ -6,20 +6,24 @@ import api from '@/api'
 
 const router = useRouter()
 
-// 心情 emoji 映射
+// 心情 emoji 映射（与后端 MOOD_INFO 对齐 —— v2.3 七种心情）
 const MOOD_EMOJI = {
-  happy: '😊',
-  smile: '😀',
-  neutral: '😐',
-  sad: '😢',
-  cry: '😭',
+  ecstatic: '🤩',
+  happy:    '😊',
+  calm:     '😌',
+  tired:    '😪',
+  anxious:  '😰',
+  angry:    '😠',
+  sad:      '😢',
 }
 const MOOD_LABEL = {
-  happy: '开心',
-  smile: '不错',
-  neutral: '平静',
-  sad: '难过',
-  cry: '崩溃',
+  ecstatic: '极度开心',
+  happy:    '开心',
+  calm:     '平静',
+  tired:    '疲惫',
+  anxious:  '焦虑',
+  angry:    '生气',
+  sad:      '悲伤',
 }
 const moodEmoji = (t) => MOOD_EMOJI[t] || '🍃'
 const moodLabel = (t) => MOOD_LABEL[t] || '未知'
@@ -38,20 +42,9 @@ const formatDate = (str) => {
 }
 
 // 拾瓶状态
-const bottle = ref(null) // 当前拾到的日记
+const bottle = ref(null) // 当前拾到的日记（明文）
 const picking = ref(false)
 const errorMsg = ref('')
-
-// 已解密的明文
-const plainText = ref('')
-
-// 解密弹窗
-const passwordModal = ref({
-  visible: false,
-  password: '',
-  error: '',
-  loading: false,
-})
 
 // AI 鼓励语（瓶子无鼓励语时自动拉取）
 const aiEncouragement = ref('')
@@ -74,17 +67,16 @@ const showToast = (text) => {
   }, 2200)
 }
 
-// 拾一个漂流瓶
+// 拾一个漂流瓶（明文直接返回，无需解密）
 const pickBottle = async () => {
   picking.value = true
   errorMsg.value = ''
   bottle.value = null
-  plainText.value = ''
   aiEncouragement.value = ''
   encourageText.value = ''
   try {
     const res = await api.get('/diary/pick/random')
-    // 兼容两种返回：直接对象/null 或 { data: {...} }
+    // 后端返回明文 content 的对象，或 404
     const data = res && (res.id !== undefined ? res : res?.data)
     if (!data) {
       errorMsg.value = '海面上暂时没有漂流瓶了，过一会儿再来吧'
@@ -93,55 +85,13 @@ const pickBottle = async () => {
     }
     bottle.value = data
     picking.value = false
-    // 弹密码框
-    passwordModal.value = {
-      visible: true,
-      password: '',
-      error: '',
-      loading: false,
+    // 如果瓶子里没有鼓励语，自动拉 AI 鼓励
+    if (!data.encouragement_count) {
+      fetchAiEncouragement(data.content)
     }
   } catch (e) {
     errorMsg.value = e.message || '拾瓶失败'
     picking.value = false
-  }
-}
-
-// 解密当前瓶子
-const doDecrypt = async () => {
-  if (!bottle.value) return
-  const pwd = passwordModal.value.password
-  if (!pwd) {
-    passwordModal.value.error = '请输入密码'
-    return
-  }
-  passwordModal.value.loading = true
-  passwordModal.value.error = ''
-  try {
-    // 用当前用户密码 + 日记所有者的 salt 解密
-    const plain = await decryptText(bottle.value.content_encrypted, pwd, bottle.value.salt)
-    if (plain === null) {
-      passwordModal.value.error = '解密失败，密码可能不对'
-    } else {
-      plainText.value = plain
-      passwordModal.value.visible = false
-      // 如果瓶子里没有鼓励语，自动拉 AI 鼓励
-      if (!bottle.value.encouragements || bottle.value.encouragements.length === 0) {
-        fetchAiEncouragement(plain)
-      }
-    }
-  } catch {
-    passwordModal.value.error = '解密出错'
-  } finally {
-    passwordModal.value.loading = false
-  }
-}
-
-const closePasswordModal = () => {
-  if (passwordModal.value.loading) return
-  passwordModal.value.visible = false
-  // 还没解密成功就放弃，把瓶子放回海里
-  if (!plainText.value) {
-    bottle.value = null
   }
 }
 
@@ -155,7 +105,7 @@ const fetchAiEncouragement = async (fullText) => {
       diary_preview: preview,
       mood_label: moodLabel(bottle.value.mood_type),
     })
-    // 兼容多种返回形状：字符串 / { encouragement } / { data: {...} } / { data: '...' }
+    // 兼容多种返回形状
     let text = ''
     if (typeof res === 'string') text = res
     else if (typeof res?.data === 'string') text = res.data
@@ -175,7 +125,7 @@ const fetchAiEncouragement = async (fullText) => {
   }
 }
 
-// 写一句鼓励
+// 写一句鼓励（评论返回发布者 + 消息提醒）
 const sendEncourage = async () => {
   if (!bottle.value) return
   const text = encourageText.value.trim()
@@ -188,6 +138,11 @@ const sendEncourage = async () => {
     await api.post(`/diary/${bottle.value.id}/encourage`, { content: text })
     showToast('你的鼓励已被海风带走 💛')
     encourageText.value = ''
+    // 鼓励数 +1
+    bottle.value = {
+      ...bottle.value,
+      encouragement_count: (bottle.value.encouragement_count || 0) + 1,
+    }
   } catch (e) {
     showToast(e.message || '发送失败')
   } finally {
@@ -211,34 +166,23 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (toastTimer) clearTimeout(toastTimer)
 })
-
-// ── 加密辅助函数（Web Crypto API） ──
-async function deriveKey(password, saltBase64) {
-  const enc = new TextEncoder()
-  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey'])
-  const salt = Uint8Array.from(atob(saltBase64), c => c.charCodeAt(0))
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt']
-  )
-}
-async function decryptText(cipherBase64, password, saltBase64) {
-  try {
-    const key = await deriveKey(password, saltBase64)
-    const combined = Uint8Array.from(atob(cipherBase64), c => c.charCodeAt(0))
-    const iv = combined.slice(0, 12)
-    const cipher = combined.slice(12)
-    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher)
-    return new TextDecoder().decode(plain)
-  } catch { return null }
-}
 </script>
 
 <template>
   <div class="pick-bottle-view">
+    <!-- 大海动效背景（SVG 波浪 + CSS 动画） -->
+    <div class="sea-bg" aria-hidden="true">
+      <svg class="sea-bg__wave sea-bg__wave--1" viewBox="0 0 1440 200" preserveAspectRatio="none">
+        <path d="M0,100 C240,160 480,40 720,100 C960,160 1200,40 1440,100 L1440,200 L0,200 Z" fill="rgba(168, 197, 232, 0.18)"/>
+      </svg>
+      <svg class="sea-bg__wave sea-bg__wave--2" viewBox="0 0 1440 200" preserveAspectRatio="none">
+        <path d="M0,120 C240,60 480,180 720,120 C960,60 1200,180 1440,120 L1440,200 L0,200 Z" fill="rgba(197, 213, 232, 0.22)"/>
+      </svg>
+      <svg class="sea-bg__wave sea-bg__wave--3" viewBox="0 0 1440 200" preserveAspectRatio="none">
+        <path d="M0,140 C240,100 480,170 720,140 C960,100 1200,170 1440,140 L1440,200 L0,200 Z" fill="rgba(232, 240, 246, 0.32)"/>
+      </svg>
+    </div>
+
     <header class="pick-header">
       <button class="back-btn" @click="router.push('/diary')">← 回海岸</button>
       <h1 class="pick-title">拾一个漂流瓶</h1>
@@ -255,7 +199,7 @@ async function decryptText(cipherBase64, password, saltBase64) {
       <div v-if="errorMsg" class="pick-hero__error">{{ errorMsg }}</div>
     </section>
 
-    <!-- 日记展示 -->
+    <!-- 日记展示（明文，无需解密） -->
     <section v-else class="bottle-section">
       <div class="bottle-card card">
         <div class="bottle-card__head">
@@ -265,19 +209,13 @@ async function decryptText(cipherBase64, password, saltBase64) {
             <div class="bottle-card__date">{{ formatDate(bottle.created_at) }}</div>
           </div>
         </div>
-        <p class="bottle-card__content">{{ plainText }}</p>
+        <p class="bottle-card__content">{{ bottle.content }}</p>
       </div>
 
       <!-- 已有鼓励语 -->
-      <div v-if="bottle.encouragements && bottle.encouragements.length" class="encouragement-list">
-        <h3 class="encouragement-list__title">来自陌生人的鼓励 💛</h3>
-        <div
-          v-for="(e, i) in bottle.encouragements"
-          :key="i"
-          class="encouragement-item"
-        >
-          {{ typeof e === 'string' ? e : (e.content || e.text || '') }}
-        </div>
+      <div v-if="bottle.encouragement_count > 0" class="encouragement-list">
+        <h3 class="encouragement-list__title">来自陌生人的鼓励 💛 × {{ bottle.encouragement_count }}</h3>
+        <p class="encouragement-list__hint">在「我的日记」详情页可以看到全部鼓励</p>
       </div>
 
       <!-- AI 鼓励语（瓶子无鼓励语时自动拉取） -->
@@ -287,7 +225,7 @@ async function decryptText(cipherBase64, password, saltBase64) {
         <p v-else-if="aiEncouragement" class="ai-encouragement__text">{{ aiEncouragement }}</p>
       </div>
 
-      <!-- 写一句鼓励 -->
+      <!-- 写一句鼓励（评论返回发布者 + 消息提醒） -->
       <div class="encourage-form">
         <label class="form-label">给写日记的人一句鼓励</label>
         <div class="encourage-form__row">
@@ -297,6 +235,7 @@ async function decryptText(cipherBase64, password, saltBase64) {
             type="text"
             placeholder="一句温柔的话…"
             :disabled="encourageSubmitting"
+            maxlength="200"
           >
           <button
             class="btn btn--primary encourage-form__btn"
@@ -316,32 +255,6 @@ async function decryptText(cipherBase64, password, saltBase64) {
       </div>
     </section>
 
-    <!-- 密码弹窗 -->
-    <transition name="modal">
-      <div v-if="passwordModal.visible" class="modal-mask" @click.self="closePasswordModal">
-        <div class="modal-card card">
-          <div class="modal-card__icon">🔑</div>
-          <h3 class="modal-card__title">输入密码解开瓶子</h3>
-          <p class="modal-card__hint">用你的密码尝试解开这只瓶子</p>
-          <input
-            v-model="passwordModal.password"
-            type="password"
-            class="form-input modal-input"
-            placeholder="至少 6 位"
-            autocomplete="current-password"
-            @keyup.enter="doDecrypt"
-          >
-          <div v-if="passwordModal.error" class="modal-error">{{ passwordModal.error }}</div>
-          <div class="modal-actions">
-            <button class="btn btn--ghost" @click="closePasswordModal">放弃</button>
-            <button class="btn btn--primary" :disabled="passwordModal.loading" @click="doDecrypt">
-              {{ passwordModal.loading ? '解锁中…' : '解锁' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </transition>
-
     <!-- toast -->
     <transition name="toast">
       <div v-if="toastVisible" class="toast">{{ toastText }}</div>
@@ -354,6 +267,51 @@ async function decryptText(cipherBase64, password, saltBase64) {
   max-width: 720px;
   margin: 0 auto;
   padding: 32px 24px 80px;
+  position: relative;
+}
+
+/* 大海动效背景 */
+.sea-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.sea-bg__wave {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 200%;
+  height: 220px;
+  bottom: 0;
+}
+.sea-bg__wave--1 {
+  animation: wave-slide 18s linear infinite;
+  opacity: 0.7;
+}
+.sea-bg__wave--2 {
+  animation: wave-slide 26s linear infinite reverse;
+  opacity: 0.6;
+  bottom: -10px;
+}
+.sea-bg__wave--3 {
+  animation: wave-slide 32s linear infinite;
+  opacity: 0.8;
+  bottom: -20px;
+}
+@keyframes wave-slide {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* 内容上浮到 z=1 */
+.pick-header,
+.pick-hero,
+.bottle-section,
+.toast {
+  position: relative;
+  z-index: 1;
 }
 
 /* 平板紧凑 */
@@ -372,6 +330,9 @@ async function decryptText(cipherBase64, password, saltBase64) {
   margin-bottom: 14px;
   padding: 0;
   transition: color 0.2s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 .back-btn:hover {
   color: var(--color-accent-dark, #8B7B5E);
@@ -483,15 +444,10 @@ async function decryptText(cipherBase64, password, saltBase64) {
   margin: 0 0 12px;
   font-weight: 500;
 }
-.encouragement-item {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid var(--color-border, rgba(139, 123, 94, 0.15));
-  border-radius: var(--radius-md, 14px);
-  padding: 14px 18px;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--color-text-primary, #3D3327);
-  margin-bottom: 8px;
+.encouragement-list__hint {
+  font-size: 12px;
+  color: var(--color-text-muted, #8B7B5E);
+  margin: 0;
 }
 
 /* AI 鼓励 */
@@ -543,73 +499,6 @@ async function decryptText(cipherBase64, password, saltBase64) {
   margin-top: 8px;
 }
 
-/* 弹窗 */
-.modal-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(60, 50, 40, 0.45);
-  backdrop-filter: blur(6px);
-  display: grid;
-  place-items: center;
-  z-index: 100;
-  padding: 20px;
-}
-.modal-card {
-  max-width: 460px;
-  width: 100%;
-  padding: 32px 28px;
-  text-align: center;
-}
-.modal-card__icon {
-  font-size: 40px;
-  margin-bottom: 10px;
-}
-.modal-card__title {
-  font-family: var(--font-serif, serif);
-  font-size: 20px;
-  font-weight: 500;
-  margin: 0 0 6px;
-  color: var(--color-text-primary, #3D3327);
-}
-.modal-card__hint {
-  font-size: 13px;
-  color: var(--color-text-muted, #8B7B5E);
-  margin: 0 0 18px;
-  line-height: 1.6;
-}
-.modal-input {
-  margin-bottom: 12px;
-  text-align: left;
-}
-.modal-error {
-  color: #C57878;
-  font-size: 13px;
-  margin: 6px 0 12px;
-}
-.modal-actions {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.3s var(--ease-soft);
-}
-.modal-enter-active .modal-card,
-.modal-leave-active .modal-card {
-  transition: transform 0.3s var(--ease-soft), opacity 0.3s var(--ease-soft);
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-.modal-enter-from .modal-card,
-.modal-leave-to .modal-card {
-  transform: translateY(12px) scale(0.98);
-  opacity: 0;
-}
-
 /* toast */
 .toast {
   position: fixed;
@@ -624,7 +513,9 @@ async function decryptText(cipherBase64, password, saltBase64) {
   z-index: 200;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(6px);
-  white-space: nowrap;
+  max-width: 80%;
+  text-align: center;
+  line-height: 1.5;
 }
 .toast-enter-active,
 .toast-leave-active {
@@ -676,10 +567,6 @@ async function decryptText(cipherBase64, password, saltBase64) {
   /* toast 上移避开 tabbar */
   .toast {
     bottom: calc(90px + env(safe-area-inset-bottom));
-  }
-  .modal-card {
-    max-width: calc(100vw - 32px);
-    padding: 24px 20px;
   }
 }
 </style>

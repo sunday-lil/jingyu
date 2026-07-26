@@ -16,6 +16,8 @@
 
 > 🔒 **2026-07-25 v2.2.3 移动端响应式 UI + 3D 几何降档**：三档断点系统（≤768px 手机 / 769-1024px 平板 / ≥1025px 桌面）差异化布局 + iOS Safari `100dvh` + `env(safe-area-inset-*)` 适配 + `fullscreen` 路由模式 + 4 个 3D 组件移动端几何精度降档（Lathe/Cylinder/Icosahedron 段数降低、樱花树深度 4→3、花瓣网格 5×8→4×6、AudioVisualizer 柱数减半）。**部署前必须重新 `npm run build`**，否则用户拿不到移动端布局优化 + 3D 几何降档。关键词 `三档断点` / `100dvh` / `safe-area-inset` / `fullscreen` / `几何精度降档` / `iPhone 16` 在 6 份文档中都要出现。
 
+> 🔒 **2026-07-25 v2.3 六大四字名板块 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱**：① **部署前必须重新 `npm run build`**，否则用户拿不到新视图（MusicWesternView / ProfileView / NotificationsView）+ 双资源 UI + 通知铃铛 + 花田生长网格；② 数据库**自动迁移**（`_migrate_legacy_columns()` 一次性加 5 个新列：`users.leaves` + `diaries.content/send_to_ai_hole` + `shop_items.cost_currency` + `musics.category`），**不需要手动 ALTER TABLE**；新表 `user_flowers` / `notifications` 由 `init_db()` 自动建表；③ seed **按 title 幂等**自动补齐 6 首西方改编曲目（绿袖子/卡农/致爱丽丝/月光奏鸣曲/天鹅湖/昨日重现），老库重启即生效；④ pre-commit 5 项 checklist 正式化（Pydantic Out / `_migrate_legacy_columns` / `constants.py` / `.env.example` / README+HANDOFF 速查表）。关键词 `双资源` / `露水` / `落叶` / `UserFlower` / `Notification` / `ProfileView` / `古琴弹西洋曲谱` / `send_to_ai_hole` / `树洞` / `漂流瓶社交` / `琴音疗心` / `pre-commit 5 项` 在 6 份文档中都要出现。
+
 ---
 
 ## 前端构建（v2.0 Vue 3 重构后必做，所有部署方式通用）
@@ -531,8 +533,17 @@ curl -I http://127.0.0.1:5000/static/css/style.css    # 200
 curl -I http://127.0.0.1:5000/static/audio/gong.mp3   # 200
 
 # 3. 公开 API
-curl http://127.0.0.1:5000/api/music | head           # 16 首曲
-curl http://127.0.0.1:5000/api/garden/shop | head     # 11 件商品
+curl http://127.0.0.1:5000/api/music | head           # v2.3 起含 6 首西方改编，共 22 首（16 classic + 6 western）
+curl http://127.0.0.1:5000/api/music?category=western | head   # v2.3 加：仅 6 首西方改编
+curl http://127.0.0.1:5000/api/garden/shop | head     # 11 件商品（含 cost_currency 字段）
+
+# 3b. v2.3 新路由（无需登录也能拿 200 / 302）
+curl -I http://127.0.0.1:5000/music                  # 200（琴音疗心顶级路由）
+curl -I http://127.0.0.1:5000/music/western          # 200（古琴弹西洋曲谱子菜单）
+curl -I http://127.0.0.1:5000/profile                # 302（未登录跳 /login，requiresAuth 生效）
+curl -I http://127.0.0.1:5000/notifications          # 302（未登录跳 /login，requiresAuth 生效）
+curl -I http://127.0.0.1:5000/api/notifications      # 401 或 200（需登录后访问）
+curl -I http://127.0.0.1:5000/api/admin/stats        # 401（未登录拒绝，符合预期）
 
 # 4. 注册一个测试账号
 curl -X POST http://127.0.0.1:5000/api/auth/register \
@@ -544,7 +555,32 @@ curl -X POST http://127.0.0.1:5000/api/auth/register \
 # http://yourdomain.com
 # 注册 → 听歌 → 写日记 → 打卡 → 兑换
 # 访问 /garden 确认 3D 花田场景加载正常
+# v2.3 加：访问 /music 看琴音疗心板块（5 音卡片 + 古琴弹西洋入口 + AI 选音）
+# v2.3 加：访问 /music/western 看古琴弹西洋曲谱子菜单
+# v2.3 加：登录后访问 /profile 看个人主页 + 双资源条（露水/落叶）
+# v2.3 加：登录后访问 /notifications 看通知列表；顶部 🔔 铃铛显示未读数（60s 轮询）
+# v2.3 加：访问 /garden 看花田生长网格（浇水 / 拾取按钮）
 ```
+
+### v2.3 数据库自动迁移验证
+
+部署后第一次启动时，`init_db()` → `_migrate_legacy_columns()` 会自动给老库加列，无需手动 ALTER TABLE。验证：
+
+```bash
+sqlite3 data/healing.db
+sqlite> .schema users | grep leaves                  # 应看到 leaves INTEGER DEFAULT 0 NOT NULL
+sqlite> .schema diaries | grep -E "content|send_to_ai_hole"
+sqlite> .schema shop_items | grep cost_currency      # 应看到 cost_currency VARCHAR(20) DEFAULT 'dew'
+sqlite> .schema musics | grep category               # 应看到 category VARCHAR(20) DEFAULT 'classic'
+sqlite> .tables                                       # 应看到 user_flowers + notifications 新表
+sqlite> SELECT COUNT(*) FROM musics WHERE category='western';  # 应为 6（西方改编 seed）
+sqlite> .quit
+```
+
+**迁移失败排查**：
+- 若新列不存在 → 检查 `logs/healing.log` 是否有 `_migrate_legacy_columns` 报错
+- 若新表 `user_flowers` / `notifications` 不存在 → `init_db()` 没跑通，检查 `app/models/__init__.py` 是否 import 了 `UserFlower` / `Notification`
+- 修复后重启 `python start.py restart` 即可重跑迁移（已存在的列会跳过，不重复加）
 
 **全部通过 = 部署完成。**
 

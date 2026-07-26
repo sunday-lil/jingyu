@@ -116,10 +116,20 @@ def grant_energy(
 # ─────────────────────────────────────────────────────────────
 
 def exchange_item(db: Session, user: User, item_id: int) -> GardenItem:
-    """用户用能量兑换一个商店物品。"""
+    """用户兑换一个商店物品。
+
+    v2.3 调整：双货币系统。
+    - 花种（item_type=flower）：用 ``leaves``（落叶）兑换。
+    - 装扮（item_type=costume）：用 ``total_energy``（露水）兑换。
+    - 徽章（item_type=badge）：cost=0，自动触发，不在这里走。
+    """
     item = db.get(ShopItem, item_id)
     if item is None:
         raise HTTPException(status_code=404, detail="找不到这件物品")
+
+    # 花种特殊处理：兑换后直接种到屿上花田（不进 garden_items）
+    if item.item_type == "flower":
+        return _exchange_flower_seed(db, user, item)
 
     # 检查是否已持有（对所有物品都检查，包括 cost=0 的徽章）
     existing = (
@@ -131,28 +141,75 @@ def exchange_item(db: Session, user: User, item_id: int) -> GardenItem:
         raise HTTPException(status_code=400, detail="这件你已经拥有啦")
 
     cost = item.cost or 0
-    if cost > 0:
-        if (user.total_energy or 0) < cost:
-            raise HTTPException(status_code=400, detail=f"能量不足，还差 {cost - user.total_energy}")
+    currency = item.cost_currency or "dew"
 
-        # 扣能量 + 写流水
-        record = EnergyRecord(
-            user_id=user.id,
-            amount=-cost,
-            source="exchange",
-            note=f"兑换 {item.name}",
-        )
-        db.add(record)
-        # 同上：显式 UPDATE 避免赋值跨 session 不同步
-        db.query(User).filter(User.id == user.id).update(
-            {User.total_energy: User.total_energy - cost}
-        )
+    if cost > 0:
+        if currency == "leaves":
+            # 落叶兑换（理论上 costume 不会走这里，留作扩展）
+            if (user.leaves or 0) < cost:
+                raise HTTPException(status_code=400, detail=f"落叶不足，还差 {cost - user.leaves}")
+            db.query(User).filter(User.id == user.id).update(
+                {User.leaves: User.leaves - cost}
+            )
+        else:
+            # 露水兑换
+            if (user.total_energy or 0) < cost:
+                raise HTTPException(status_code=400, detail=f"露水不足，还差 {cost - user.total_energy}")
+            record = EnergyRecord(
+                user_id=user.id,
+                amount=-cost,
+                source="exchange",
+                note=f"兑换 {item.name}",
+            )
+            db.add(record)
+            db.query(User).filter(User.id == user.id).update(
+                {User.total_energy: User.total_energy - cost}
+            )
 
     # 写入持有
     garden_item = GardenItem(user_id=user.id, item_id=item_id)
     db.add(garden_item)
     db.flush()
     return garden_item
+
+
+def _exchange_flower_seed(db: Session, user: User, item: ShopItem) -> GardenItem:
+    """兑换花种：扣落叶 → 直接种到 user_flowers 表（stage=seed）。
+
+    返回一个伪 GardenItem 包装（to_dict 包含 flower 信息），前端按需展示。
+    """
+    from app.models.garden import UserFlower, STAGE_SEED
+
+    cost = item.cost or 0
+    if cost > 0:
+        if (user.leaves or 0) < cost:
+            raise HTTPException(status_code=400, detail=f"落叶不足，还差 {cost - user.leaves}")
+        db.query(User).filter(User.id == user.id).update(
+            {User.leaves: User.leaves - cost}
+        )
+
+    # 种下：flower_type 用 item.name（中文花名）作为 key
+    flower = UserFlower(
+        user_id=user.id,
+        flower_type=item.name,
+        stage=STAGE_SEED,
+        watered_count=0,
+    )
+    db.add(flower)
+    db.flush()
+
+    # 返回一个包装对象，前端用 is_flower_seed 字段区分
+    class _FlowerSeedResult:
+        def to_dict(self) -> dict:
+            return {
+                "id": flower.id,
+                "is_flower_seed": True,
+                "flower_type": item.name,
+                "image": item.image,
+                "stage": STAGE_SEED,
+                "planted_at": flower.planted_at.isoformat() if flower.planted_at else None,
+            }
+    return _FlowerSeedResult()
 
 
 # ─────────────────────────────────────────────────────────────

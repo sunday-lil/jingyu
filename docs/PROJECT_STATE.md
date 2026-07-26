@@ -3,7 +3,7 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-25（v2.2.3 移动端响应式 UI + 3D 几何降档 — 三档断点系统（≤768px 手机 / 769-1024px 平板 / ≥1025px 桌面）差异化布局：桌面顶部完整导航、平板紧凑导航、移动端 topbar + 底部 tabbar + 「更多」抽屉；iPhone 16 Safari 底部地址栏用 `100dvh` + `env(safe-area-inset-bottom)` 适配；fullscreen 路由模式隐藏 tabbar 让聊天页占满视口；4 个 3D 组件移动端几何精度降档：HeroScene Lathe/Cylinder 段数 24→16、樱花树递归深度 4→3、花团 Icosahedron detail 2→1；FlowerField 花瓣网格 5×8→4×6、花蕊 Icosahedron detail 2→1、地面圆 64→32、茎圆柱段 6→5；AudioVisualizer 镜像柱 48→32、径向柱 64→32；AmbientBackground 已优化保留）
+**最后更新**：2026-07-25（v2.3 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱 — 10 项大改：① 主界面六大四字名板块（琴音疗心 / 漂流日记 / 情绪日历 / 心语树洞 / 落叶画坊 / 屿上花田）+ 顶部品牌图标 🏝️ 岛屿 emoji；② 双资源系统 `User.total_energy`（露水）+ `User.leaves`（落叶），`ShopItem.cost_currency` 决定扣哪种；③ 花朵生命周期 `UserFlower` 模型 + `flower_service` + `/api/garden/flowers/*` API，5 阶段 seed→sprout→bud→bloom→wilted；④ 通知系统 `Notification` 模型 + `routers/notification.py` + 前端 60s 轮询；⑤ 个人主页 `routers/profile.py` + `views/profile/ProfileView.vue`；⑥ 古琴弹西洋曲谱子菜单 `musics.category` + seed 6 首西方改编 + `/api/music?category=western` + `/music/western` 路由；⑦ 日记明文化 + `send_to_ai_hole` 字段 + 发布选项；⑧ 情绪日历 emoji 与字段对齐修复；⑨ 树洞 🌳 图标 + textarea + 文件式聊天历史 + 留存提示；⑩ 漂流瓶评论返回通知集成）
 
 ---
 
@@ -18,6 +18,7 @@
 | **v2.2.1 start.py 自动构建** | ✅ 完成（已被 v2.2.2 调整） | 2026-07-20，`python start.py` 默认 dist 未构建时自动 `npm install + build` 走生产模式；新增 `--dev` 参数。**2026-07-25 v2.2.2 起默认行为变更**，详见下行 |
 | **v2.2.2 start.py 默认应用模式** | ✅ 完成 | 2026-07-25，`python start.py` 默认行为回滚为**应用/开发模式**（Vite :5000 HMR + FastAPI :5001 API 一起起），自动检测 `frontend/node_modules` 不存在则 `npm install`；新增 `--prod` 参数显式生产模式；`--dev` 改为兼容别名；移除 v2.2.1 的 `_ensure_dist_or_dev()` 自动 build 逻辑，详见 §2 |
 | **v2.2.3 移动端响应式 UI + 3D 几何降档** | ✅ 完成 | 2026-07-25，三档断点系统差异化布局（手机/平板/桌面）+ iOS Safari `dvh` + safe-area 适配 + fullscreen 路由模式 + 4 个 3D 组件移动端几何精度降档（详见 §2） |
+| **v2.3 六大四字名模块 + 双资源 + 花朵生命周期 + 通知 + 个人主页 + 西方曲谱** | ✅ 完成 | 2026-07-25，10 项大改：六大四字名板块 + 双资源（露水/落叶）+ UserFlower + Notification + ProfileView + 古琴弹西洋曲谱子菜单 + 日记调整 + 情绪日历对齐 + 树洞改进 + 漂流瓶评论返回通知，详见 §2 |
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
 | **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 / **3D + 伪 3D 视觉增强** — 全部 ✅ |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
@@ -32,6 +33,80 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-25（v2.3）— 六大四字名板块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱
+
+- [x] 起因：用户要求按治愈系调性对模块重命名 + 双资源经济 + 花朵生命周期 + 通知 + 个人主页 + 西方曲谱子菜单 + 日记调整 + 情绪日历对齐修复 + 树洞改进 + 漂流瓶评论返回通知（共 10 项大改）
+- [x] **改动 1：主界面六大四字名板块**（替换原底部「五音疗愈」板块）+ 顶部品牌图标更新：
+  - 六大板块 + 2 个辅助入口（共 8 项 navItems）：琴音疗心（`/music` 🎵）/ 漂流日记（`/diary` 📖）/ 拾瓶（`/diary/pick` 🍶，无漂流瓶 emoji 故保留原香槟瓶）/ 情绪日历（`/calendar` 🌙）/ 心语树洞（`/ai-chat` 🌳）/ 落叶画坊（`/shop` 🍂）/ 屿上花田（`/garden` 🌸）/ 我的（`/profile` 👤）
+  - [AppLayout.vue](../../frontend/src/components/AppLayout.vue) 顶部品牌图标由 🌿 草本更新为 🏝️ 岛屿 emoji；桌面/平板/移动三档导航同步四字短标签
+  - 移动端 tabbar 4 项固定（静屿 / 漂流日记 / 情绪日历 / 我的）+ 中央「更多」抽屉（琴音疗心 / 拾瓶 / 心语树洞 / 落叶画坊 / 屿上花田）
+- [x] **改动 2：双资源系统（露水 + 落叶）** + 数据库迁移 + seed 更新：
+  - 模型：[app/models/user.py](../../app/models/user.py) 保留 `total_energy`（露水）+ 新增 `leaves: int = 0`（落叶）；[app/models/garden.py](../../app/models/garden.py) `ShopItem` 加 `cost_currency: str = "dew"`（dew 露水 / leaves 落叶）
+  - 迁移：[app/database.py](../../app/database.py) `_migrate_legacy_columns()` 加 `ALTER TABLE users ADD COLUMN leaves INTEGER DEFAULT 0 NOT NULL` + `ALTER TABLE shop_items ADD COLUMN cost_currency VARCHAR(20) DEFAULT 'dew' NOT NULL`
+  - 常量：[app/utils/constants.py](../../app/utils/constants.py) `DEFAULT_SHOP_ITEMS` 11 件物品全部带 `cost_currency`：5 件花种 = `leaves`，3 件装扮 = `dew`，3 件徽章 = `dew`（自动触发）
+  - seed：[app/seed.py](../../app/seed.py) `seed_shop_items()` 对老库回填 `UPDATE shop_items SET cost_currency='leaves' WHERE item_type='flower' AND cost_currency='dew'`
+  - **资源哲学**：露水（不可兑换）= 听歌 / 写日记 / 打卡获得，用于浇灌已播种花朵；落叶 = 花朵枯萎后拾取获得，用于在落叶画坊兑换花种（寓意「落叶归根能施肥种花」）
+  - 前端：[GardenView.vue](../../frontend/src/views/garden/GardenView.vue) / [ShopView.vue](../../frontend/src/views/garden/ShopView.vue) / [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue) 双资源条同步显示
+- [x] **改动 3：花朵生命周期**（新模型 + service + API + 前端）：
+  - 模型：[app/models/garden.py](../../app/models/garden.py) 新增 `UserFlower`（id / user_id / flower_type / stage / watered_count / planted_at / last_watered_at / bloom_at / wilted_at）+ 5 阶段常量 `STAGE_SEED/STAGE_SPROUT/STAGE_BUD/STAGE_BLOOM/STAGE_WILTED` + `WATER_TO_NEXT_STAGE` 浇水阈值 + `WILT_DAYS_AFTER_BLOOM = 7`
+  - Service：[app/services/flower_service.py](../../app/services/flower_service.py) — `list_my_flowers` / `water_flower` / `collect_wilted_leaves` / `get_flower_detail`；阶段 `seed → sprout → bud → bloom → wilted`，每浇 1 次消耗 1 露水，达阈值升级；盛开 7 天未浇水 lazy 标记枯萎；拾取枯花 → +2 落叶 → 删除该花
+  - API：[app/routers/garden.py](../../app/routers/garden.py) 新增 `GET /api/garden/flowers` / `GET /api/garden/flowers/{id}` / `POST /api/garden/flowers/{id}/water` / `POST /api/garden/flowers/{id}/collect`
+  - 前端：[GardenView.vue](../../frontend/src/views/garden/GardenView.vue) `STAGE_INFO` 映射（emoji/label/progress/desc）+ 浇水按钮（消耗 1 露水）+ 拾取按钮（枯花 → 落叶）+ 移动端单列网格
+- [x] **改动 4：通知系统**（新模型 + router + 前端轮询）：
+  - 模型：[app/models/notification.py](../../app/models/notification.py) 新增（id / user_id / type / content / related_id / is_read / created_at）；类型：`encouragement`（漂流瓶评论返回）/ `system`（预留）
+  - Router：[app/routers/notification.py](../../app/routers/notification.py)（**单数形式**）— `GET /api/notifications` / `GET /api/notifications/unread` / `POST /api/notifications/{id}/read` / `POST /api/notifications/read-all`
+  - 触发点：漂流瓶被评论 → 写 `Notification(type='encouragement', user_id=作者, related_id=diary_id)`，作者下次进入应用看到未读提醒
+  - 前端：[AppLayout.vue](../../frontend/src/components/AppLayout.vue) 顶部 + 移动端 topbar 加 🔔 铃铛 + 红点未读数；`onMounted` 起 60s 轮询 `/api/notifications/unread`；点击跳 `/notifications` 页（非下拉）
+  - 页面：[NotificationsView.vue](../../frontend/src/views/notification/NotificationsView.vue) 列表 + 未读高亮 + 单条已读 + 全部已读
+- [x] **改动 5：个人主页**（新 router + 前端视图）：
+  - Router：[app/routers/profile.py](../../app/routers/profile.py) — `GET /api/profile`（自己）/ `GET /api/profile/stats`（轻量统计）/ `GET /api/profile/{user_id}`（他人，仅公开信息）
+  - 统计字段：`diary_count` / `public_diary_count` / `checkin_count` / `listen_count` / `flower_count` / `garden_item_count` / `received_encouragement_count` / `streak`（连续打卡）
+  - 前端：[frontend/src/views/profile/ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue) — 卡片式布局：🏝️ 头像 + 昵称 + 在岛天数 + 双资源条（露水/落叶）+ 6 统计卡（日记/打卡/听曲/花朵/收到鼓励/岛上物件）+ 快捷入口
+  - 路由：`/profile` + `/notifications` 加入 `requiresAuth: true` 守卫
+- [x] **改动 6：古琴弹西洋曲谱子菜单**（数据库迁移 + seed 幂等 + API 参数 + 前端路由）：
+  - 模型：[app/models/music.py](../../app/models/music.py) 加 `category: str = "classic"`（classic 五音古曲 / western 古琴弹西洋）
+  - 迁移：`_migrate_legacy_columns()` 加 `ALTER TABLE musics ADD COLUMN category VARCHAR(20) DEFAULT 'classic' NOT NULL`
+  - 常量：[app/utils/constants.py](../../app/utils/constants.py) 新增 `class MusicCategory(str, Enum)`：`CLASSIC = "classic"` / `WESTERN = "western"`
+  - seed：[app/seed.py](../../app/seed.py) `SEED_MUSIC` 加 6 首西方改编——绿袖子（yu）/ 卡农（gong）/ 致爱丽丝（jue）/ 月光奏鸣曲（yu）/ 天鹅湖（shang）/ 昨日重现（zhi）；**`seed_music()` 改为按 title 幂等**（不再「表空才插」），老库重启即自动补齐 western 曲目
+  - API：[app/routers/music.py](../../app/routers/music.py) `GET /api/music?category=western` 加 query 参数过滤
+  - 前端：[MusicListView.vue](../../frontend/src/views/music/MusicListView.vue) 底部加「古琴弹西洋」入口卡片；新视图 [MusicWesternView.vue](../../frontend/src/views/music/MusicWesternView.vue) 按五音分组展示 + 内置播放器 + AudioVisualizer
+  - 路由：[frontend/src/router/index.js](../../frontend/src/router/index.js) 加 `/music/western`（**必须放在 `/music/:yin` 前面**避免动态段捕获）+ `/profile` + `/notifications`
+- [x] **改动 7：日记调整**（明文化 + 发布选项 + 前端）：
+  - 模型：[app/models/diary.py](../../app/models/diary.py) `content: Text` 明文（v2.3 起替代 `content_encrypted`，移除密码保护）；新增 `send_to_ai_hole: bool = False`；保留 `is_public` + `mood_type`
+  - 迁移：`_migrate_legacy_columns()` 加 `ALTER TABLE diaries ADD COLUMN content TEXT NOT NULL DEFAULT ''` + `ADD COLUMN send_to_ai_hole BOOLEAN DEFAULT 0 NOT NULL`
+  - `User.encryption_salt` 保留仅为兼容老库（v2.3 起不再使用）
+  - 发布选项（前端 radio）：放入漂流瓶（`is_public=True`，公开可见 + 允许评论）/ 不放入漂流瓶（`is_public=False`，仅自己可见 + 可选 `send_to_ai_hole=True` 同步至心语树洞）
+  - 前端：[DiaryWriteView.vue](../../frontend/src/views/diary/DiaryWriteView.vue) 移除 emoji 选择器 + 移除密码 UI + 加发布选项 radio + 加 SVG 海浪动画（日记海岸主题）
+- [x] **改动 8：情绪日历对齐修复**（前后端字段一致 + emoji 完整显示）：
+  - 修复：前端 `MoodCalendarView.vue` 原用 `mood_type` + `date`，后端 `MoodCheckin` 用 `mood_emoji` + `check_date`；统一改为后端字段名（前端兼容旧字段）
+  - [app/utils/constants.py](../../app/utils/constants.py) `MOOD_INFO` 7 种心情：ecstatic 🤩 / happy 😊 / calm 😌 / tired 😪 / anxious 😰 / angry 😠 / sad 😢
+  - 前端 `MOOD_INFO` 同步 7 种 + 日历加心情图例（legend）解决「emoji 显示不全」问题
+- [x] **改动 9：树洞改进**（统一图标 + 文本输入 + 文件式聊天历史 + 留存提示）：
+  - 统一图标：AIChatView + AppLayout 导航 + tabbar 全部用 🌳 树形 emoji（替代原 🌿）
+  - 文本输入：[AIChatView.vue](../../frontend/src/views/ai/AIChatView.vue) 加 `<textarea>` 多行输入框（原仅单行 input）
+  - 文件式聊天历史：[app/services/chat_history_service.py](../../app/services/chat_history_service.py) 新增——存于 `data/chat_history/<user_id>/<conversation_id>.json`；`create_conversation` / `load_messages` / `append_message` / `list_conversations` / `delete_conversation` / `get_or_create_conversation`；单对话上限 100 条；每次 AI 调用前加载历史
+  - 留存提示：每次聊天结束时树洞询问用户是否保留记录；选「不保留」则 `delete_conversation` 删文件
+  - 上下文增强：树洞根据用户当日 `MoodCheckin.mood_emoji` + 当日 `Diary.content`（若 `send_to_ai_hole=True`）提供针对性聊天和安慰
+- [x] **改动 10：漂流瓶评论返回 + 通知集成**：
+  - 读者在拾瓶后留鼓励语 → 写 `Encouragement` + 同步写 `Notification(type='encouragement', user_id=作者, related_id=diary_id)`
+  - 作者顶部 🔔 红点 + 60s 轮询 `/api/notifications/unread` → 点击跳 `/notifications` → 单条已读 → 跳回原日记
+- [x] **数据库迁移**（`_migrate_legacy_columns()` 一次性自动加列 + `init_db()` 建新表）：
+  - `users` 加 `leaves INTEGER DEFAULT 0 NOT NULL`
+  - `diaries` 加 `content TEXT NOT NULL DEFAULT ''` + `send_to_ai_hole BOOLEAN DEFAULT 0 NOT NULL`
+  - `shop_items` 加 `cost_currency VARCHAR(20) DEFAULT 'dew' NOT NULL`
+  - `musics` 加 `category VARCHAR(20) DEFAULT 'classic' NOT NULL`
+  - 新表 `user_flowers` / `notifications` 由 `init_db()` 自动建表（Base.metadata.create_all）
+- [x] 文档同步（Iron Rule）：6 份文档同步更新 — README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT
+- [x] **Smoke test 结果**（2026-07-25 实测）：
+  - `python -m py_compile` 9 个新/改文件 ✅ 通过
+  - `python -c "import app.main"` ✅ IMPORT OK，69 routes total，55 in OpenAPI
+  - `npm run build` ✅ 通过：206 modules，MusicWesternView 6.61KB / ProfileView 9.59KB / NotificationsView 4.18KB / three-vendor 719.84KB
+  - `GET /api/music?category=western` ✅ 返回 6 首西方改编曲目（绿袖子/卡农/致爱丽丝/月光奏鸣曲/天鹅湖/昨日重现）
+  - `GET /api/notifications` / `/api/notifications/unread` / `/api/profile` / `/api/profile/stats` / `/api/garden/flowers` ✅ 全部 200/401（守卫生效）
+  - `GET /` ✅ SPA fallback 返回 dist/index.html（含 `viewport-fit=cover` meta + `<div id="app">` 挂载点）
+  - `_migrate_legacy_columns()` ✅ 跑通（老库自动加 5 个新列 + 2 张新表）
+  - seed_music 幂等 ✅（重启后自动补齐 6 首西方曲目，已有曲目不重复插入）
 
 ### 2026-07-25（v2.2.3）— 移动端响应式 UI + 3D 几何降档
 

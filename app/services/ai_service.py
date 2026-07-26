@@ -162,19 +162,38 @@ def _call_nvidia(
 # 上层业务方法
 # ─────────────────────────────────────────────────────────────
 
-def chat(messages: List[dict]) -> str:
+def chat(
+    messages: List[dict],
+    today_mood: Optional[str] = None,
+    today_diary: Optional[str] = None,
+) -> str:
     """树洞多轮对话。
 
     Args:
         messages: OpenAI 格式 [{role, content}, ...]，前端传最近几轮
+        today_mood: 用户今日心情标签（来自情绪日历）
+        today_diary: 用户今日日记内容片段（来自漂流日记同步）
     Returns:
         AI 回复文本
+
+    v2.3：若有 today_mood / today_diary，注入到 system prompt 末尾作为上下文，
+    让树洞提供针对性陪伴（不直接复述，而是温柔接住）。
     """
     # 最后一条是当前用户输入，前面的作为 history
     history = messages[:-1] if len(messages) > 1 else None
     user_content = messages[-1]["content"] if messages else ""
+
+    system_prompt = SYSTEM_PROMPT_TREEHOLE
+    context_parts = []
+    if today_mood:
+        context_parts.append(f"用户今日心情是：{today_mood}。请结合心情给予陪伴。")
+    if today_diary:
+        context_parts.append(f"用户今日日记里写了一句：「{today_diary}」。请温柔接住，不要直接复述。")
+    if context_parts:
+        system_prompt = system_prompt + "\n\n【用户今日背景】\n" + "\n".join(context_parts)
+
     return _call_nvidia(
-        SYSTEM_PROMPT_TREEHOLE,
+        system_prompt,
         user_content,
         max_tokens=400,
         temperature=0.75,

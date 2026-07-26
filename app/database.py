@@ -68,6 +68,11 @@ def _migrate_legacy_columns() -> None:
                 "ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0 NOT NULL"
             ))
             logger.info("[MIGRATE] users.is_admin 已添加")
+        if "leaves" not in cols:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN leaves INTEGER DEFAULT 0 NOT NULL"
+            ))
+            logger.info("[MIGRATE] users.leaves 已添加（落叶资源，v2.3）")
 
     # energy_records 表（2026-07-20 加 music_id，用于同歌 24h 去重）
     if insp.has_table("energy_records"):
@@ -78,6 +83,45 @@ def _migrate_legacy_columns() -> None:
                     "ALTER TABLE energy_records ADD COLUMN music_id INTEGER"
                 ))
                 logger.info("[MIGRATE] energy_records.music_id 已添加")
+
+    # diaries 表（v2.3：改明文 + 发布选项）
+    if insp.has_table("diaries"):
+        d_cols = {c["name"] for c in insp.get_columns("diaries")}
+        with engine.begin() as conn:
+            if "content" not in d_cols:
+                conn.execute(text(
+                    "ALTER TABLE diaries ADD COLUMN content TEXT NOT NULL DEFAULT ''"
+                ))
+                logger.info("[MIGRATE] diaries.content 已添加（明文，v2.3）")
+            if "send_to_ai_hole" not in d_cols:
+                conn.execute(text(
+                    "ALTER TABLE diaries ADD COLUMN send_to_ai_hole BOOLEAN DEFAULT 0 NOT NULL"
+                ))
+                logger.info("[MIGRATE] diaries.send_to_ai_hole 已添加（v2.3）")
+            # content_encrypted 老库是 NOT NULL，放宽为 NULL 兼容新数据不写密文
+            if "content_encrypted" in d_cols:
+                # SQLite 不支持 ALTER COLUMN，只能靠新表；这里仅记录，新代码不再写该列
+                pass
+
+    # shop_items 表（v2.3：加 cost_currency 区分露水/落叶）
+    if insp.has_table("shop_items"):
+        s_cols = {c["name"] for c in insp.get_columns("shop_items")}
+        with engine.begin() as conn:
+            if "cost_currency" not in s_cols:
+                conn.execute(text(
+                    "ALTER TABLE shop_items ADD COLUMN cost_currency VARCHAR(20) DEFAULT 'dew' NOT NULL"
+                ))
+                logger.info("[MIGRATE] shop_items.cost_currency 已添加（v2.3）")
+
+    # musics 表（v2.3：加 category 区分五音古曲 / 古琴弹西洋）
+    if insp.has_table("musics"):
+        m_cols = {c["name"] for c in insp.get_columns("musics")}
+        with engine.begin() as conn:
+            if "category" not in m_cols:
+                conn.execute(text(
+                    "ALTER TABLE musics ADD COLUMN category VARCHAR(20) DEFAULT 'classic' NOT NULL"
+                ))
+                logger.info("[MIGRATE] musics.category 已添加（v2.3）")
 
 
 def init_db() -> None:

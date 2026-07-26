@@ -12,9 +12,12 @@ from app.database import Base
 class Diary(Base):
     """漂流瓶日记表。
 
-    - ``content_encrypted``：Fernet 密文（base64 字符串）。**明文绝不落库**。
+    v2.3 调整：
+    - ``content``：明文日记内容（v2.3 起替代 content_encrypted，移除密码保护）。
+    - ``content_encrypted``：遗留字段（v2.3 前的 Fernet 密文），保留只为兼容老库，新数据不再写入。
     - ``mood_type``：关联心情枚举字符串（也可为空）。
-    - ``is_public``：是否允许被陌生人拾取。
+    - ``is_public``：是否放入漂流瓶（公开可见，允许所有人查看和评论）。
+    - ``send_to_ai_hole``：不放入漂流瓶时，是否同步至树洞（仅自己可见 + AI 对话）。
     """
 
     __tablename__ = "diaries"
@@ -23,9 +26,11 @@ class Diary(Base):
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    content_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    content_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     mood_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    send_to_ai_hole: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.current_timestamp(), nullable=False, index=True
     )
