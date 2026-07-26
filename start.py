@@ -1,22 +1,20 @@
 """静屿 — 一键启动脚本（前后端一起起来）。
 
 >>> 一句话用法：
-    python start.py                # 后台启动：默认应用模式（Vite :5000 + FastAPI :5001 一起起，HMR 热更新）
-    python start.py --prod         # 显式生产模式（FastAPI :5000 单进程；v2.3.1 起源码更新会自动重建 dist）
+    python start.py                # 后台启动：默认生产模式（自动构建前端 + FastAPI :5000）
+    python start.py --dev          # 应用/开发模式（Vite :5000 HMR + FastAPI :5001，本地开发用）
     python start.py fg             # 前台运行（systemd / 调试用，关掉终端就停）
     python start.py --init-db      # 启动前重置数据库
 
 --- 全部子命令：
-    python start.py                # 后台启动（默认 = 应用/开发模式）：Vite 占 :5000 + FastAPI 退 :5001，前后端一起起
+    python start.py                # 后台启动（默认 = 生产模式）：自动构建前端（如果 static/dist/ 不存在）+ FastAPI :5000
     python start.py start          # 同上
-    python start.py --prod         # 显式生产模式：FastAPI 监听 :5000
-                                   #   v2.3.1 起：检测到 frontend/src/ 比 static/dist/ 新时自动重建（需 Node.js）
-                                   #   FileZilla 上传新代码后直接 restart 即可，无需手动 build
-    python start.py --dev          # 兼容别名，等同默认行为（应用/开发模式）
+    python start.py --prod         # 显式生产模式（默认就是生产模式，加不加效果一样）
+    python start.py --dev          # 应用/开发模式：Vite :5000（HMR）+ FastAPI :5001，本地开发用
     python start.py stop           # 优雅停止（同时停 FastAPI + Vite）
     python start.py restart        # 重启
     python start.py status         # 查看状态
-    python start.py fg             # 前台运行（systemd / 调试用，关掉终端就停；fg 默认仍是应用模式，可加 --prod 切生产）
+    python start.py fg             # 前台运行（systemd / 调试用，关掉终端就停；fg 默认仍是生产模式，可加 --dev 切应用模式）
     python start.py build          # 仅构建前端到 static/dist/（不启动服务）
 
 --- 架构说明（v2.0 Vue 3 重构 + v2.0.1 端口策略 + v2.2.2 默认应用模式）：
@@ -214,83 +212,6 @@ def is_dist_built() -> bool:
     return DIST_INDEX.exists()
 
 
-# 哈希标记文件：构建完成后记录当时 frontend 源码的内容哈希
-DIST_HASH_FILE = ROOT / "static" / "dist" / ".built_hash"
-
-
-def _compute_src_hash() -> str:
-    """计算 frontend 源码 + 关键配置文件的内容哈希（MD5）。
-
-    不依赖 mtime / .git，只看文件内容。FileZilla 上传新代码后
-    内容变了 → 哈希变 → 触发自动重建。
-
-    哈希范围：
-      - frontend/package.json / vite.config.js / tailwind.config.js / postcss.config.js
-      - frontend/src/ 下所有 .vue / .js / .ts / .css / .json 文件
-      - 用「相对路径 + 文件内容」一起哈希（重命名/新增/删除都能检测）
-    """
-    import hashlib
-    h = hashlib.md5()
-
-    # 关键配置文件
-    key_files = [
-        FRONTEND_DIR / "package.json",
-        FRONTEND_DIR / "vite.config.js",
-        FRONTEND_DIR / "tailwind.config.js",
-        FRONTEND_DIR / "postcss.config.js",
-    ]
-    for f in key_files:
-        if f.exists():
-            h.update(str(f.relative_to(ROOT)).encode("utf-8"))
-            h.update(b"\x00")
-            h.update(f.read_bytes())
-            h.update(b"\x01")
-
-    # frontend/src/ 下所有源码文件（sorted 保证跨平台一致）
-    src_dir = FRONTEND_DIR / "src"
-    if src_dir.exists():
-        files = []
-        for pattern in ("**/*.vue", "**/*.js", "**/*.ts", "**/*.css", "**/*.json"):
-            files.extend(src_dir.glob(pattern))
-        for f in sorted(files, key=lambda x: str(x)):
-            if f.is_file():
-                h.update(str(f.relative_to(ROOT)).encode("utf-8"))
-                h.update(b"\x00")
-                h.update(f.read_bytes())
-                h.update(b"\x01")
-
-    return h.hexdigest()
-
-
-def _is_dist_stale() -> bool:
-    """检测 dist 是否过期（frontend 源码内容哈希变化）。
-
-    不依赖 mtime / .git，只看文件内容：
-      - dist 不存在 → True
-      - .built_hash 标记文件不存在 → True（首次或老 dist）
-      - 当前源码哈希 != .built_hash 里存的哈希 → True
-      - 哈希一致 → False（无需重建）
-
-    FileZilla 上传新代码 → 内容变 → 哈希变 → 自动重建
-    没改前端 → 哈希一致 → 跳过构建，秒启
-    """
-    if not DIST_INDEX.exists():
-        return True
-    if not DIST_HASH_FILE.exists():
-        return True  # 老构建没有标记文件，强制重建一次
-    try:
-        stored = DIST_HASH_FILE.read_text(encoding="utf-8").strip()
-    except OSError:
-        return True
-    return stored != _compute_src_hash()
-
-
-def _save_dist_hash() -> None:
-    """构建完成后保存当前源码哈希到 static/dist/.built_hash。"""
-    DIST_HASH_FILE.parent.mkdir(parents=True, exist_ok=True)
-    DIST_HASH_FILE.write_text(_compute_src_hash(), encoding="utf-8")
-
-
 def _check_node_available() -> tuple[bool, str]:
     """检测 node + npm 是否可用。返回 (是否可用, 版本信息字符串)。"""
     npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
@@ -340,32 +261,28 @@ def _ensure_node_modules() -> bool:
 
 
 def _ensure_dist_for_prod() -> None:
-    """生产模式启动前的 dist 检查 + 自动构建（v2.3.1 增强）。
+    """生产模式启动前的 dist 检查 + 自动构建。
 
-    - dist 已构建且最新 → 通过
-    - dist 不存在 OR 源码新于 dist → 自动构建（需 Node.js）
-    - Node.js 不可用且 dist 不存在 → 报错退出
+    逻辑很简单：static/dist/index.html 存在 → 直接启动；不存在 → 自动构建。
 
-    这样用户在服务器上用 FileZilla 上传新代码后，直接跑
-    `python start.py --prod restart` 就能自动重建前端 + 启动服务，
-    不需要手动跑 `python start.py build`。
+    服务器部署流程：
+      1. FileZilla 上传代码（static/dist/ 不上传，被 .gitignore 排除）
+      2. python start.py → 检测到 dist 不存在 → 自动 npm install + npm run build
+      3. 构建完启动 FastAPI :5000
+
+    想强制重建？删除 static/dist/ 目录再启动，或跑 `python start.py build`。
     """
-    if is_dist_built() and not _is_dist_stale():
-        return  # dist 已构建且最新
+    if is_dist_built():
+        return  # dist 已存在，直接启动
 
-    # 需要构建
-    if not is_dist_built():
-        print("[INFO] 生产模式（--prod）：static/dist/ 未构建，尝试自动构建...")
-    else:
-        print("[INFO] 生产模式（--prod）：检测到前端源码已更新，自动重建 dist...")
+    print("[INFO] static/dist/ 不存在，自动构建前端...")
 
     node_ok, node_ver = _check_node_available()
     if not node_ok:
         print("[FAIL] 需要构建前端但 Node.js 不可用")
         print("       解决方案（任选其一）：")
-        print("         A. 在服务器上装 Node.js 18+，再跑 python start.py --prod restart")
+        print("         A. 在服务器上装 Node.js 18+，再跑 python start.py")
         print("         B. 在本地构建好 dist 后，把 static/dist/ 整个目录上传到服务器")
-        print("         C. 不加 --prod 走默认应用模式：python start.py（需 Node.js）")
         sys.exit(1)
 
     print(f"[INFO] 检测到 {node_ver}，开始构建前端...")
@@ -451,8 +368,6 @@ def build_frontend() -> bool:
     if not DIST_INDEX.exists():
         print(f"[FAIL] 构建完成但 {DIST_INDEX} 不存在")
         return False
-    # 保存源码哈希，下次启动时 _is_dist_stale() 用它判断是否需要重建
-    _save_dist_hash()
     print(f"[OK] 前端构建完成 → {DIST_INDEX}")
     return True
 
