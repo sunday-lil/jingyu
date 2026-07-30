@@ -3,6 +3,10 @@
 > 写给接手这个项目的下一个 AI（Cursor / Copilot / Devin / 任何 Agent）。
 > 读这一份文件 ≈ 读完整套文档。它是项目元信息 + 关键决策 + 踩坑清单的汇总。
 
+> 🔒 **2026-07-28 v2.3.2 start.py 默认生产模式 + 自动构建简化**：`python start.py` 默认行为再次变更——**默认走生产模式**（FastAPI :5000 单进程，前后端不再一起起），需 `static/dist/` 已构建（不存在则自动 `npm install + npm run build`）。**自动构建仅检测 `static/dist/index.html` 存在性**（`dist 存在检测`），不再比较 `frontend/src/` 与 `static/dist/` 文件修改时间。**开发需显式 `python start.py --dev`**（Vite :5000 HMR + FastAPI :5001 API，前后端一起起的「应用模式」）。`--prod` 改为兼容别名（默认就是生产模式，加不加效果一样）。**服务器部署 2 步**：① 上传代码 ② `python start.py`（首次自动构建，之后秒启，FastAPI 单进程 :5000）。本次回滚 v2.2.2「默认应用模式」决策，理由：服务器端口代理已配好 :5000 不能动，应用模式会让 Vite 占 :5000 破坏代理。关键词 `默认生产模式` / `dist 存在检测` / `自动构建` / `--dev` / `应用模式` / `v2.3.2` 在 6 份文档中都要出现。
+
+> 🔒 **2026-07-30 v2.3.3 Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）**：解决 Safari / iOS 用户反馈的两类问题。① **Safari 主页 3D 不渲染**：根因包括 `hasWebGL()` 检测 bug、iOS Safari 切后台→前台后 WebGL 上下文丢失无恢复逻辑、老 iOS 缺 `EXT_color_buffer_half_float` 扩展、Bloom + 高分辨率 PMREM 内存超限。修复：**`hasWebGL` 重写**（区分 WebGL1/2 + 检测扩展 + max texture size），新增 `getWebGLCaps()` / `isSafari()` / `isIOS()` 工具函数；[frontend/src/utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听，上下文丢失时保存场景状态、恢复时重建；[HeroScene.vue](../../frontend/src/components/HeroScene.vue) 实现 **iOS 降级**策略（**Bloom 降级**：iOS 关闭 UnrealBloomPass；**PMREM 降级**：iOS PMREM 分辨率 256→128、阴影 2048→1024、dpr 上限 2→1.5；老 iOS 缺扩展时关闭 PMREM + Bloom）。② **Safari emoji 显示不一致**：根因为跨平台 emoji 字体风格差异（Apple Color Emoji vs 系统 emoji）。修复：新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件，使用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**；替换 [AppLayout.vue](../../frontend/src/components/AppLayout.vue)（品牌 / 导航 / 通知 / 资源）+ [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（头像 / 通知 / 资源 / 统计 / 快捷入口 / 花朵阶段）所有 emoji。关键词 `Safari 兼容` / `WebGL 上下文丢失` / `webglcontextlost` / `iOS 降级` / `EmojiIcon` / `Iconify` / `twemoji` / `SVG emoji` / `跨浏览器一致` / `hasWebGL 重写` / `getWebGLCaps` / `isSafari` / `isIOS` / `Bloom 降级` / `PMREM 降级` / `v2.3.3` 在 6 份文档中都要出现。
+
 ---
 
 ## 0. 你正在接手什么
@@ -11,7 +15,7 @@
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 强隐私 / 轻运营
 **代码体量**：约 2 500 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.3 — 2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱（详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
+**当前阶段**：v2.3.3 — 2026-07-30 Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致，详见 §4 Phase 8）。前一阶段 v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱，详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
 
 ---
 
@@ -22,23 +26,25 @@ cd c:\Users\Administrator\Desktop\webwrold
 pip install -r requirements.txt
 python start.py
 # 浏览器自动打开 http://127.0.0.1:5000
+# v2.3.2 起：默认 = 生产模式（FastAPI :5000 单进程），dist 不存在则自动 npm install + npm run build
 ```
 
 服务管理：
 ```bash
-python start.py start     # 后台启动（默认 = 应用模式，前后端一起起：Vite :5000 + FastAPI :5001）
-python start.py --prod    # 后台启动（显式生产模式，FastAPI :5000 单进程，需 dist 已构建）
+python start.py start     # 后台启动（v2.3.2 起默认 = 生产模式，FastAPI :5000 单进程，dist 不存在则自动构建）
+python start.py --prod    # 后台启动（兼容别名，默认就是生产模式，加不加效果一样）
+python start.py --dev     # 应用/开发模式（Vite :5000 HMR + FastAPI :5001，前后端一起起，本地开发用）
 python start.py stop      # 停止（同时停 FastAPI + Vite）
-python start.py restart   # 重启（默认应用模式）
-python start.py status    # 查 PID + 端口（显示 FastAPI / Vite 两个进程状态）
-python start.py fg        # 前台运行 FastAPI（systemd / 调试；fg 默认应用模式，可加 --prod 切生产）
+python start.py restart   # 重启（默认生产模式）
+python start.py status    # 查 PID + 端口（显示 FastAPI / Vite 进程状态）
+python start.py fg        # 前台运行 FastAPI（systemd / 调试；fg 默认生产模式，可加 --dev 切应用模式）
 python start.py build     # 构建前端到 static/dist/（自动 npm install + npm run build）
 python start.py --init-db # 启动前重置数据库
 ```
 
 > 📌 **端口策略**（用户始终访问 :5000，由 `start.py` 自动切换）：
-> - **应用模式**（默认，v2.2.2 起）：Vite 监听 :5000（用户入口，HMR 热更新）+ FastAPI 改听 :5001（API 后端，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001；自动检测 `frontend/node_modules` 不存在则 `npm install`（约 7 分钟，仅首次）
-> - **生产模式**（`--prod`）：FastAPI 监听 :5000（从 `.env` 读 `QI_PORT`），Vite 不运行，需 `static/dist/` 已构建（未构建报错退出，提示先 `python start.py build`）
+> - **生产模式**（默认，v2.3.2 起）：FastAPI 监听 :5000（从 `.env` 读 `QI_PORT`），Vite 不运行，需 `static/dist/` 已构建；**`dist 存在检测`**——`static/dist/index.html` 不存在则自动 `npm install + npm run build`（`自动构建`，需 Node.js 18+）；**服务器部署 2 步**：① 上传代码 ② `python start.py`（首次自动构建，之后秒启）
+> - **应用模式**（`--dev`）：Vite 监听 :5000（用户入口，HMR 热更新）+ FastAPI 改听 :5001（API 后端，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001；自动检测 `frontend/node_modules` 不存在则 `npm install`（约 7 分钟，仅首次）
 > - 详见 [HANDOFF §5.9](#59-为什么开发模式让-vite-占5000-fastapi-改50012026-07-19-加) 决策 + [§6.16](#616-fastapi-代理转发-vite-内部路径含特殊字符失败2026-07-19-加) 踩坑
 
 **秘密后台**：`http://127.0.0.1:5000/admin`（默认入口）
@@ -50,20 +56,22 @@ python start.py --init-db # 启动前重置数据库
 
 **GitHub**：`https://github.com/sunday-lil/jingyu`（public, MIT 友好，私有项目只发了一次）
 
-**前端应用/开发模式**（2026-07-19 Vue 3 重构后；2026-07-25 v2.2.2 起为 `python start.py` 默认行为）：
+**前端开发模式**（2026-07-19 Vue 3 重构后；v2.3.2 起 `python start.py` 默认走生产模式，开发需显式 `--dev`）：
 
-**推荐：`python start.py` 一键起**（默认应用模式：自动 npm install + 启动 Vite :5000 + FastAPI :5001）
+**推荐：`python start.py --dev` 一键起**（应用模式：自动 npm install + 启动 Vite :5000 + FastAPI :5001）
 ```bash
-python start.py         # 默认应用模式：自动起 Vite :5000（用户入口）+ FastAPI :5001（API）
+python start.py --dev   # 应用/开发模式：自动起 Vite :5000（用户入口）+ FastAPI :5001（API）
                         # frontend/node_modules 不存在时自动 npm install（约 7 分钟，仅首次）
 # 浏览器打开 http://127.0.0.1:5000（Vite dev server，HMR 热更新）
 ```
 
+> ⚠️ **v2.3.2 行为变更**：`python start.py`（无参数）默认走**生产模式**（FastAPI :5000 单进程，需 dist 已构建，不存在则自动 `npm install + npm run build`）。开发需显式 `python start.py --dev`（Vite :5000 + FastAPI :5001，前后端一起起的「应用模式」）。`--prod` 改为兼容别名（默认就是生产模式）。
+
 **备选：手动分两个终端**（调试时方便看各自日志）
 ```bash
 # 终端 1：FastAPI（应用模式手动设置 QI_PORT=5001）
-$env:QI_PORT="5001"; python start.py fg       # Windows PowerShell
-# 或：QI_PORT=5001 python start.py fg          # Linux/macOS
+$env:QI_PORT="5001"; python start.py fg --dev   # Windows PowerShell
+# 或：QI_PORT=5001 python start.py fg --dev      # Linux/macOS
 
 # 终端 2：Vite dev server
 cd frontend
@@ -71,7 +79,7 @@ npm install         # 首次：含 three.js 大包，约 7 分钟
 npm run dev         # Vite dev server :5000
 ```
 - dev proxy `/api` / `/static` / `/admin` / `/docs` / `/openapi.json` → FastAPI `:5001`（[frontend/vite.config.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/vite.config.js)）
-- 生产（部署用）：`python start.py build`（或手动 `cd frontend && npm run build`）→ 输出到 `static/dist/` → `python start.py --prod` → FastAPI :5000 单进程 SPA fallback（详见 [docs/DEPLOYMENT.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEPLOYMENT.md)「前端构建」）
+- 生产（默认，部署用）：`python start.py` → dist 不存在则自动构建 → FastAPI :5000 单进程 SPA fallback（详见 [docs/DEPLOYMENT.md](file:///c:/Users/Administrator/Desktop/webwrold/docs/DEPLOYMENT.md)「前端构建」）
 
 ---
 
@@ -89,7 +97,8 @@ npm run dev         # Vite dev server :5000
 | 前端状态 | **Pinia** | user store（cookie session 模式，不存 token） |
 | 前端样式 | **Tailwind CSS 3.4** | 治愈系色彩 token + 动画（breathe/float/fade-up） |
 | 前端动效 | **GSAP 3.12 + @vueuse/motion 2.2** | 入场 stagger + 呼吸动效，`prefers-reduced-motion` 降级 |
-| 前端 3D | **Three.js 0.168** | 4 个治愈系 3D / Canvas 组件群（v2.2 PBR 升级版）：① [FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue) 3D 花田 v2（自定义 `BufferGeometry` 立体花瓣 + `MeshPhysicalMaterial` + `UnrealBloomPass` + `OrbitControls` + `raycaster` 点击花语）；② [AmbientBackground.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AmbientBackground.vue) 全局氛围背景 v2（Canvas2D 柔光 sprite + 鼠标排斥 + Three.js 双层粒子 + 滚动视差 + 轻量 Bloom）；③ [HeroScene.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/HeroScene.vue) 首页浮岛雾海 v2（`LatheGeometry` 浮岛 + 递归樱花树 + PBR 水面 shader + `UnrealBloomPass` + `OrbitControls` + `raycaster` 飞入）；④ [AudioVisualizer.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AudioVisualizer.vue) 音波可视化 v2（4 模式 wave/mirror/radial/particles + 节拍检测 + 频响颜色 + 点击切换）。配套 [utils/visual.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/visual.js) 能力检测 + [utils/three-helpers.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/three-helpers.js) PBR 工具集（v2.2 加，9 个共享函数：createRenderer / createEnvironment / createPostProcessing / createOrbitControls / createKeyLight / createFillLight / createSoftSpriteTexture / disposeObject3D / disposeRenderer）+ [SceneHint.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/SceneHint.vue) 交互指引横幅 + [SceneControls.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/SceneControls.vue) 视图控制工具栏。全部支持 SVG / CSS 静态降级 + `prefers-reduced-motion` + `OrbitControls` 拖拽旋转 / 滚轮缩放 + `raycaster` 点击拾取 |
+| 前端 3D | **Three.js 0.168** | 4 个治愈系 3D / Canvas 组件群（v2.2 PBR 升级版，v2.3.3 Safari 兼容增强）：① [FlowerField.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/FlowerField.vue) 3D 花田 v2（自定义 `BufferGeometry` 立体花瓣 + `MeshPhysicalMaterial` + `UnrealBloomPass` + `OrbitControls` + `raycaster` 点击花语）；② [AmbientBackground.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AmbientBackground.vue) 全局氛围背景 v2（Canvas2D 柔光 sprite + 鼠标排斥 + Three.js 双层粒子 + 滚动视差 + 轻量 Bloom）；③ [HeroScene.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/HeroScene.vue) 首页浮岛雾海 v2（`LatheGeometry` 浮岛 + 递归樱花树 + PBR 水面 shader + `UnrealBloomPass` + `OrbitControls` + `raycaster` 飞入；v2.3.3 **iOS 降级**：**Bloom 降级** + **PMREM 降级** + `webglcontextlost` 上下文恢复）；④ [AudioVisualizer.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AudioVisualizer.vue) 音波可视化 v2（4 模式 wave/mirror/radial/particles + 节拍检测 + 频响颜色 + 点击切换）。配套 [utils/visual.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/visual.js) 能力检测（v2.3.3 **hasWebGL 重写** + `getWebGLCaps` / `isSafari` / `isIOS`）+ [utils/three-helpers.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/three-helpers.js) PBR 工具集（v2.2 加，9 个共享函数；v2.3.3 加 `webglcontextlost` / `webglcontextrestored` 事件监听处理 **WebGL 上下文丢失**）+ [SceneHint.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/SceneHint.vue) 交互指引横幅 + [SceneControls.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/SceneControls.vue) 视图控制工具栏。全部支持 SVG / CSS 静态降级 + `prefers-reduced-motion` + `OrbitControls` 拖拽旋转 / 滚轮缩放 + `raycaster` 点击拾取 |
+| 前端 emoji | **Iconify + @iconify-json/twemoji**（v2.3.3 加） | [EmojiIcon.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/EmojiIcon.vue) 离线 **SVG emoji** 组件，解决 Safari Apple Color Emoji 与系统 emoji 字体风格差异，确保 **跨浏览器一致**；已替换 AppLayout.vue + ProfileView.vue 所有 emoji |
 | 前端 HTTP | **axios 1.7** | `baseURL=/api`，`withCredentials=true`，401 自动跳登录 |
 | 密码哈希 | **bcrypt 4.x**（直接用，不用 passlib） | passlib 与 4.x 不兼容 |
 | 日记加密 | **Fernet (AES-128-CBC + HMAC)** | 客户端 Web Crypto PBKDF2 派生密钥 |
@@ -350,6 +359,31 @@ webwrold/
 **Smoke test 结果**（详见 [README §7.1](../../README.md) / [PROJECT_STATE §2](../PROJECT_STATE.md)）：`python start.py restart` ✅ / `curl /` 200 / `curl /api/music` 200（含西方 6 首，共 22 首）/ `curl /music` 200 / `curl /profile` 302 / `curl /music/western` 200 / `curl /api/admin/stats` 401 / `npm run build` 通过 / `_migrate_legacy_columns` 跑通（5 列）/ 双资源 UI 显示正常 / 通知 60s 轮询生效。
 
 **6 份文档同步**（Iron Rule）：README §3.4/§3.8/§4/§7.1/§9.3 + 状态徽章 + 顶部提示 / HANDOFF §0/§4 Phase 7/§12.4/末次更新（本节）/ PROJECT_STATE §1/§2（本条）/ ARCHITECTURE §1.1.7/§7.7 / DEPLOYMENT 顶部提示 / DEVELOPMENT §1.9.4 + pre-commit 5 项。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
+
+### Phase 8 — v2.3.2 + v2.3.3 start.py 默认生产模式 + Safari 兼容性修复（2026-07-28 / 2026-07-30 加）
+
+> 设计原则：**「部署最简 + Safari 兼容兜底」** —— v2.3.2 回滚 v2.2.2「默认应用模式」决策，因为服务器端口代理已配好 :5000 不能动，应用模式会让 Vite 占 :5000 破坏代理；v2.3.3 解决 Safari / iOS 用户反馈的 3D 不渲染 + emoji 不一致两类问题。
+
+**v2.3.2 改动**（2026-07-28，start.py 默认生产模式 + 自动构建简化）：
+1. **默认生产模式**：`python start.py`（无参数）默认走生产模式（FastAPI :5000 单进程），回滚 v2.2.2 默认应用模式
+2. **`dist 存在检测`**：自动构建仅检测 `static/dist/index.html` 存在性，不再比较 `frontend/src/` 与 `static/dist/` 文件修改时间
+3. **`自动构建`**：dist 不存在时自动 `npm install + npm run build`（需 Node.js 18+）
+4. **`--dev` 应用模式**：开发需显式 `python start.py --dev`（Vite :5000 HMR + FastAPI :5001 API，前后端一起起的「应用模式」）
+5. **`--prod` 兼容别名**：默认就是生产模式，加不加效果一样
+6. **服务器部署 2 步**：① 上传代码 ② `python start.py`（首次自动构建，之后秒启）
+
+**v2.3.3 改动**（2026-07-30，Safari 兼容性修复）：
+1. **Safari 主页 3D 不渲染**修复：
+   - **`hasWebGL` 重写**：[utils/visual.js](../../frontend/src/utils/visual.js) 区分 WebGL1/2 + 检测扩展 + max texture size
+   - 新增 `getWebGLCaps()` / `isSafari()` / `isIOS()` 工具函数
+   - [three-helpers.js](../../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听，处理 **WebGL 上下文丢失**（iOS Safari 切后台→前台触发），上下文丢失时保存场景状态、恢复时重建
+   - [HeroScene.vue](../../frontend/src/components/HeroScene.vue) **iOS 降级**：**Bloom 降级**（iOS 关闭 UnrealBloomPass）+ **PMREM 降级**（iOS PMREM 256→128、阴影 2048→1024、dpr 上限 2→1.5；老 iOS 缺 `EXT_color_buffer_half_float` 扩展时关闭 PMREM + Bloom）
+2. **Safari emoji 显示不一致**修复：
+   - 新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件，使用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**
+   - 替换 [AppLayout.vue](../../frontend/src/components/AppLayout.vue)（品牌 / 导航 / 通知 / 资源）+ [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（头像 / 通知 / 资源 / 统计 / 快捷入口 / 花朵阶段）所有 emoji
+3. 构建 209 modules / 12.30s，HeroScene +0.71KB（降级逻辑）
+
+**6 份文档同步**（Iron Rule）：README §2/§3.5/§8 + 状态徽章 + 顶部提示 / HANDOFF §0/§1/§2/§4 Phase 8/§6.24（本节）/ PROJECT_STATE §1/§2（本条）/ ARCHITECTURE §1.1.6/§7.7 / DEPLOYMENT 顶部提示 / DEVELOPMENT §1.9。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
 
 ---
 
@@ -977,6 +1011,41 @@ onBeforeUnmount(() => {
 ```
 
 **铁律**：视觉组件的 4 大坑（`createMediaElementSource` 一次性 / `shallowRef` 而非 `ref` / `smartRAF` 替代 `requestAnimationFrame` / `onBeforeUnmount` 完整释放）**必须同时满足**，缺任何一个都会在长时间使用或多视图切换后出问题。新建视觉组件时直接复制 [AmbientBackground.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AmbientBackground.vue) 的结构作为模板。
+
+### 6.24 Safari / iOS WebGL 上下文丢失 + emoji 字体不一致（2026-07-30 v2.3.3 加）
+
+#### 6.24.1 iOS Safari 切后台→前台后 3D 场景黑屏（WebGL 上下文丢失）
+
+**症状**：iOS Safari 用户访问首页（HeroScene 3D 浮岛）后切到其他 App，再切回 Safari 时 3D 场景黑屏，Console 无报错但 WebGL context 已失效。
+
+**根因**：iOS Safari 为节省内存，在页面切到后台时会主动释放 WebGL 上下文（触发 `webglcontextlost` 事件）。v2.3.3 之前 [three-helpers.js](../../frontend/src/utils/three-helpers.js) 没有监听该事件，上下文丢失后 Three.js 的 renderer / geometry / material 全部失效，切回前台时无恢复逻辑 → 黑屏。
+
+**修复**（v2.3.3）：[three-helpers.js](../../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听：
+- `webglcontextlost`：`event.preventDefault()` + 保存当前场景状态（相机位置 / OrbitControls 状态 / 自动旋转开关）
+- `webglcontextrestored`：重建 renderer + 重新编译 material + 恢复场景状态 + 重启 rAF 循环
+
+同时 [HeroScene.vue](../../frontend/src/components/HeroScene.vue) 实现 **iOS 降级**策略降低内存压力：
+- **Bloom 降级**：iOS 关闭 `UnrealBloomPass`（后处理内存大户）
+- **PMREM 降级**：iOS PMREM 分辨率 256→128、阴影贴图 2048→1024、dpr 上限 2→1.5
+- 老 iOS 缺 `EXT_color_buffer_half_float` 扩展时，完全关闭 PMREM + Bloom（[utils/visual.js](../../frontend/src/utils/visual.js) `getWebGLCaps()` 检测）
+
+#### 6.24.2 `hasWebGL()` 检测 bug 导致 Safari 误判无 WebGL
+
+**症状**：部分 Safari 用户报告首页 3D 场景直接降级为 SVG 静态插画，但 Safari 明明支持 WebGL。
+
+**根因**：v2.3.3 之前 [utils/visual.js](../../frontend/src/utils/visual.js) 的 `hasWebGL()` 实现有 bug——仅尝试创建 WebGL2 context，若失败就返回 false。但部分老 Safari 只支持 WebGL1（无 WebGL2），被误判为「无 WebGL」→ 直接降级 SVG。
+
+**修复**（v2.3.3）：**hasWebGL 重写**——区分 WebGL1 / WebGL2，先试 WebGL2 失败再试 WebGL1；同时检测关键扩展（`EXT_color_buffer_half_float` 等）+ max texture size；新增 `getWebGLCaps()` 返回完整能力对象、`isSafari()` / `isIOS()` 判断浏览器/平台。
+
+#### 6.24.3 Safari emoji 显示不一致（Apple Color Emoji vs 系统 emoji）
+
+**症状**：Safari 用户反馈导航/个人主页的 emoji 风格与 Chrome 不一致——Safari 用 Apple Color Emoji（彩色写实风格），Chrome 用系统 emoji（扁平风格），视觉不统一。
+
+**根因**：跨平台 emoji 字体差异——浏览器各自调用系统 emoji 字体渲染，不同平台风格差异大（Apple Color Emoji vs Noto Color Emoji vs Segoe UI Emoji），无法通过 CSS 统一。
+
+**修复**（v2.3.3）：新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件，使用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**（twemoji 风格统一扁平彩色），确保 **跨浏览器一致**。已替换 [AppLayout.vue](../../frontend/src/components/AppLayout.vue)（品牌 / 导航 / 通知 / 资源）+ [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（头像 / 通知 / 资源 / 统计 / 快捷入口 / 花朵阶段）所有 emoji。
+
+**铁律**：Safari / iOS 兼容 3 大坑（`webglcontextlost` 上下文恢复 / `hasWebGL` 须区分 WebGL1+2 + 检测扩展 / emoji 须用 SVG 统一而非系统字体）**必须同时满足**。新建 3D 组件时直接复制 [HeroScene.vue](../../frontend/src/components/HeroScene.vue) 的 `webglcontextlost` / `webglcontextrestored` 监听 + iOS 降级逻辑作为模板。
 
 ---
 

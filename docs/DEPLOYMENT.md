@@ -18,6 +18,10 @@
 
 > 🔒 **2026-07-25 v2.3 六大四字名板块 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱**：① **部署前必须重新 `npm run build`**，否则用户拿不到新视图（MusicWesternView / ProfileView / NotificationsView）+ 双资源 UI + 通知铃铛 + 花田生长网格；② 数据库**自动迁移**（`_migrate_legacy_columns()` 一次性加 5 个新列：`users.leaves` + `diaries.content/send_to_ai_hole` + `shop_items.cost_currency` + `musics.category`），**不需要手动 ALTER TABLE**；新表 `user_flowers` / `notifications` 由 `init_db()` 自动建表；③ seed **按 title 幂等**自动补齐 6 首西方改编曲目（绿袖子/卡农/致爱丽丝/月光奏鸣曲/天鹅湖/昨日重现），老库重启即生效；④ pre-commit 5 项 checklist 正式化（Pydantic Out / `_migrate_legacy_columns` / `constants.py` / `.env.example` / README+HANDOFF 速查表）。关键词 `双资源` / `露水` / `落叶` / `UserFlower` / `Notification` / `ProfileView` / `古琴弹西洋曲谱` / `send_to_ai_hole` / `树洞` / `漂流瓶社交` / `琴音疗心` / `pre-commit 5 项` 在 6 份文档中都要出现。
 
+> 🔒 **2026-07-28 v2.3.2 start.py 默认生产模式 + 自动构建简化**：`python start.py` 默认行为**再次变更**（回滚 v2.2.2「默认应用模式」）——**默认走生产模式**（FastAPI :5000 单进程，前后端不再一起起），需 `static/dist/` 已构建（不存在则自动 `npm install + npm run build`）。**`dist 存在检测`**——仅检测 `static/dist/index.html` 存在性，不再比较 `frontend/src/` 与 `static/dist/` 文件修改时间；**`自动构建`**：dist 不存在时自动 `npm install + npm run build`（需 Node.js 18+）。开发需显式 `python start.py --dev`（Vite :5000 HMR + FastAPI :5001 API，前后端一起起的「应用模式」）。`--prod` 改为兼容别名（默认就是生产模式）。**服务器部署简化为 2 步**：① 上传代码 ② `python start.py`（首次自动构建，之后秒启，FastAPI 单进程 :5000）。回滚理由：服务器端口代理已配好 :5000 不能动，应用模式会让 Vite 占 :5000 破坏代理。关键词 `默认生产模式` / `dist 存在检测` / `自动构建` / `--dev` / `应用模式` / `v2.3.2` 在 6 份文档中都要出现。
+
+> 🔒 **2026-07-30 v2.3.3 Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）**：① **部署前必须重新 `npm run build`**，否则 Safari / iOS 用户拿不到 **Safari 兼容**修复——主页 3D 浮岛不渲染（`hasWebGL` 误判 + `webglcontextlost` 无恢复 + Bloom/PMREM 内存超限）+ emoji 风格不一致（Apple Color Emoji vs 系统 emoji）。修复：[utils/visual.js](../frontend/src/utils/visual.js) **`hasWebGL` 重写**（区分 WebGL1/2 + 检测扩展 + max texture size）+ 新增 `getWebGLCaps()` / `isSafari()` / `isIOS()`；[utils/three-helpers.js](../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听处理 **WebGL 上下文丢失**；[HeroScene.vue](../frontend/src/components/HeroScene.vue) **iOS 降级**（**Bloom 降级**：iOS 关闭 UnrealBloomPass；**PMREM 降级**：iOS PMREM 256→128、阴影 2048→1024、dpr 2→1.5）；新建 [EmojiIcon.vue](../frontend/src/components/EmojiIcon.vue) 组件用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**，替换 AppLayout.vue + ProfileView.vue 所有 emoji。构建 209 modules / 12.30s，HeroScene +0.71KB（降级逻辑）。无数据库迁移 / 无新依赖（Iconify + twemoji 已在 frontend/package.json）。关键词 `Safari 兼容` / `WebGL 上下文丢失` / `webglcontextlost` / `iOS 降级` / `EmojiIcon` / `Iconify` / `twemoji` / `SVG emoji` / `跨浏览器一致` / `hasWebGL 重写` / `getWebGLCaps` / `isSafari` / `isIOS` / `Bloom 降级` / `PMREM 降级` / `v2.3.3` 在 6 份文档中都要出现。
+
 ---
 
 ## 前端构建（v2.0 Vue 3 重构后必做，所有部署方式通用）
@@ -100,31 +104,38 @@ dist/assets/index-xxxxxx.css     ← Tailwind CSS
 | 改 [`templates/admin/`](../../templates/admin/) 后台 SSR 模板 | ❌ 不需要（Jinja2 模板运行时渲染） |
 | 改 [`.env`](../../.env.example) | ❌ 不需要（重启即可） |
 
-### 部署流程（生产）
+> 💡 **v2.3.3 Safari 兼容修复示例**：本次改了 [utils/visual.js](../../frontend/src/utils/visual.js)（**`hasWebGL` 重写** + `getWebGLCaps` / `isSafari` / `isIOS`）+ [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js)（`webglcontextlost` / `webglcontextrestored` 监听）+ [HeroScene.vue](../../frontend/src/components/HeroScene.vue)（**iOS 降级**：**Bloom 降级** + **PMREM 降级**）+ 新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue)（**Iconify** + `twemoji` **SVG emoji**）+ 改 [AppLayout.vue](../../frontend/src/components/AppLayout.vue) / [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（替换 emoji）——全部命中表格首行（`.vue` / `.js`），**必须重新 `npm run build`** 才能让 Safari / iOS 用户拿到 **Safari 兼容**修复 + **跨浏览器一致** emoji。
+
+### 部署流程（生产，v2.3.2 起默认生产模式 + 自动构建）
 
 ```bash
 # 1. 拉代码
 git pull
 
 # 2. 构建前端（如果 frontend/src/ 有改动）
+#    v2.3.2 起：也可跳过此步，python start.py 会 dist 存在检测，不存在则自动构建
 cd frontend && npm install && npm run build && cd ..
 
 # 3. 装/更新 Python 依赖（如果 requirements.txt 有改动）
 pip install -r requirements.txt
 
-# 4. 启动 / 重启后端
+# 4. 启动 / 重启后端（v2.3.2 起默认 = 生产模式，FastAPI :5000 单进程）
 python start.py restart
 ```
 
-> ⚠️ **顺序很重要**：先 `npm run build`，后 `python start.py`。否则 FastAPI 起来后还是返回旧 dist（或提示页）。
+> ⚠️ **顺序很重要**：先 `npm run build`，后 `python start.py`。否则 FastAPI 起来后还是返回旧 dist（v2.3.2 起 `dist 存在检测` 只看 `static/dist/index.html` 是否存在，不比较修改时间，旧 dist 不会自动触发重建）。
 
-### 关于应用/开发模式（不需要构建，v2.2.2 起为默认行为）
+> 💡 **v2.3.2 服务器部署简化为 2 步**（首次或更新皆可）：① 上传代码（`git pull`）② `python start.py`（`dist 存在检测` → 不存在则 `自动构建` `npm install + npm run build`，需 Node.js 18+；已存在则秒启 FastAPI 单进程 :5000）。`--prod` 已改为兼容别名（默认就是生产模式）。
+
+### 关于应用/开发模式（需要 `--dev` 显式开启，v2.3.2 起不再是默认行为）
+
+> ⚠️ **v2.3.2 行为变更**：`python start.py`（无参数）默认走**生产模式**（FastAPI :5000 单进程，需 dist 已构建，不存在则自动构建）——回滚 v2.2.2「默认应用模式」。开发需显式 `python start.py --dev`（Vite :5000 HMR + FastAPI :5001 API，前后端一起起的「应用模式」）。`--prod` 改为兼容别名。理由：服务器端口代理已配好 :5000 不能动，应用模式会让 Vite 占 :5000 破坏代理。
 
 开发时不用每次改前端都 `npm run build`，直接跑 Vite dev server：
 ```bash
-python start.py                # 默认应用模式（v2.2.2 起）：
-                               #   自动 npm install 当 node_modules 不存在
-                               #   起 Vite :5000（HMR + 用户入口）+ FastAPI :5001（API）
+python start.py --dev           # 应用/开发模式（v2.3.2 起需显式 --dev）：
+                                #   自动 npm install 当 node_modules 不存在
+                                #   起 Vite :5000（HMR + 用户入口）+ FastAPI :5001（API）
 ```
 
 或手动两终端（v2.0.1 端口策略）：
@@ -137,8 +148,6 @@ set QI_PORT=5001 && python start.py fg    # http://127.0.0.1:5001/
 ```
 
 > ⚠️ **v2.0.1 端口策略调整**：应用/开发模式 Vite 占 :5000（用户入口 + HMR），FastAPI 退到 :5001（API）；不再是 v2.0 的 Vite :5173 + FastAPI :5000。理由：让 FastAPI 反代 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 会因 null 字节转义 + 冒号失败（详见 [HANDOFF §6.16](../../HANDOFF.md)）。**用户始终访问 :5000**。
-
-> ⚠️ **v2.2.2 默认行为变更**：`python start.py`（无参数）默认走应用模式（Vite :5000 + FastAPI :5001），自动检测 `frontend/node_modules` 不存在则 `npm install`。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 dist 已构建）。
 
 Vite dev server 提供 HMR 热更新 + 自动 proxy `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 到 FastAPI :5001，详见 [DEVELOPMENT 前端开发](DEVELOPMENT.md)。
 
@@ -212,27 +221,28 @@ cd /www/wwwroot/healing
 python3 -m pip install -r requirements.txt
 ```
 
-**5b. 前端构建**（v2.2.2 起按部署模式不同，需要不同处理）：
+**5b. 前端构建**（v2.3.2 起默认生产模式，`dist 存在检测` + `自动构建`）：
 
-**情况 A：默认应用模式部署**（推荐，Vite :5000 + FastAPI :5001 一起起）
+**情况 A：默认生产模式部署**（推荐，FastAPI :5000 单进程）
 ```bash
 # 服务器需先装 Node.js 18+（宝塔软件商店 → Node.js 版本管理器）
 # 不需要手动 npm install / npm run build
-# python start.py 首次启动时会自动 npm install（约 7 分钟），之后秒启
-# 端口代理 :5000 指向 Vite dev server（用户入口），:5001 是 FastAPI（API 后端）
-```
-
-**情况 B：生产模式部署**（FastAPI :5000 单进程，性能更好但需构建 dist）
-```bash
-# 服务器需先装 Node.js 18+（构建用，运行时不需要）
-# 提前手动构建（避免 systemd 首次启动超时）：
+# python start.py 首次启动时 dist 存在检测 → 不存在则自动 npm install + npm run build（约 7 分钟），之后秒启
+# 端口代理 :5000 永远指向 FastAPI（单进程，API + SPA fallback + 静态资源）
+# 也可提前手动构建（避免首次启动超时）：
 cd /www/wwwroot/healing/frontend
 npm install        # 首次约 7 分钟（含 three.js 大包）
 npm run build      # 输出到 ../static/dist/
-# 之后用 python start.py --prod 走生产模式（端口代理 :5000 永远指向 FastAPI）
 ```
 
-> 💡 **v2.2.2 新行为**：`python start.py`（无参数）默认走**应用模式**（Vite :5000 + FastAPI :5001），自动 `npm install` 当 `frontend/node_modules` 不存在（不构建 dist，应用模式用 Vite dev server 不需要构建产物）。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 dist 已构建）。**端口代理 :5000 在应用模式指向 Vite，在生产模式指向 FastAPI**——根据部署模式选择。
+**情况 B：应用/开发模式部署**（需 `--dev` 显式开启，Vite :5000 + FastAPI :5001 一起起）
+```bash
+# 仅本地开发 / 真机调试用，不建议生产部署
+# 服务器需先装 Node.js 18+（运行时需要，Vite dev server 常驻）
+python start.py --dev    # 端口代理 :5000 指向 Vite dev server（用户入口），:5001 是 FastAPI（API 后端）
+```
+
+> 💡 **v2.3.2 新行为**（回滚 v2.2.2）：`python start.py`（无参数）默认走**生产模式**（FastAPI :5000 单进程），**`dist 存在检测`**——`static/dist/index.html` 不存在则**`自动构建`** `npm install + npm run build`（需 Node.js 18+）；`--prod` 改为兼容别名（默认就是生产模式）。开发需显式 `python start.py --dev`（Vite :5000 + FastAPI :5001，前后端一起起的「应用模式」）。**端口代理 :5000 在生产模式指向 FastAPI，在应用模式指向 Vite**——服务器端口代理已配好 :5000 不能动，故默认生产模式。关键词 `默认生产模式` / `dist 存在检测` / `自动构建` / `--dev` / `应用模式` / `v2.3.2`。
 
 ### 1.6 启动
 
@@ -241,24 +251,21 @@ npm run build      # 输出到 ../static/dist/
 或 SSH：
 ```bash
 cd /www/wwwroot/healing
-python start.py
+python start.py          # v2.3.2 起默认 = 生产模式（FastAPI :5000 单进程，dist 不存在则自动构建）
 ```
 
-应该看到（默认应用模式）：
+应该看到（默认生产模式）：
 ```
-[START] 后台启动（应用模式）
-   FastAPI : http://0.0.0.0:5001
-   Vite    : http://0.0.0.0:5000（用户访问入口，HMR 热更新）
+[START] 后台启动（生产模式）
+   FastAPI : http://0.0.0.0:5000（用户访问入口 + API）
    日志文件 : /www/wwwroot/healing/logs/healing.log
    PID 文件 : /www/wwwroot/healing/run/healing.pid
-[OK] FastAPI 启动成功（PID 12345, :5001）
-[START] 后台启动 Vite dev server -> http://127.0.0.1:5000
-[OK] Vite 启动成功（PID 12346）
-   访问     http://0.0.0.0:5000（Vite dev，HMR 热更新）
-   API      http://0.0.0.0:5001/docs
+[OK] FastAPI 启动成功（PID 12345, :5000）
+   访问     http://0.0.0.0:5000（FastAPI，服务 static/dist/ + SPA fallback）
+   API      http://0.0.0.0:5000/docs
 ```
 
-> 💡 **生产模式启动**（若已 build dist）：`python start.py --prod` → FastAPI 单进程 :5000（Vite 不运行）
+> 💡 **应用/开发模式启动**（本地开发用）：`python start.py --dev` → Vite :5000（用户入口，HMR）+ FastAPI :5001（API），前后端一起起。生产部署不需要。
 
 ### 1.7 反向代理（让外网能访问）
 
@@ -328,20 +335,9 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**3b. 前端构建**（v2.2.2 起按部署模式不同，需要不同处理）：
+**3b. 前端构建**（v2.3.2 起默认生产模式，`dist 存在检测` + `自动构建`）：
 
-**情况 A：默认应用模式部署**（不推荐 systemd 用，Vite + FastAPI 双进程不易管理）
-```bash
-# 服务器需先装 Node.js 18+
-sudo apt install nodejs npm     # Ubuntu/Debian
-# 或: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs
-
-# 不需要手动 npm install / npm run build
-# python start.py 首次启动时会自动 npm install（约 7 分钟），之后秒启
-# 注意：systemd 管理双进程较复杂，建议用 §1 宝塔面板或 §3 nohup 方式跑应用模式
-```
-
-**情况 B：生产模式部署**（systemd 推荐，FastAPI 单进程）
+**情况 A：默认生产模式部署**（systemd 推荐，FastAPI 单进程）
 ```bash
 # 服务器需先装 Node.js 18+（构建用，运行时不需要）
 sudo apt install nodejs npm     # Ubuntu/Debian
@@ -351,10 +347,19 @@ sudo apt install nodejs npm     # Ubuntu/Debian
 cd /home/healing/app/frontend
 npm install        # 首次约 7 分钟（含 three.js 大包）
 npm run build      # 输出到 ../static/dist/
-# 之后用 python start.py fg --prod 走生产模式（端口代理 :5000 永远指向 FastAPI）
+# 之后用 python start.py fg 走生产模式（v2.3.2 起默认就是生产模式，端口代理 :5000 永远指向 FastAPI）
+# 也可不提前构建，python start.py fg 会 dist 存在检测 → 不存在则自动构建（但 systemd TimeoutStartSec=90 可能不够）
 ```
 
-> 💡 **v2.2.2 新行为**：`python start.py fg`（systemd 调用）默认走应用模式（需单独起 Vite，不适合 systemd），生产模式需显式加 `--prod`（`python start.py fg --prod`），且需 dist 已构建。但 systemd 默认 `TimeoutStartSec=90` 秒，**建议提前手动跑情况 B 的构建** 避免 systemd 因首次启动超时。**生产模式端口代理 :5000 永远指向 FastAPI**。
+**情况 B：应用/开发模式部署**（需 `--dev` 显式开启，不推荐 systemd 用，Vite + FastAPI 双进程不易管理）
+```bash
+# 仅本地开发 / 真机调试用，不建议生产部署
+# 服务器需先装 Node.js 18+（运行时需要，Vite dev server 常驻）
+python start.py fg --dev    # Vite :5000（用户入口）+ FastAPI :5001（API），前后端一起起
+# 注意：systemd 管理双进程较复杂，建议用 §1 宝塔面板或 §3 nohup 方式跑应用模式
+```
+
+> 💡 **v2.3.2 新行为**（回滚 v2.2.2）：`python start.py fg`（systemd 调用）默认走**生产模式**（FastAPI 单进程 :5000），**`dist 存在检测`**——`static/dist/index.html` 不存在则**`自动构建`** `npm install + npm run build`；`--prod` 改为兼容别名。应用/开发模式需显式 `python start.py fg --dev`（Vite :5000 + FastAPI :5001，前后端一起起的「应用模式」）。但 systemd 默认 `TimeoutStartSec=90` 秒，**建议提前手动跑情况 A 的构建** 避免 systemd 因首次 `自动构建` 超时。**生产模式端口代理 :5000 永远指向 FastAPI**。关键词 `默认生产模式` / `dist 存在检测` / `自动构建` / `--dev` / `应用模式` / `v2.3.2`。
 
 ### 2.4 配置 .env
 
@@ -387,9 +392,10 @@ Environment="PATH=/home/healing/app/venv/bin"
 Environment="QI_HOST=0.0.0.0"
 Environment="QI_PORT=5000"
 Environment="QI_DEBUG=false"
-# 用 systemd 管，start.py 跑前台（fg 子命令）+ 显式生产模式（--prod，需 dist 已构建）
-# v2.2.2 起默认是应用模式（不适合 systemd 双进程管理），生产部署必须加 --prod
-ExecStart=/home/healing/app/venv/bin/python start.py fg --prod
+# 用 systemd 管，start.py 跑前台（fg 子命令）；v2.3.2 起默认就是生产模式（FastAPI :5000 单进程，需 dist 已构建）
+# --prod 为兼容别名（加不加效果一样）；应用/开发模式需 --dev（不适合 systemd 双进程管理）
+# dist 不存在时 fg 会自动构建（npm install + npm run build），但建议提前手动构建避免 systemd 超时
+ExecStart=/home/healing/app/venv/bin/python start.py fg
 Restart=always
 RestartSec=5
 StandardOutput=append:/home/healing/app/logs/healing.log

@@ -14,6 +14,10 @@
 
 > 🔒 **2026-07-25 v2.3 六大四字名模块 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱**：① 新增 `UserFlower` + `Notification` 模型 + `flower_service` 业务层 + `/api/garden/flowers/*` + `/api/notifications/*` + `/api/profile/me` 端点；② 双资源系统 `User.dew` + `User.leaves` 替代单一 `total_energy`，`EnergyRecord.resource_type` 区分，`ShopItem.cost_resource` 决定扣哪种资源；③ 日记加 `visibility` / `category` 字段，情绪日历 `mood_emoji` 统一为 emoji 字符；④ 树洞文件式聊天历史 `data/chats/{user_id}/{session_id}.json`；⑤ 五音疗愈盘独立为顶级模块（`/healing` 路由）+ 古琴弹西洋曲谱子菜单（`musics.is_western_score` 列 + `/music/western` 路由）；⑥ pre-commit 5 项 checklist 正式化（Pydantic Out / `_migrate_legacy_columns` / `constants.py` / `.env.example` / README+HANDOFF 速查表）。详见 §1.1.7。关键词 `双资源` / `露水` / `落叶` / `UserFlower` / `Notification` / `ProfileView` / `古琴弹西洋曲谱` / `visibility` / `树洞` / `漂流瓶社交` / `五音疗愈盘` / `pre-commit 5 项` 在 6 份文档中都要出现。
 
+> 🔒 **2026-07-28 v2.3.2 start.py 默认生产模式 + 自动构建简化**：`python start.py` 默认行为再次变更——**默认走生产模式**（FastAPI :5000 单进程，前后端不再一起起），需 `static/dist/` 已构建（不存在则自动 `npm install + npm run build`）。**自动构建仅检测 `static/dist/index.html` 存在性**（`dist 存在检测`），不再比较 `frontend/src/` 与 `static/dist/` 文件修改时间。**开发需显式 `python start.py --dev`**（Vite :5000 HMR + FastAPI :5001 API，前后端一起起的「应用模式」）。`--prod` 改为兼容别名（默认就是生产模式，加不加效果一样）。§1.2 开发/生产模式切换的端口策略更新：默认 → 生产模式（FastAPI :5000，dist 不存在则自动构建）；`--dev` → 应用模式（Vite :5000 + FastAPI :5001）。关键词 `默认生产模式` / `dist 存在检测` / `自动构建` / `--dev` / `应用模式` / `v2.3.2` 在 6 份文档中都要出现。
+
+> 🔒 **2026-07-30 v2.3.3 Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）**：① §1.1.6 视觉组件群加 **Safari 兼容**增强——[utils/visual.js](../../frontend/src/utils/visual.js) **`hasWebGL` 重写**（区分 WebGL1/2 + 检测扩展 + max texture size）+ 新增 `getWebGLCaps()` / `isSafari()` / `isIOS()` 工具函数；[utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听处理 **WebGL 上下文丢失**（iOS Safari 切后台→前台触发）；[HeroScene.vue](../../frontend/src/components/HeroScene.vue) **iOS 降级**（**Bloom 降级**：iOS 关闭 UnrealBloomPass；**PMREM 降级**：iOS PMREM 256→128、阴影 2048→1024、dpr 上限 2→1.5；老 iOS 缺 `EXT_color_buffer_half_float` 扩展时关闭 PMREM + Bloom）。② 新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件，使用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**（解决 Safari Apple Color Emoji vs 系统 emoji 字体差异），替换 AppLayout.vue + ProfileView.vue 所有 emoji。关键词 `Safari 兼容` / `WebGL 上下文丢失` / `webglcontextlost` / `iOS 降级` / `EmojiIcon` / `Iconify` / `twemoji` / `SVG emoji` / `跨浏览器一致` / `hasWebGL 重写` / `getWebGLCaps` / `isSafari` / `isIOS` / `Bloom 降级` / `PMREM 降级` / `v2.3.3` 在 6 份文档中都要出现。
+
 ---
 
 ## 1. 总体架构
@@ -234,18 +238,19 @@ const FlowerField = defineAsyncComponent(() =>
 >
 > **v2.2 PBR 升级**（2026-07-20）：4 个视觉组件全部升级到 PBR 渲染管线（`ACESFilmicToneMapping` + `SRGBColorSpace` + `PCFSoftShadowMap` + `RoomEnvironment` PMREM + `UnrealBloomPass`）；新增 [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 集中 9 个共享 PBR 工具函数；新增 [SceneHint.vue](../../frontend/src/components/SceneHint.vue) 交互指引横幅 + [SceneControls.vue](../../frontend/src/components/SceneControls.vue) 视图控制工具栏，解决「用户不知道如何与 3D 元素交互」问题；所有 3D 场景统一 `OrbitControls`（拖拽旋转 + 滚轮缩放）+ `raycaster` 点击拾取。决策理由详见 [HANDOFF §5.11](../../HANDOFF.md)。
 
-**v2.2 视觉文件群**（共 7 个）：
+**v2.2 视觉文件群**（共 8 个，v2.3.3 加 EmojiIcon.vue）：
 
 | 文件 | 角色 | 嵌入位置 | 降级路径 |
 |---|---|---|---|
-| [frontend/src/utils/visual.js](../../frontend/src/utils/visual.js) | 视觉能力检测 | 被其他组件 import | 单次缓存检测结果，无降级（自身就是降级判断器） |
-| [frontend/src/utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) | **PBR 工具集（v2.2 加）** | 被 HeroScene / FlowerField / AmbientBackground import | 9 个共享函数：createRenderer / createEnvironment / createPostProcessing / createOrbitControls / createKeyLight / createFillLight / createSoftSpriteTexture / disposeObject3D / disposeRenderer |
+| [frontend/src/utils/visual.js](../../frontend/src/utils/visual.js) | 视觉能力检测（v2.3.3 Safari 兼容增强） | 被其他组件 import | 单次缓存检测结果，无降级（自身就是降级判断器）；v2.3.3 **hasWebGL 重写**（区分 WebGL1/2 + 检测扩展 + max texture size）+ 新增 `getWebGLCaps()` / `isSafari()` / `isIOS()` |
+| [frontend/src/utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) | **PBR 工具集（v2.2 加；v2.3.3 加上下文恢复）** | 被 HeroScene / FlowerField / AmbientBackground import | 9 个共享函数：createRenderer / createEnvironment / createPostProcessing / createOrbitControls / createKeyLight / createFillLight / createSoftSpriteTexture / disposeObject3D / disposeRenderer；v2.3.3 加 `webglcontextlost` / `webglcontextrestored` 事件监听处理 **WebGL 上下文丢失** |
 | [frontend/src/components/AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) | 全局氛围背景 v2 | [AppLayout.vue](../../frontend/src/components/AppLayout.vue) 根（所有页面可见） | CSS 永远启用 → Canvas2D 柔光 sprite（reduced-motion 关闭）→ Three.js 双层粒子 + 轻量 Bloom（WebGL + 非低性能） |
-| [frontend/src/components/HeroScene.vue](../../frontend/src/components/HeroScene.vue) | 首页 3D 浮岛雾海 v2 | [HomeView.vue](../../frontend/src/views/HomeView.vue) 顶部 | 无 WebGL / reduced-motion / initScene 异常 → SVG 静态插画（800×480 viewBox：天空渐变 + 太阳 + 3 岛 + 3 层波浪 + 5 漂浮点） |
+| [frontend/src/components/HeroScene.vue](../../frontend/src/components/HeroScene.vue) | 首页 3D 浮岛雾海 v2（v2.3.3 iOS 降级） | [HomeView.vue](../../frontend/src/views/HomeView.vue) 顶部 | 无 WebGL / reduced-motion / initScene 异常 → SVG 静态插画（800×480 viewBox：天空渐变 + 太阳 + 3 岛 + 3 层波浪 + 5 漂浮点）；v2.3.3 **iOS 降级**：**Bloom 降级**（iOS 关闭 UnrealBloomPass）+ **PMREM 降级**（PMREM 256→128、阴影 2048→1024、dpr 2→1.5）+ `webglcontextlost` 上下文恢复 |
 | [frontend/src/components/FlowerField.vue](../../frontend/src/components/FlowerField.vue) | 3D 花田 v2 | [GardenView.vue](../../frontend/src/views/garden/GardenView.vue) 顶部 | 无 WebGL / reduced-motion / initScene 异常 → CSS 渐变背景 + 提示文案 |
 | [frontend/src/components/AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) | 音波可视化 v2 | [MusicDetailView.vue](../../frontend/src/views/music/MusicDetailView.vue) 详情头之后 | 无 Web Audio / reduced-motion → CSS 5 色横条静态动画 |
 | [frontend/src/components/SceneHint.vue](../../frontend/src/components/SceneHint.vue) | **3D 场景交互指引（v2.2 加）** | 被 HeroScene / FlowerField 引用 | `pointer-events: none` 不阻挡 3D 交互；3 秒后自动淡出 |
 | [frontend/src/components/SceneControls.vue](../../frontend/src/components/SceneControls.vue) | **3D 场景视图控制（v2.2 加）** | 被 HeroScene / FlowerField 引用 | emit 事件由父组件处理；玻璃拟态样式 + 8px 圆角 |
+| [frontend/src/components/EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) | **跨浏览器 emoji 组件（v2.3.3 加）** | 被 AppLayout.vue / ProfileView.vue 引用（品牌 / 导航 / 通知 / 资源 / 统计 / 快捷入口 / 花朵阶段） | **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**（解决 Safari Apple Color Emoji vs 系统 emoji 字体差异）；无降级（SVG 本身就是跨浏览器方案） |
 
 **核心架构决策**：
 
@@ -266,6 +271,8 @@ const FlowerField = defineAsyncComponent(() =>
 | 移动端降级 | 粒子数减半 + `dpr` ≤ 1.5 + Bloom strength 0.3 → 0.18 + 几何精度降档（Lathe/Cylinder 段数 24→16、Icosahedron detail 2→1、樱花树递归深度 4→3、花瓣网格 5×8→4×6、地面圆 64→32、AudioVisualizer 柱数 48/64→32） | 移动端 GPU/CPU 弱，全量粒子 + 强 Bloom + 高精度几何会掉帧；几何降档可在不牺牲视觉层次的前提下大幅减少顶点数 |
 | 配色一致性 | 4 个组件全部用治愈系 5 色（藕粉 `#E8B8C5` / 淡黄 `#E8D5A8` / 青绿 `#A8C5A0` / 雾蓝 `#A8B8C5` / 纯白 `#FAF6F2`）+ 米白 `#F9F6F0` 背景 | 与 [tailwind.config.js](../../frontend/tailwind.config.js) token 一致；AudioVisualizer 4 模式频响颜色低频暖色 → 高频冷色 |
 | Web Audio 一次性约束 | `audioCtx.createMediaElementSource(audioEl)` 对同一 `<audio>` 元素只能调一次 | AudioVisualizer `if (!sourceNode)` 守卫 + MusicDetailView `visualizerConnected` ref 标记首次 `playIndex` 时连接（详见 [HANDOFF §6.23.1](../../HANDOFF.md)） |
+| **Safari 兼容（v2.3.3）** | ① **`hasWebGL` 重写**（区分 WebGL1/2 + 检测扩展 + max texture size）+ `getWebGLCaps()` / `isSafari()` / `isIOS()`；② `webglcontextlost` / `webglcontextrestored` 事件监听处理 **WebGL 上下文丢失**（iOS Safari 切后台→前台触发）；③ **iOS 降级**：**Bloom 降级**（iOS 关闭 UnrealBloomPass）+ **PMREM 降级**（PMREM 256→128、阴影 2048→1024、dpr 2→1.5；老 iOS 缺 `EXT_color_buffer_half_float` 扩展时关闭 PMREM + Bloom） | 解决 Safari / iOS 用户反馈的 3D 不渲染（hasWebGL 误判 + 上下文丢失无恢复 + Bloom/PMREM 内存超限）问题（详见 [HANDOFF §6.24](../../HANDOFF.md)） |
+| **跨浏览器 emoji 一致性（v2.3.3）** | [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji** | 解决 Safari Apple Color Emoji vs 系统 emoji 字体风格差异，确保 **跨浏览器一致**；已替换 AppLayout.vue + ProfileView.vue 所有 emoji |
 
 **为什么 v2.2 引入 PBR + Bloom 后处理**（推翻 v2.1 决策）：
 - v2.1 决策「不用全屏 shader / 后处理」基于「治愈系要柔和不刺眼」，但实际效果过于平淡，被用户评价为「粗糙过时，类似 80/90 年代红白机」
@@ -279,10 +286,12 @@ const FlowerField = defineAsyncComponent(() =>
 | 桌面 Chrome（WebGL + 默认 motion） | CSS + Canvas2D 柔光 sprite + Three.js 双层粒子 + Bloom | 3D 浮岛雾海 + 樱花树 + PBR 水面 + Bloom + OrbitControls | 3D 立体花瓣 + MeshPhysicalMaterial + Bloom + OrbitControls + raycaster | Web Audio + Canvas2D 4 模式 + 节拍检测 |
 | 桌面 Chrome + `prefers-reduced-motion` | 仅 CSS 雾气光斑 | SVG 静态插画 | CSS 渐变背景 + 提示文案 | CSS 5 色横条静态 |
 | 移动端 Safari（WebGL + 默认 motion） | CSS + Canvas2D（粒子减半）+ Three.js 双层粒子（dpr≤1.5）+ Bloom strength 0.18 | 3D 浮岛雾海（粒子减半 + dpr≤1.5 + Bloom 0.18 + 樱花树深度 4→3 + Lathe/Cylinder 段数 24→16 + Icosahedron detail 2→1） | 3D 立体花瓣（粒子减半 + dpr≤1.5 + 花瓣网格 5×8→4×6 + 花蕊 Icosahedron detail 2→1 + 地面圆 64→32 + 茎圆柱段 6→5） | Web Audio + Canvas2D 4 模式（镜像柱 48→32 / 径向柱 64→32 / 粒子流 120→60 / 节拍粒子 10→6 / 24fps） |
-| 旧浏览器（无 WebGL） | CSS + Canvas2D 光点 | SVG 静态插画 | CSS 渐变背景 + 提示文案 | CSS 5 色横条 |
+| **iOS Safari v2.3.3 降级**（`isIOS()` 检测） | 同上（AmbientBackground 不受 iOS 降级影响） | **iOS 降级**：**Bloom 降级**（关闭 UnrealBloomPass）+ **PMREM 降级**（PMREM 256→128、阴影 2048→1024、dpr 2→1.5）；老 iOS 缺 `EXT_color_buffer_half_float` 扩展时关闭 PMREM + Bloom | 同上（FlowerField 不受 iOS 降级影响） | 同上（AudioVisualizer 不受 iOS 降级影响） |
+| **iOS Safari 切后台→前台**（`webglcontextlost`） | Three.js 粒子暂停渲染，CSS + Canvas2D 兜底 | `webglcontextlost` 保存场景状态 → `webglcontextrestored` 重建 renderer + 恢复场景 + 重启 rAF | 同上（`webglcontextlost` 时暂停，`webglcontextrestored` 时恢复） | 不受影响（不用 Three.js） |
+| 旧浏览器（无 WebGL，v2.3.3 hasWebGL 重写后准确检测） | CSS + Canvas2D 光点 | SVG 静态插画 | CSS 渐变背景 + 提示文案 | CSS 5 色横条 |
 | `import('three')` 失败 | CSS + Canvas2D 光点 | SVG 静态插画 | CSS 渐变背景 + 提示文案 | 不受影响（不用 Three.js） |
 
-详见 [frontend/src/components/AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) + [HeroScene.vue](../../frontend/src/components/HeroScene.vue) + [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) + [FlowerField.vue](../../frontend/src/components/FlowerField.vue) + [SceneHint.vue](../../frontend/src/components/SceneHint.vue) + [SceneControls.vue](../../frontend/src/components/SceneControls.vue) + [utils/visual.js](../../frontend/src/utils/visual.js) + [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js)，决策理由详见 [HANDOFF §5.10](../../HANDOFF.md) + [HANDOFF §5.11](../../HANDOFF.md)，4 大坑详见 [HANDOFF §6.23](../../HANDOFF.md)。
+详见 [frontend/src/components/AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) + [HeroScene.vue](../../frontend/src/components/HeroScene.vue) + [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) + [FlowerField.vue](../../frontend/src/components/FlowerField.vue) + [SceneHint.vue](../../frontend/src/components/SceneHint.vue) + [SceneControls.vue](../../frontend/src/components/SceneControls.vue) + [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) + [utils/visual.js](../../frontend/src/utils/visual.js) + [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js)，决策理由详见 [HANDOFF §5.10](../../HANDOFF.md) + [HANDOFF §5.11](../../HANDOFF.md)，4 大坑详见 [HANDOFF §6.23](../../HANDOFF.md)，Safari 兼容 3 大坑详见 [HANDOFF §6.24](../../HANDOFF.md)。
 
 ---
 
@@ -1025,6 +1034,10 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 > 🔒 **2026-07-20 v2.1 视觉增强 Iron Rule 扩展**：
 > 改 4 个视觉组件（[AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue) / [HeroScene.vue](../../frontend/src/components/HeroScene.vue) / [AudioVisualizer.vue](../../frontend/src/components/AudioVisualizer.vue) / [utils/visual.js](../../frontend/src/utils/visual.js)）或 [vite.config.js](../../frontend/vite.config.js) `manualChunks` 配置 = **同一 commit 同步更新 6 份文档**，关键词 `三层渐进增强` / `AmbientBackground` / `HeroScene` / `AudioVisualizer` / `visual.js` / `shallowRef` / `smartRAF` / `prefers-reduced-motion` 在 6 份文档中都要出现。
 > 4 大集成铁律（缺任何一个都会在长时间使用或多视图切换后出问题）：① `createMediaElementSource` 一次性 — AudioVisualizer `if (!sourceNode)` 守卫；② Three.js 对象用 `shallowRef` 而非 `ref`；③ rAF 必须走 `smartRAF` 而非 `requestAnimationFrame`；④ `onBeforeUnmount` 必须完整释放 geometry / material / renderer / 监听 / ResizeObserver。详见 [HANDOFF §6.23](../../HANDOFF.md)。
+
+> 🔒 **2026-07-30 v2.3.3 Safari 兼容 Iron Rule 扩展**：
+> 改视觉组件的 **Safari 兼容**逻辑（[utils/visual.js](../../frontend/src/utils/visual.js) `hasWebGL` 重写 / `getWebGLCaps` / `isSafari` / `isIOS` / [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) `webglcontextlost` / `webglcontextrestored` / [HeroScene.vue](../../frontend/src/components/HeroScene.vue) iOS 降级 Bloom 降级 + PMREM 降级 / [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) Iconify + twemoji SVG emoji 跨浏览器一致）= **同一 commit 同步更新 6 份文档**，关键词 `Safari 兼容` / `WebGL 上下文丢失` / `webglcontextlost` / `iOS 降级` / `EmojiIcon` / `Iconify` / `twemoji` / `SVG emoji` / `跨浏览器一致` / `hasWebGL 重写` / `getWebGLCaps` / `isSafari` / `isIOS` / `Bloom 降级` / `PMREM 降级` / `v2.3.3` 在 6 份文档中都要出现。
+> Safari 兼容 3 大坑（缺任何一个都会在 Safari / iOS 上出问题）：① `webglcontextlost` / `webglcontextrestored` 上下文恢复 — iOS Safari 切后台→前台触发；② `hasWebGL` 须区分 WebGL1+2 + 检测扩展 — 老 Safari 只有 WebGL1 不能误判；③ emoji 须用 SVG 统一而非系统字体 — Apple Color Emoji vs 系统 emoji 风格差异。详见 [HANDOFF §6.24](../../HANDOFF.md)。
 
 ### 7.8 AI 隐私边界（2026-07-17 加）
 > AI 接入必须**不破坏**日记端到端加密的隐私承诺。

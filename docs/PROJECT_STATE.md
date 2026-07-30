@@ -3,7 +3,11 @@
 > 一眼看出「现在能跑吗」「最近改了什么」「还有什么 TODO」。
 > 每次大改后请更新本文件。
 
-**最后更新**：2026-07-25（v2.3 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱 — 10 项大改：① 主界面六大四字名板块（琴音疗心 / 漂流日记 / 情绪日历 / 心语树洞 / 落叶画坊 / 屿上花田）+ 顶部品牌图标 🏝️ 岛屿 emoji；② 双资源系统 `User.total_energy`（露水）+ `User.leaves`（落叶），`ShopItem.cost_currency` 决定扣哪种；③ 花朵生命周期 `UserFlower` 模型 + `flower_service` + `/api/garden/flowers/*` API，5 阶段 seed→sprout→bud→bloom→wilted；④ 通知系统 `Notification` 模型 + `routers/notification.py` + 前端 60s 轮询；⑤ 个人主页 `routers/profile.py` + `views/profile/ProfileView.vue`；⑥ 古琴弹西洋曲谱子菜单 `musics.category` + seed 6 首西方改编 + `/api/music?category=western` + `/music/western` 路由；⑦ 日记明文化 + `send_to_ai_hole` 字段 + 发布选项；⑧ 情绪日历 emoji 与字段对齐修复；⑨ 树洞 🌳 图标 + textarea + 文件式聊天历史 + 留存提示；⑩ 漂流瓶评论返回通知集成）
+> 🔒 **2026-07-28 v2.3.2 start.py 默认生产模式 + 自动构建简化**：`python start.py` 默认行为再次变更——**默认走生产模式**（FastAPI :5000 单进程，前后端不再一起起），需 `static/dist/` 已构建（不存在则自动 `npm install + npm run build`）。**自动构建仅检测 `static/dist/index.html` 存在性**（`dist 存在检测`），不再比较 `frontend/src/` 与 `static/dist/` 文件修改时间。**开发需显式 `python start.py --dev`**（Vite :5000 HMR + FastAPI :5001 API，前后端一起起的「应用模式」）。`--prod` 改为兼容别名（默认就是生产模式，加不加效果一样）。**服务器部署 2 步**：① 上传代码 ② `python start.py`（首次自动构建，之后秒启，FastAPI 单进程 :5000）。本次回滚 v2.2.2「默认应用模式」决策，理由：服务器端口代理已配好 :5000 不能动，应用模式会让 Vite 占 :5000 破坏代理。关键词 `默认生产模式` / `dist 存在检测` / `自动构建` / `--dev` / `应用模式` / `v2.3.2` 在 6 份文档中都要出现。
+
+> 🔒 **2026-07-30 v2.3.3 Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）**：解决 Safari / iOS 用户反馈的两类问题。① **Safari 主页 3D 不渲染**：根因包括 `hasWebGL()` 检测 bug、iOS Safari 切后台→前台后 WebGL 上下文丢失无恢复逻辑、老 iOS 缺 `EXT_color_buffer_half_float` 扩展、Bloom + 高分辨率 PMREM 内存超限。修复：**`hasWebGL` 重写**（区分 WebGL1/2 + 检测扩展 + max texture size），新增 `getWebGLCaps()` / `isSafari()` / `isIOS()` 工具函数；[frontend/src/utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听，上下文丢失时保存场景状态、恢复时重建；[HeroScene.vue](../../frontend/src/components/HeroScene.vue) 实现 **iOS 降级**策略（**Bloom 降级**：iOS 关闭 UnrealBloomPass；**PMREM 降级**：iOS PMREM 分辨率 256→128、阴影 2048→1024、dpr 上限 2→1.5；老 iOS 缺扩展时关闭 PMREM + Bloom）。② **Safari emoji 显示不一致**：根因为跨平台 emoji 字体风格差异（Apple Color Emoji vs 系统 emoji）。修复：新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件，使用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**；替换 [AppLayout.vue](../../frontend/src/components/AppLayout.vue)（品牌 / 导航 / 通知 / 资源）+ [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（头像 / 通知 / 资源 / 统计 / 快捷入口 / 花朵阶段）所有 emoji。构建 209 modules / 12.30s，HeroScene +0.71KB（降级逻辑）。关键词 `Safari 兼容` / `WebGL 上下文丢失` / `webglcontextlost` / `iOS 降级` / `EmojiIcon` / `Iconify` / `twemoji` / `SVG emoji` / `跨浏览器一致` / `hasWebGL 重写` / `getWebGLCaps` / `isSafari` / `isIOS` / `Bloom 降级` / `PMREM 降级` / `v2.3.3` 在 6 份文档中都要出现。
+
+**最后更新**：2026-07-30（v2.3.3 Safari 兼容性修复 — 3D 上下文恢复 + emoji 跨浏览器一致：① **`hasWebGL` 重写** + `getWebGLCaps` / `isSafari` / `isIOS` 工具函数；② [three-helpers.js](../../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听处理 **WebGL 上下文丢失**；③ [HeroScene.vue](../../frontend/src/components/HeroScene.vue) **iOS 降级**（**Bloom 降级** + **PMREM 降级**）；④ 新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件（**Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，**跨浏览器一致**），替换 AppLayout.vue + ProfileView.vue 所有 emoji。前一阶段 v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱 — 10 项大改））
 
 ---
 
@@ -11,7 +15,7 @@
 
 | 维度 | 状态 | 备注 |
 |---|---|---|
-| **可运行** | ✅ | 用户始终访问 `:5000`：应用模式（默认）Vite :5000 + FastAPI :5001（`python start.py` 自动起两个 + 自动 npm install）；生产模式 FastAPI :5000（`python start.py build` + `python start.py --prod`） |
+| **可运行** | ✅ | 用户始终访问 `:5000`：生产模式（v2.3.2 起默认）FastAPI :5000 单进程（`python start.py`，dist 不存在则自动构建）；应用模式（`--dev`）Vite :5000 + FastAPI :5001（前后端一起起，本地开发用） |
 | **v2.0 Vue 3 重构** | ✅ 完成 | 2026-07-19，前端独立 `frontend/`，13 个视图迁入 `frontend/src/views/`，详见 §2 |
 | **v2.1 视觉增强** | ✅ 完成 | 2026-07-20，4 个视觉组件 + 三层渐进增强策略（CSS / Canvas2D / Three.js），全部支持降级，详见 §2 |
 | **v2.2 视觉重构** | ✅ 完成 | 2026-07-20，解决 v2.1 "红白机观感" + "交互不明确"两大问题：three-helpers.js PBR 工具集 + SceneHint/SceneControls 交互组件 + 4 个视觉组件 v2 重写（PBR + Bloom + OrbitControls + raycaster），详见 §2 |
@@ -19,6 +23,8 @@
 | **v2.2.2 start.py 默认应用模式** | ✅ 完成 | 2026-07-25，`python start.py` 默认行为回滚为**应用/开发模式**（Vite :5000 HMR + FastAPI :5001 API 一起起），自动检测 `frontend/node_modules` 不存在则 `npm install`；新增 `--prod` 参数显式生产模式；`--dev` 改为兼容别名；移除 v2.2.1 的 `_ensure_dist_or_dev()` 自动 build 逻辑，详见 §2 |
 | **v2.2.3 移动端响应式 UI + 3D 几何降档** | ✅ 完成 | 2026-07-25，三档断点系统差异化布局（手机/平板/桌面）+ iOS Safari `dvh` + safe-area 适配 + fullscreen 路由模式 + 4 个 3D 组件移动端几何精度降档（详见 §2） |
 | **v2.3 六大四字名模块 + 双资源 + 花朵生命周期 + 通知 + 个人主页 + 西方曲谱** | ✅ 完成 | 2026-07-25，10 项大改：六大四字名板块 + 双资源（露水/落叶）+ UserFlower + Notification + ProfileView + 古琴弹西洋曲谱子菜单 + 日记调整 + 情绪日历对齐 + 树洞改进 + 漂流瓶评论返回通知，详见 §2 |
+| **v2.3.2 start.py 默认生产模式 + 自动构建简化** | ✅ 完成 | 2026-07-28，`python start.py` 默认回滚为**生产模式**（FastAPI :5000 单进程），**`dist 存在检测`** + **`自动构建`**（dist 不存在则 `npm install + npm run build`）；开发需显式 `--dev`（**应用模式**）；`--prod` 改为兼容别名；服务器部署 2 步。回滚 v2.2.2 默认应用模式（服务器端口代理 :5000 不能动），详见 §2 |
+| **v2.3.3 Safari 兼容性修复** | ✅ 完成 | 2026-07-30，**Safari 兼容**两类问题修复：① 3D 不渲染（**`hasWebGL` 重写** + `getWebGLCaps` / `isSafari` / `isIOS` + `webglcontextlost` / `webglcontextrestored` 处理 **WebGL 上下文丢失** + **iOS 降级**：**Bloom 降级** + **PMREM 降级**）；② emoji 不一致（新建 **EmojiIcon** 组件，**Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，**跨浏览器一致**），详见 §2 |
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
 | **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 / **3D + 伪 3D 视觉增强** — 全部 ✅ |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
@@ -33,6 +39,36 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-07-30（v2.3.3）— Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）
+
+- [x] 起因：Safari / iOS 用户反馈两类问题——① 主页 3D 浮岛场景不渲染（直接降级 SVG 或黑屏）；② 导航 / 个人主页 emoji 显示风格与 Chrome 不一致（Apple Color Emoji vs 系统 emoji）
+- [x] **改动 1：Safari 主页 3D 不渲染修复**（3 个根因逐一解决）：
+  - **`hasWebGL` 重写**：[utils/visual.js](../../frontend/src/utils/visual.js) 原 `hasWebGL()` 仅尝试 WebGL2，老 Safari 只支持 WebGL1 被误判无 WebGL → 降级 SVG。重写为区分 WebGL1/2（先试 WebGL2 失败再试 WebGL1）+ 检测扩展 + max texture size
+  - 新增 `getWebGLCaps()` / `isSafari()` / `isIOS()` 工具函数（`getWebGLCaps` 检测 `EXT_color_buffer_half_float` 等关键扩展）
+  - [three-helpers.js](../../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听，处理 **WebGL 上下文丢失**（iOS Safari 切后台→前台时触发）：`webglcontextlost` 时 `event.preventDefault()` + 保存场景状态；`webglcontextrestored` 时重建 renderer + 恢复场景状态 + 重启 rAF
+  - [HeroScene.vue](../../frontend/src/components/HeroScene.vue) **iOS 降级**策略降低内存压力：**Bloom 降级**（iOS 关闭 `UnrealBloomPass`）+ **PMREM 降级**（iOS PMREM 256→128、阴影 2048→1024、dpr 上限 2→1.5；老 iOS 缺 `EXT_color_buffer_half_float` 扩展时完全关闭 PMREM + Bloom）
+- [x] **改动 2：Safari emoji 显示不一致修复**：
+  - 新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件，使用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**（twemoji 风格统一扁平彩色），确保 **跨浏览器一致**
+  - 替换 [AppLayout.vue](../../frontend/src/components/AppLayout.vue)（品牌 / 导航 / 通知 / 资源）+ [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（头像 / 通知 / 资源 / 统计 / 快捷入口 / 花朵阶段）所有 emoji
+- [x] **Smoke test 结果**（2026-07-30 实测）：
+  - `npm run build` ✅ 通过：209 modules / 12.30s，HeroScene +0.71KB（降级逻辑）
+  - Safari 主页 3D 浮岛场景正常渲染（不再降级 SVG）✅
+  - iOS Safari 切后台→前台后 3D 场景恢复（不再黑屏）✅
+  - Safari / Chrome emoji 风格一致（twemoji SVG）✅
+- [x] 文档同步（Iron Rule）：6 份文档同步更新 — README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT
+
+### 2026-07-28（v2.3.2）— start.py 默认生产模式 + 自动构建简化
+
+- [x] 起因：v2.2.2 默认应用模式让 Vite 占 :5000，但服务器端口代理已配好 :5000 不能动，应用模式会破坏代理。回滚为默认生产模式
+- [x] **改动 1：[start.py](../../start.py) 默认行为变更** — 回滚 v2.2.2，默认走生产模式：
+  - 默认（无参数）：FastAPI :5000 单进程（生产模式），Vite 不运行
+  - **`dist 存在检测`**：仅检测 `static/dist/index.html` 存在性，不再比较 `frontend/src/` 与 `static/dist/` 文件修改时间
+  - **`自动构建`**：dist 不存在时自动 `npm install + npm run build`（需 Node.js 18+）
+  - `--dev` 改为显式应用模式（Vite :5000 HMR + FastAPI :5001 API，前后端一起起的「应用模式」）
+  - `--prod` 改为兼容别名（默认就是生产模式，加不加效果一样）
+- [x] **改动 2：服务器部署简化** — 从 3 步简化为 2 步：① 上传代码 ② `python start.py`（首次自动构建，之后秒启，FastAPI 单进程 :5000）
+- [x] 文档同步（Iron Rule）：6 份文档同步更新 — README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT
 
 ### 2026-07-25（v2.3）— 六大四字名板块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱
 

@@ -10,6 +10,10 @@
 
 > 🔒 **2026-07-25 v2.3 六大四字名模块 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱**：13 项大改全部完成。**开发新功能必须遵守 pre-commit 5 项 checklist**（详见 [§1.8](#18-改完代码必须同步更新文档自动同步铁律) / [HANDOFF §12.4](../../HANDOFF.md)）：① Pydantic Out schema 同步 ② `_migrate_legacy_columns()` 加列 ③ `constants.py` 业务常量同步 ④ `.env.example` 配置同步 ⑤ README+HANDOFF 速查表同步。新增模型 `UserFlower` / `Notification` + service `flower_service` + routers `notifications.py` / `profile.py` + 前端视图 `HealingView` / `WesternMusicListView` / `ProfileView`；双资源系统 `User.dew` + `User.leaves` 替代单一 `total_energy`；情绪日历 emoji 字符统一；树洞文件式聊天历史 `data/chats/{user_id}/{session_id}.json`；五音疗愈盘独立为顶级模块（`/healing`）；古琴弹西洋曲谱子菜单（`musics.is_western_score` + `/music/western`）。关键词 `双资源` / `露水` / `落叶` / `UserFlower` / `Notification` / `ProfileView` / `古琴弹西洋曲谱` / `visibility` / `树洞` / `漂流瓶社交` / `五音疗愈盘` / `pre-commit 5 项` 在 6 份文档中都要出现。
 
+> 🔒 **2026-07-28 v2.3.2 start.py 默认生产模式 + 自动构建简化**：`python start.py` 默认行为**再次变更**（回滚 v2.2.2「默认应用模式」）——**默认走生产模式**（FastAPI :5000 单进程，前后端不再一起起），需 `static/dist/` 已构建（不存在则自动 `npm install + npm run build`）。**`dist 存在检测`**——仅检测 `static/dist/index.html` 存在性；**`自动构建`**：dist 不存在时自动 `npm install + npm run build`（需 Node.js 18+）。**开发需显式 `python start.py --dev`**（Vite :5000 HMR + FastAPI :5001 API，前后端一起起的「应用模式」）。`--prod` 改为兼容别名（默认就是生产模式）。详见 [§1.9.1](#191-启动开发模式vite-dev-server-5000--fastapi-5001v232-起需显式---dev) / [§1.9.2](#192-开发模式-vs-生产模式v232-起默认生产模式)。关键词 `默认生产模式` / `dist 存在检测` / `自动构建` / `--dev` / `应用模式` / `v2.3.2` 在 6 份文档中都要出现。
+
+> 🔒 **2026-07-30 v2.3.3 Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）**：**Safari 兼容**两类问题修复。① 3D 不渲染：[utils/visual.js](../../frontend/src/utils/visual.js) **`hasWebGL` 重写**（区分 WebGL1/2 + 检测扩展 + max texture size）+ 新增 `getWebGLCaps()` / `isSafari()` / `isIOS()`；[utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听处理 **WebGL 上下文丢失**（iOS Safari 切后台→前台触发）；[HeroScene.vue](../../frontend/src/components/HeroScene.vue) **iOS 降级**（**Bloom 降级**：iOS 关闭 UnrealBloomPass；**PMREM 降级**：iOS PMREM 256→128、阴影 2048→1024、dpr 2→1.5）。② emoji 不一致：新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**，替换 AppLayout.vue + ProfileView.vue 所有 emoji。**新建 3D 组件必须复制 HeroScene 的 `webglcontextlost` / `webglcontextrestored` 监听 + iOS 降级逻辑**（详见 [§1.9.8](#198-视觉组件开发指南v21-加2026-07-20) / [HANDOFF §6.24](../../HANDOFF.md)）；**新增 emoji 必须用 `<EmojiIcon name="..." />` 而非裸 emoji 字符**（详见 [§1.9.9](#199-emoji-组件用法emojiiconvuev233-加2026-07-30)）。关键词 `Safari 兼容` / `WebGL 上下文丢失` / `webglcontextlost` / `iOS 降级` / `EmojiIcon` / `Iconify` / `twemoji` / `SVG emoji` / `跨浏览器一致` / `hasWebGL 重写` / `getWebGLCaps` / `isSafari` / `isIOS` / `Bloom 降级` / `PMREM 降级` / `v2.3.3` 在 6 份文档中都要出现。
+
 ---
 
 ## 1. 开发铁律
@@ -109,23 +113,25 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1
 
 ---
 
-## 1.9 前端开发模式（Vue 3 SPA，2026-07-19 v2.0 加，v2.0.1 端口策略调整，v2.2.2 默认应用模式）
+## 1.9 前端开发模式（Vue 3 SPA，2026-07-19 v2.0 加，v2.0.1 端口策略调整，v2.3.2 默认生产模式）
 
 > 2026-07-19 v2.0 全站 Vue 3 重构后，前台 13 个页面迁移到 Vue 3 SPA。本节讲**怎么开发前端**，不是讲铁律。架构看 [ARCHITECTURE §1.1](../ARCHITECTURE.md)，部署看 [DEPLOYMENT 前端构建](../DEPLOYMENT.md)。
 
 > 2026-07-19 v2.0.1 端口策略调整：开发模式 Vite 占 :5000（用户入口）+ FastAPI 退到 :5001（API），**用户始终访问 :5000**。理由见 [HANDOFF §6.16](../../HANDOFF.md)（FastAPI 反代 Vite 内部路径含 null 字节转义 + 冒号失败）。
 
-> 🔒 **2026-07-25 v2.2.2 start.py 默认应用模式**：`python start.py`（无参数）默认行为变更——**默认走应用/开发模式**（Vite :5000 HMR + FastAPI :5001 API 一起起），自动检测 `frontend/node_modules` 不存在则 `npm install`（约 7 分钟，仅首次）。**v2.2.1 的「dist 未构建 → 自动 build 后走生产模式」逻辑已移除**（应用模式用 Vite dev server 不需要构建产物）。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 `static/dist/` 已构建，未构建报错退出）。`--dev` 改为兼容别名（等同默认行为，向后兼容）。关键词 `--prod` / `默认应用模式` / `自动 npm install` / `前后端一起起` 在 6 份文档中都要出现。
+> 🔒 **2026-07-25 v2.2.2 start.py 默认应用模式**（⚠️ **已被 v2.3.2 回滚，保留仅为历史记录**）：`python start.py`（无参数）默认行为变更——**默认走应用/开发模式**（Vite :5000 HMR + FastAPI :5001 API 一起起），自动检测 `frontend/node_modules` 不存在则 `npm install`（约 7 分钟，仅首次）。**v2.2.1 的「dist 未构建 → 自动 build 后走生产模式」逻辑已移除**（应用模式用 Vite dev server 不需要构建产物）。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 `static/dist/` 已构建，未构建报错退出）。`--dev` 改为兼容别名（等同默认行为，向后兼容）。关键词 `--prod` / `默认应用模式` / `自动 npm install` / `前后端一起起` 在 6 份文档中都要出现。
 
-### 1.9.1 启动开发模式（Vite dev server :5000 + FastAPI :5001，v2.2.2 起为默认行为）
+> 🔒 **2026-07-28 v2.3.2 start.py 默认生产模式 + 自动构建简化**（⭐ **当前最新行为，回滚 v2.2.2**）：`python start.py`（无参数）默认行为**再次变更**——**默认走生产模式**（FastAPI :5000 单进程，前后端不再一起起），需 `static/dist/` 已构建（不存在则自动 `npm install + npm run build`）。**`dist 存在检测`**——仅检测 `static/dist/index.html` 存在性；**`自动构建`**：dist 不存在时自动 `npm install + npm run build`（需 Node.js 18+）。**开发需显式 `python start.py --dev`**（Vite :5000 HMR + FastAPI :5001 API，前后端一起起的「应用模式」）。`--prod` 改为兼容别名（默认就是生产模式，加不加效果一样）。理由：服务器端口代理已配好 :5000 不能动，应用模式会让 Vite 占 :5000 破坏代理。关键词 `默认生产模式` / `dist 存在检测` / `自动构建` / `--dev` / `应用模式` / `v2.3.2` 在 6 份文档中都要出现。
+
+### 1.9.1 启动开发模式（Vite dev server :5000 + FastAPI :5001，v2.3.2 起需显式 `--dev`）
 
 #### 方式 A：一键启动（推荐 ⭐）
 
 ```bash
 cd c:\Users\Administrator\Desktop\webwrold
-python start.py         # 强制开发模式（Vite :5000 + FastAPI :5001）
-                        # v2.2.2 起：默认行为就是应用模式，无需 --dev
-                        # 自动检测 frontend/node_modules 不存在 → npm install（约 7 分钟，仅首次）
+python start.py --dev    # 应用/开发模式（Vite :5000 + FastAPI :5001，前后端一起起）
+                         # v2.3.2 起：默认行为改为生产模式，开发必须显式加 --dev
+                         # 自动检测 frontend/node_modules 不存在 → npm install（约 7 分钟，仅首次）
 ```
 
 [start.py](../../start.py) 在 dev 模式会：
@@ -159,19 +165,20 @@ python start.py fg             # http://127.0.0.1:5001（fg 前台，关终端�
 >
 > ⚠️ **dev 模式 :5000 是 Vite，不是 FastAPI**：若用 `curl http://127.0.0.1:5000/api/...` 测试 API，会经 Vite proxy 转发到 :5001 的 FastAPI。直接打 FastAPI 用 :5001（如 `curl http://127.0.0.1:5001/docs` 看 Swagger）。
 >
-> ⚠️ **v2.2.2 行为变更**：`python start.py`（无参数）默认走应用模式（Vite :5000 + FastAPI :5001），自动 `npm install` 当 `frontend/node_modules` 不存在（不构建 dist，应用模式用 Vite dev server 不需要构建产物）。生产模式需显式 `python start.py --prod`（FastAPI :5000 单进程，需 dist 已构建，未构建报错退出）。
+> ⚠️ **v2.3.2 行为变更**（回滚 v2.2.2）：`python start.py`（无参数）默认走**生产模式**（FastAPI :5000 单进程，需 dist 已构建，不存在则**`自动构建`** `npm install + npm run build`，**`dist 存在检测`** 仅看 `static/dist/index.html` 是否存在）。开发需显式 `python start.py --dev`（Vite :5000 + FastAPI :5001，前后端一起起的「应用模式」）。`--prod` 改为兼容别名（默认就是生产模式）。
 
-### 1.9.2 开发模式 vs 生产模式
+### 1.9.2 开发模式 vs 生产模式（v2.3.2 起默认生产模式）
 
-| 维度 | 应用模式（默认，v2.2.2 起） | 生产模式（--prod） |
+| 维度 | 生产模式（默认，v2.3.2 起） | 应用模式（--dev） |
 |---|---|---|
-| 启动命令 | `python start.py`（默认）或 `python start.py --dev`（兼容别名） | `python start.py --prod` |
-| 浏览器访问 | `http://127.0.0.1:5000/`（Vite） | `http://127.0.0.1:5000/`（FastAPI） |
-| 谁服务 :5000 | Vite dev server（HMR + 源码） | FastAPI（服务 `static/dist/index.html` + SPA fallback） |
-| FastAPI 监听 | :5001（由 start.py 设 QI_PORT=5001） | :5000（从 .env 读 QI_PORT） |
-| Vite 是否运行 | ✅ 是 | ❌ 否（dist 已构建，不需要 Vite） |
-| 改 .vue 后 | 浏览器自动热更新 | 必须重新 `python start.py build` 或 `npm run build` |
-| 适用场景 | 日常开发 | 部署上线 / 真机测试 |
+| 启动命令 | `python start.py`（默认）或 `python start.py --prod`（兼容别名） | `python start.py --dev` |
+| 浏览器访问 | `http://127.0.0.1:5000/`（FastAPI） | `http://127.0.0.1:5000/`（Vite） |
+| 谁服务 :5000 | FastAPI（服务 `static/dist/index.html` + SPA fallback） | Vite dev server（HMR + 源码） |
+| FastAPI 监听 | :5000（从 .env 读 QI_PORT） | :5001（由 start.py 设 QI_PORT=5001） |
+| Vite 是否运行 | ❌ 否（dist 已构建，不需要 Vite） | ✅ 是 |
+| dist 不存在时 | **`自动构建`** `npm install + npm run build`（**`dist 存在检测`**） | 自动 `npm install`（不构建 dist，应用模式用 Vite dev server） |
+| 改 .vue 后 | 必须重新 `python start.py build` 或 `npm run build` | 浏览器自动热更新 |
+| 适用场景 | 部署上线 / 真机测试 / 服务器（端口代理 :5000 指向 FastAPI） | 日常开发（本地，端口代理 :5000 指向 Vite） |
 
 ### 1.9.3 dev proxy 配置（[frontend/vite.config.js](../../frontend/vite.config.js)）
 
@@ -345,7 +352,7 @@ build: {
 | `npm run build` | 构建生产产物到 `../static/dist/`（v2.0.1 起也可用 `python start.py build` 一键） |
 | `npm run preview` | 本地预览 build 产物（不常用，生产走 FastAPI SPA fallback） |
 
-> **start.py 子命令对照**（v2.2.2 起）：`python start.py`（默认应用模式：Vite :5000 + FastAPI :5001，自动 `npm install` 当 `frontend/node_modules` 不存在）/ `python start.py --prod`（显式生产模式，FastAPI :5000 单进程，需 dist 已构建）/ `python start.py --dev`（兼容别名，等同默认应用模式）/ `python start.py build`（仅构建前端到 `static/dist/`，不启动服务）/ `python start.py fg`（前台运行，systemd 用，默认应用模式，加 `--prod` 切生产）/ `python start.py status`（查 Vite + FastAPI 双进程状态）/ `python start.py stop`（停双进程）/ `python start.py restart`（重启，默认应用模式）。
+> **start.py 子命令对照**（v2.3.2 起，回滚 v2.2.2）：`python start.py`（**默认生产模式**：FastAPI :5000 单进程，**`dist 存在检测`** → 不存在则**`自动构建`** `npm install + npm run build`）/ `python start.py --prod`（兼容别名，默认就是生产模式，加不加效果一样）/ `python start.py --dev`（**应用模式**：Vite :5000 HMR + FastAPI :5001 API，前后端一起起，本地开发用，自动 `npm install` 当 `frontend/node_modules` 不存在）/ `python start.py build`（仅构建前端到 `static/dist/`，不启动服务）/ `python start.py fg`（前台运行，systemd 用，默认生产模式，加 `--dev` 切应用模式）/ `python start.py status`（查 FastAPI / Vite 进程状态）/ `python start.py stop`（停进程）/ `python start.py restart`（重启，默认生产模式）。
 
 ### 1.9.7 调试技巧
 
@@ -353,10 +360,12 @@ build: {
 - **Vite 启动慢 / HMR 不生效**：检查 [frontend/vite.config.js](../../frontend/vite.config.js) 的 `host: '127.0.0.1'`（不要写 `localhost`，IPv6 `[::1]` 会连不上，详见 [HANDOFF §6.12](../../HANDOFF.md)）
 - **API 401 不跳登录**：检查 [frontend/src/api/index.js](../../frontend/src/api/index.js) 的 axios 拦截器
 - **404 不显示**：检查 `router/index.js` 末尾的 `/:pathMatch(.*)*` catch-all 路由
-- **dist 未构建提示页**：访问 :5000 看到「dist 未构建」→ `python start.py build` 或 `cd frontend && npm run build`
-- **dev 模式 :5000 是 Vite，不是 FastAPI**（v2.0.1 加）：开发模式访问 :5000 是 Vite dev server（HMR + 源码），API 请求经 Vite proxy 转发到 :5001 的 FastAPI。要看 FastAPI Swagger 文档直接访问 :5001（`http://127.0.0.1:5001/docs`）。**生产模式 :5000 才是 FastAPI**。详见 [§1.9.1](#191-启动开发模式vite-dev-server-5000--fastapi-50012026-07-19-v201-改)。
-- **端口 5000 被占用**：`python start.py stop` 停掉旧进程；或检查是否同时跑了 Vite 和 FastAPI（v2.0.1 dev 模式 Vite 占 :5000，如果 FastAPI 没改成 :5001 就会撞）。Vite `strictPort: true` 会直接报错不自动跳端口。
+- **dist 未构建提示页**：访问 :5000 看到「dist 未构建」→ `python start.py build` 或 `cd frontend && npm run build`（v2.3.2 起默认生产模式 `python start.py` 也会自动构建）
+- **dev 模式 :5000 是 Vite，不是 FastAPI**（v2.0.1 加）：应用模式（`--dev`）访问 :5000 是 Vite dev server（HMR + 源码），API 请求经 Vite proxy 转发到 :5001 的 FastAPI。要看 FastAPI Swagger 文档直接访问 :5001（`http://127.0.0.1:5001/docs`）。**生产模式（默认）:5000 才是 FastAPI**。详见 [§1.9.1](#191-启动开发模式vite-dev-server-5000--fastapi-5001v232-起需显式---dev)。
+- **端口 5000 被占用**：`python start.py stop` 停掉旧进程；或检查是否同时跑了 Vite 和 FastAPI（应用模式 Vite 占 :5000，如果 FastAPI 没改成 :5001 就会撞）。Vite `strictPort: true` 会直接报错不自动跳端口。
 - **3D 花田不显示**：访问 `/garden` 看到「🌿 花田正在生长…」一直转 → 打开 DevTools Console 看是不是 `Failed to fetch dynamically imported module`（three-vendor chunk 没加载到，检查 `static/dist/assets/three-vendor-*.js` 是否存在 → 不存在重新 `npm run build`）
+- **Safari 主页 3D 不渲染**（v2.3.3 加）：iOS Safari 切后台→前台后 3D 黑屏 → 检查 `webglcontextlost` / `webglcontextrestored` 监听是否挂载（详见 [§1.9.8 Safari / iOS 兼容](#safari--ios-兼容v233-加) / [HANDOFF §6.24](../../HANDOFF.md)）；Safari 直接降级 SVG → 检查 `hasWebGL()` 是否误判（v2.3.3 **hasWebGL 重写** 已修复，区分 WebGL1/2）
+- **Safari emoji 与 Chrome 不一致**（v2.3.3 加）：检查是否用了裸 emoji 字符 → 改用 `<EmojiIcon name="..." />`（详见 [§1.9.9](#19-emoji-组件用法emojiiconvuev233-加2026-07-30)）
 - **proxy 没生效**：检查 [vite.config.js](../../frontend/vite.config.js) 的 `server.proxy` 是否包含 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json`（v2.0.1 起多了 `/docs` 和 `/openapi.json`，方便开发时直接在 :5000 访问 Swagger）
 
 ### 1.9.8 视觉组件开发指南（v2.1 加，2026-07-20；v2.2 PBR 升级，2026-07-20）
@@ -539,7 +548,10 @@ onBeforeUnmount(() => { /* 见铁律 ④ */ })
 
 | 函数 | 返回 | 说明 |
 |---|---|---|
-| `hasWebGL()` | boolean | 当前浏览器是否支持 WebGL（含 2 / 1 fallback 测试） |
+| `hasWebGL()` | boolean | 当前浏览器是否支持 WebGL（v2.3.3 **hasWebGL 重写**：区分 WebGL1/2 + 检测扩展 + max texture size，先试 WebGL2 失败再试 WebGL1，避免老 Safari 误判） |
+| `getWebGLCaps()` | object \| null | **v2.3.3 加**：返回 WebGL 能力对象（`isWebGL2` / `maxTextureSize` / `hasHalfFloatExt` 等）；`hasHalfFloatExt` 检测 `EXT_color_buffer_half_float` 扩展，老 iOS 缺该扩展时需关闭 PMREM + Bloom |
+| `isSafari()` | boolean | **v2.3.3 加**：UA 是否含 Safari 且不含 Chrome/Edge（区分 Safari 与 Chrome 的 Safari UA 伪装） |
+| `isIOS()` | boolean | **v2.3.3 加**：UA 是否含 iPhone/iPad/iPod（iPadOS 13+ 用 `navigator.platform` 含 Mac + `navigator.maxTouchPoints > 1` 兜底） |
 | `prefersReducedMotion()` | boolean | 用户是否设置 `prefers-reduced-motion: reduce` |
 | `isMobile()` | boolean | 视口宽度 < 768px 或 UA 含 Mobile |
 | `isLowPower()` | boolean | `navigator.hardwareConcurrency` ≤ 4 或 `deviceMemory` ≤ 4 |
@@ -548,6 +560,70 @@ onBeforeUnmount(() => { /* 见铁律 ④ */ })
 | `smartRAF(callback)` | number | `requestAnimationFrame` 包装，`document.hidden` 时 `cancelAnimationFrame`，可见时自动恢复 |
 
 所有函数**单次缓存**结果（同一会话内重复调用直接返回缓存值），不会重复检测拖累性能。
+
+#### Safari / iOS 兼容（v2.3.3 加）
+
+> 🔒 **Safari 兼容 3 大坑**（详见 [HANDOFF §6.24](../../HANDOFF.md)）：① **WebGL 上下文丢失**（iOS Safari 切后台→前台触发 `webglcontextlost`）；② **`hasWebGL` 误判**（老 Safari 仅 WebGL1 被判无 WebGL）；③ **emoji 字体不一致**（Apple Color Emoji vs 系统 emoji）。
+
+**新建 3D 组件必须复制 [HeroScene.vue](../../frontend/src/components/HeroScene.vue) 的 Safari 兼容逻辑**：
+
+1. **`webglcontextlost` / `webglcontextrestored` 事件监听**（在 [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 的 `createRenderer` 中已统一挂载）：
+   - `webglcontextlost`：`event.preventDefault()` + 保存场景状态（相机位置 / OrbitControls 状态 / 自动旋转开关）
+   - `webglcontextrestored`：重建 renderer + 恢复场景状态 + 重启 rAF
+   - 组件侧需在回调里恢复自身场景（HeroScene 的 `onContextRestored` 为模板）
+2. **iOS 降级**（`isIOS()` 检测）降低内存压力，避免老 iOS 缺 `EXT_color_buffer_half_float` 扩展时崩溃：
+   - **Bloom 降级**：iOS 关闭 `UnrealBloomPass`（`if (!isIOS()) composer = createPostProcessing(...)`）
+   - **PMREM 降级**：iOS PMREM 分辨率 256→128、阴影贴图 2048→1024、`renderer.setPixelRatio(Math.min(dpr, 1.5))`（桌面 dpr 上限 2）
+   - 老 iOS 缺 `EXT_color_buffer_half_float` 扩展时（`getWebGLCaps().hasHalfFloatExt === false`）完全关闭 PMREM + Bloom
+3. **验证清单**（在原 §1.9.8 验证清单基础上追加）：
+   - iOS Safari 真机访问首页：3D 浮岛正常渲染（不降级 SVG）
+   - iOS Safari 切到其他 App 再切回：3D 场景恢复（不黑屏）
+   - 老 iOS（缺 `EXT_color_buffer_half_float`）：PMREM + Bloom 关闭，3D 仍可渲染（无扩展崩溃）
+   - Safari / Chrome 对照：emoji 风格一致（twemoji SVG）
+
+详见 [ARCHITECTURE §1.1.6](../ARCHITECTURE.md) Safari 兼容决策 + 降级验证矩阵 + [HANDOFF §6.24](../../HANDOFF.md) 3 大坑。
+
+### 1.9.9 emoji 组件用法（EmojiIcon.vue，v2.3.3 加，2026-07-30）
+
+> 🔒 **铁律**：**新增 emoji 必须用 `<EmojiIcon name="..." />` 而非裸 emoji 字符**。裸 emoji 在 Safari（Apple Color Emoji 彩色写实）与 Chrome（系统 emoji 扁平）风格不一致，破坏 **跨浏览器一致** 的视觉调性。
+
+**是什么**：[EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 是基于 **Iconify** + `@iconify-json/twemoji` 的离线 **SVG emoji** 组件。twemoji 风格统一扁平彩色，不依赖系统 emoji 字体，确保 Safari / Chrome / Firefox / Edge 渲染完全一致。
+
+**为什么用 SVG emoji 而非系统 emoji**：Safari 用 Apple Color Emoji（彩色写实风格），Chrome 用系统 emoji（扁平风格），同一 emoji 在不同浏览器视觉差异明显（如 🌳 树 / 🏝️ 岛屿 / 🔔 铃铛）。**跨浏览器一致** 是治愈系视觉调性的硬要求，故用 Iconify 离线 SVG 统一。
+
+**用法**：
+
+```vue
+<script setup>
+import EmojiIcon from '@/components/EmojiIcon.vue'
+</script>
+
+<template>
+  <!-- name = twemoji 图标名（kebab-case），见 @iconify-json/twemoji -->
+  <EmojiIcon name="desert-island" />        <!-- 🏝️ 岛屿 -->
+  <EmojiIcon name="bell" />                 <!-- 🔔 铃铛 -->
+  <EmojiIcon name="deciduous-tree" />       <!-- 🌳 树 -->
+  <EmojiIcon name="herb" />                 <!-- 🌿 草本 -->
+  <EmojiIcon name="champagne-bottle" />     <!-- 🍶 拾瓶 -->
+  <EmojiIcon name="sparkles" />             <!-- ✨ -->
+</template>
+```
+
+**支持的 props**：
+
+| prop | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `name` | string | **必填** | twemoji 图标名（kebab-case），查 [Iconify twemoji](https://icon-sets.iconify.design/twemoji/) |
+| `size` | string \| number | `'1em'` | SVG 尺寸，默认跟随父元素 `font-size`（`1em`） |
+| `class` | string | — | 透传给 SVG 的 CSS class（Tailwind class 也可） |
+
+**已替换的位置**（v2.3.3）：
+- [AppLayout.vue](../../frontend/src/components/AppLayout.vue)：品牌图标 / 导航项 / 通知铃铛 / 资源条
+- [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)：头像 / 通知 / 资源 / 统计卡 / 快捷入口 / 花朵阶段
+
+**查 twemoji 图标名**：访问 https://icon-sets.iconify.design/twemoji/ 搜索 emoji，复制 `name`（如 🏝️ → `desert-island`）。`@iconify-json/twemoji` 已在 [frontend/package.json](../../frontend/package.json) 依赖中，构建时打包进 bundle（离线，不联网）。
+
+> ⚠️ **不要**用裸 emoji 字符（如 `🏝️`）写进 `.vue` 模板——Safari 与 Chrome 渲染不一致。**所有前台 emoji 必须走 `<EmojiIcon>`**。后台 `/admin/*` SSR 模板不受此约束（独立隔离，不强求跨浏览器一致）。
 
 ---
 
