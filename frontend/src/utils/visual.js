@@ -9,29 +9,90 @@
 
 let _webglChecked = false
 let _webglAvailable = false
+let _webglCaps = null
 let _reducedMotion = null
 let _isMobile = null
 let _isLowPower = null
 
 /**
  * 检测浏览器是否支持 WebGL（用于 Three.js 重度场景的准入判断）
- * 仅检测 WebGL2，因为 Three.js 0.168 默认走 WebGL2
+ * 同时检测关键扩展能力（half-float / max texture size），缓存到 _webglCaps
+ *
+ * Safari 兼容性（v2.3.3 修复）：
+ * - 明确区分 WebGL1/WebGL2（旧逻辑用 instanceof WebGLRenderingContext 误判 WebGL2 context）
+ * - 检测 EXT_color_buffer_half_float（PMREM/Bloom 必需，老 iOS 缺失）
+ * - 检测 MAX_TEXTURE_SIZE / MAX_CUBE_MAP_TEXTURE_SIZE（shadow map 2048 / PMREM 依赖）
  */
 export function hasWebGL() {
   if (_webglChecked) return _webglAvailable
   _webglChecked = true
   try {
     const canvas = document.createElement('canvas')
-    const gl =
-      canvas.getContext('webgl2') ||
-      canvas.getContext('webgl') ||
-      canvas.getContext('experimental-webgl')
-    _webglAvailable = !!(gl && gl instanceof WebGLRenderingContext) ||
-      !!(canvas.getContext('webgl2') instanceof WebGL2RenderingContext)
+    let gl = canvas.getContext('webgl2', { failIfMajorPerformanceCaveat: false })
+    const isWebGL2 = !!gl
+    if (!gl) {
+      gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    }
+    if (!gl) {
+      _webglAvailable = false
+      return false
+    }
+
+    const exts = gl.getSupportedExtensions() || []
+    const hasHalfFloat = exts.includes('EXT_color_buffer_half_float') ||
+                         exts.includes('EXT_color_buffer_float')
+    const hasHalfFloatLinear = exts.includes('OES_texture_half_float_linear')
+    const maxTexSize = gl.getParameter(gl.MAX_TEXTURE_SIZE)
+    const maxCubeSize = gl.getParameter(gl.MAX_CUBE_MAP_TEXTURE_SIZE)
+
+    _webglCaps = {
+      isWebGL2,
+      hasHalfFloat,
+      hasHalfFloatLinear,
+      maxTexSize,
+      maxCubeSize,
+      // PMREM 需要 half-float + cube map ≥1024
+      canPMREM: hasHalfFloat && maxCubeSize >= 1024,
+      // UnrealBloomPass 需要 half-float + half-float linear
+      canBloom: hasHalfFloat && hasHalfFloatLinear,
+    }
+
+    // WebGL 可用门槛：有 WebGL2 或 WebGL1 + 纹理尺寸够
+    _webglAvailable = isWebGL2 || maxTexSize >= 4096
   } catch (e) {
     _webglAvailable = false
   }
   return _webglAvailable
+}
+
+/**
+ * 获取 WebGL 能力详情（hasWebGL() 后才有效）
+ * 用于 HeroScene 决定是否降级 PMREM/Bloom
+ */
+export function getWebGLCaps() {
+  return _webglCaps
+}
+
+/**
+ * 是否为 Safari（v2.3.3 加，用于 3D 场景降级决策）
+ * Safari 的 WebKit 引擎对 WebGL 有已知 bug（iOS 17 上下文丢失、PMREM 静默失败等）
+ */
+export function isSafari() {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  // Safari = WebKit + 非 Chrome/Android
+  return /Safari/i.test(ua) && !/Chrome|CriOS|Android/i.test(ua)
+}
+
+/**
+ * 是否为 iOS（v2.3.3 加，用于 3D 场景降级决策）
+ * iPhone/iPad/iPod，iPadOS 13+ 的 iPad 报 MacIntel 但有触摸
+ */
+export function isIOS() {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  return /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 }
 
 /**

@@ -3,6 +3,7 @@ import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import AmbientBackground from '@/components/AmbientBackground.vue'
+import EmojiIcon from '@/components/EmojiIcon.vue'
 import api from '@/api'
 
 const router = useRouter()
@@ -114,7 +115,7 @@ onBeforeUnmount(() => {
     <header class="desktop-nav safe-top">
       <div class="nav-inner nav-inner--desktop">
         <router-link to="/" class="nav-brand">
-          <span class="nav-brand__icon">🏝️</span>
+          <EmojiIcon emoji="🏝️" class="nav-brand__icon" />
           <span class="nav-brand__name">静屿</span>
         </router-link>
 
@@ -126,7 +127,7 @@ onBeforeUnmount(() => {
             class="nav-link"
             :class="{ 'is-active': activeNav === item.name }"
           >
-            <span class="nav-link__icon">{{ item.icon }}</span>
+            <EmojiIcon :emoji="item.icon" class="nav-link__icon" />
             <span class="nav-link__label">{{ item.label }}</span>
           </router-link>
         </nav>
@@ -139,10 +140,10 @@ onBeforeUnmount(() => {
               :title="`未读通知 ${unreadCount} 条`"
               aria-label="通知"
             >
-              🔔<span v-if="unreadCount > 0" class="nav-bell__badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+              <EmojiIcon emoji="🔔" /><span v-if="unreadCount > 0" class="nav-bell__badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
             </button>
             <div class="nav-energy" :title="`露水: ${userStore.energy}`">
-              <span class="nav-energy__icon">💧</span>
+              <EmojiIcon emoji="💧" class="nav-energy__icon" />
               <span class="nav-energy__num">{{ userStore.energy }}</span>
             </div>
             <button class="nav-user__btn" @click="handleLogout">离开</button>
@@ -158,7 +159,7 @@ onBeforeUnmount(() => {
     <header class="tablet-nav safe-top">
       <div class="nav-inner nav-inner--tablet">
         <router-link to="/" class="nav-brand">
-          <span class="nav-brand__icon">🏝️</span>
+          <EmojiIcon emoji="🏝️" class="nav-brand__icon" />
           <span class="nav-brand__name">静屿</span>
         </router-link>
 
@@ -171,7 +172,7 @@ onBeforeUnmount(() => {
             :class="{ 'is-active': activeNav === item.name }"
             :title="item.label"
           >
-            <span class="nav-link__icon">{{ item.icon }}</span>
+            <EmojiIcon :emoji="item.icon" class="nav-link__icon" />
             <span class="nav-link__label--compact">{{ item.label }}</span>
           </router-link>
         </nav>
@@ -184,10 +185,10 @@ onBeforeUnmount(() => {
               :title="`未读通知 ${unreadCount} 条`"
               aria-label="通知"
             >
-              🔔<span v-if="unreadCount > 0" class="nav-bell__badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+              <EmojiIcon emoji="🔔" /><span v-if="unreadCount > 0" class="nav-bell__badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
             </button>
             <div class="nav-energy" :title="`露水: ${userStore.energy}`">
-              <span class="nav-energy__icon">💧</span>
+              <EmojiIcon emoji="💧" class="nav-energy__icon" />
               <span class="nav-energy__num">{{ userStore.energy }}</span>
             </div>
             <button class="nav-user__btn nav-user__btn--compact" @click="handleLogout">离开</button>
@@ -202,7 +203,7 @@ onBeforeUnmount(() => {
     <!-- ── 移动端（≤768px）顶部精简状态栏（fullscreen 模式隐藏） ── -->
     <header v-if="!isFullscreen" class="mobile-topbar safe-top">
       <router-link to="/" class="mobile-topbar__brand">
-        <span class="mobile-topbar__icon">🏝️</span>
+        <EmojiIcon emoji="🏝️" class="mobile-topbar__icon" />
         <span class="mobile-topbar__name">静屿</span>
       </router-link>
       <div class="mobile-topbar__right">
@@ -212,10 +213,10 @@ onBeforeUnmount(() => {
             @click="router.push('/notifications')"
             aria-label="通知"
           >
-            🔔<span v-if="unreadCount > 0" class="mobile-topbar__bell-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+            <EmojiIcon emoji="🔔" /><span v-if="unreadCount > 0" class="mobile-topbar__bell-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
           </button>
           <div class="mobile-topbar__energy">
-            <span>💧</span>
+            <EmojiIcon emoji="💧" />
             <span>{{ userStore.energy }}</span>
           </div>
           <button class="mobile-topbar__logout" @click="handleLogout">离开</button>
@@ -240,7 +241,7 @@ onBeforeUnmount(() => {
         class="tabbar-item"
         :class="{ 'is-active': activeNav === item.name }"
       >
-        <span class="tabbar-item__icon">{{ item.icon }}</span>
+        <EmojiIcon :emoji="item.icon" class="tabbar-item__icon" />
         <span class="tabbar-item__label">{{ item.label }}</span>
       </router-link>
 
@@ -272,7 +273,7 @@ onBeforeUnmount(() => {
               :class="{ 'is-active': activeNav === item.name }"
               @click="go(item.path)"
             >
-              <span class="mobile-drawer__icon">{{ item.icon }}</span>
+              <EmojiIcon :emoji="item.icon" class="mobile-drawer__icon" />
               <span class="mobile-drawer__label">{{ item.label }}</span>
             </button>
           </div>

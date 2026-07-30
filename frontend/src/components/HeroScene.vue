@@ -29,6 +29,9 @@ import { ref, onMounted, onBeforeUnmount, shallowRef, watch } from 'vue'
 import {
   shouldUseThreeJS,
   isMobile,
+  isSafari,
+  isIOS,
+  getWebGLCaps,
   smartRAF,
 } from '@/utils/visual'
 import {
@@ -194,6 +197,34 @@ const initScene = async () => {
   const height = container.clientHeight
   const mobile = isMobile()
 
+  // ─── Safari/iOS 降级决策（v2.3.3 加） ───
+  // iOS Safari 17+ 切后台必丢上下文 + HalfFloat RT 触发 OOM → 关 Bloom
+  // 老 Safari 缺 EXT_color_buffer_half_float → PMREM 失败 → 降级或关
+  const caps = getWebGLCaps()
+  const ios = isIOS()
+  const safari = isSafari()
+  let useBloom = !ios // iOS 直接关 Bloom（避免 HalfFloat RT 触发上下文丢失）
+  let usePMREM = true
+  let pmremSize = mobile ? 128 : 256
+  let shadowSize = mobile ? 1024 : 2048
+  let dpr = mobile ? 1.5 : 2
+
+  if (caps) {
+    if (!caps.hasHalfFloat) {
+      // 老 iOS/macOS 缺 half-float 扩展，PMREM 会静默失败 → 全关
+      useBloom = false
+      usePMREM = false
+    }
+    if (!caps.canBloom) useBloom = false
+    if (!caps.canPMREM) usePMREM = false
+  }
+  // iOS 进一步降级（避免 OOM + 上下文丢失）
+  if (ios) {
+    pmremSize = 128
+    shadowSize = 1024
+    dpr = 1.5
+  }
+
   // ─── 场景 ───
   const scene = new THREE.Scene()
   scene.background = null
@@ -208,18 +239,52 @@ const initScene = async () => {
 
   // ─── 渲染器（PBR） ───
   const renderer = createRenderer(container.appendChild(document.createElement('canvas')), {
-    dpr: mobile ? 1.5 : 2,
+    dpr,
     shadows: true,
     toneMappingExposure: 0.92,
   })
   renderer.setSize(width, height)
 
+  // ★ Safari 上下文丢失：暂停渲染；恢复后重新初始化整个场景
+  // iOS 17 切后台→前台会触发 webglcontextlost，不处理就永久黑屏
+  let contextLost = false
+  renderer._safariHooks.onLost = () => {
+    contextLost = true
+    if (three.value?.stopRAF) three.value.stopRAF()
+  }
+  renderer._safariHooks.onRestored = async () => {
+    if (!contextLost) return
+    contextLost = false
+    // 上下文恢复后，重新初始化场景（geometry/material 已失效）
+    try {
+      // 先清理旧的
+      if (three.value) {
+        if (three.value.stopRAF) three.value.stopRAF()
+        if (three.value.ro) three.value.ro.disconnect()
+        disposeObject3D(three.value.scene)
+        disposeRenderer(three.value.renderer, three.value.composer, three.value.pmrem, three.value.envMap)
+      }
+      await initScene()
+    } catch (e) {
+      console.warn('[HeroScene] context restore re-init failed, fallback to SVG', e)
+      showFallback.value = true
+      showThree.value = false
+    }
+  }
+
   // ─── 环境贴图（PBR 反射） ───
-  const { envMap, pmrem } = createEnvironment(renderer, mobile ? 128 : 256)
-  scene.environment = envMap
+  let envMap = null
+  let pmrem = null
+  if (usePMREM) {
+    const env = createEnvironment(renderer, pmremSize)
+    envMap = env.envMap
+    pmrem = env.pmrem
+    scene.environment = envMap
+  }
 
   // ─── 后处理（Bloom + ACES） ───
   const composer = createPostProcessing(scene, camera, renderer, {
+    bloom: useBloom,
     strength: mobile ? 0.22 : 0.28,
     radius: 0.5,
     threshold: 0.88,
@@ -244,7 +309,7 @@ const initScene = async () => {
     intensity: 1.4,
     color: 0xfff4e0,
     shadow: {
-      mapSize: mobile ? 1024 : 2048,
+      mapSize: shadowSize,
       camera: { near: 0.5, far: 50, left: -15, right: 15, top: 15, bottom: -15 },
       bias: -0.0004,
       radius: 5,

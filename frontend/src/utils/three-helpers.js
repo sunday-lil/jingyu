@@ -55,16 +55,30 @@ export function createRenderer(canvas, opts = {}) {
     depth: true,
   })
 
+  // ★ Safari/iOS 兼容：监听 WebGL 上下文丢失/恢复（iOS 17 切后台必丢）
+  // 不 preventDefault 的话浏览器会直接禁用恢复 → 永久黑屏
+  const hooks = { onLost: null, onRestored: null }
+  const onContextLost = (e) => {
+    e.preventDefault() // ★ 必须 preventDefault 才能允许恢复
+    console.warn('[WebGL] context lost, pausing render')
+    if (hooks.onLost) hooks.onLost()
+  }
+  const onContextRestored = () => {
+    console.log('[WebGL] context restored')
+    if (hooks.onRestored) hooks.onRestored()
+  }
+  canvas.addEventListener('webglcontextlost', onContextLost, false)
+  canvas.addEventListener('webglcontextrestored', onContextRestored, false)
+  // 暴露 hooks 给调用方注册回调
+  renderer._safariHooks = hooks
+
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dpr))
-  // ACES Filmic 是电影工业标准的色调映射，能优雅处理高光过曝
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = toneMappingExposure
-  // sRGB 输出空间，让颜色与设计稿一致
   renderer.outputColorSpace = THREE.SRGBColorSpace
 
   if (shadows) {
     renderer.shadowMap.enabled = true
-    // PCFSoftShadowMap 边缘更柔和，比 BasicPCF 更现代
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
   }
 

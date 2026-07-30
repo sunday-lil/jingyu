@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import gsap from 'gsap'
 import api from '@/api'
 import { useUserStore } from '@/stores/user'
+import EmojiIcon from '@/components/EmojiIcon.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -150,7 +151,7 @@ onBeforeUnmount(() => {
   <div class="profile-view">
     <!-- 顶部个人卡 -->
     <header class="profile-hero card">
-      <div class="profile-hero__avatar">🏝️</div>
+      <div class="profile-hero__avatar"><EmojiIcon emoji="🏝️" /></div>
       <div class="profile-hero__body">
         <h1 class="profile-hero__name">{{ profile?.nickname || userStore.nickname || '岛主' }}</h1>
         <p class="profile-hero__meta">
@@ -162,7 +163,7 @@ onBeforeUnmount(() => {
         </p>
       </div>
       <div class="profile-hero__actions">
-        <button class="btn btn--ghost profile-hero__btn" @click="goNotifications">🔔 通知</button>
+        <button class="btn btn--ghost profile-hero__btn" @click="goNotifications"><EmojiIcon emoji="🔔" /> 通知</button>
         <button class="btn btn--ghost profile-hero__btn profile-hero__btn--logout" @click="handleLogout">离开</button>
       </div>
     </header>
@@ -177,7 +178,7 @@ onBeforeUnmount(() => {
         <div class="resource-card card">
           <div class="resource-card__head">
             <div class="resource-card__label">露水</div>
-            <div class="resource-card__icon">💧</div>
+            <div class="resource-card__icon"><EmojiIcon emoji="💧" /></div>
           </div>
           <div class="resource-card__value">{{ profile.total_energy }}</div>
           <div class="resource-card__hint">浇灌花朵盛开</div>
@@ -185,7 +186,7 @@ onBeforeUnmount(() => {
         <div class="resource-card card">
           <div class="resource-card__head">
             <div class="resource-card__label">落叶</div>
-            <div class="resource-card__icon">🍂</div>
+            <div class="resource-card__icon"><EmojiIcon emoji="🍂" /></div>
           </div>
           <div class="resource-card__value">{{ profile.leaves }}</div>
           <div class="resource-card__hint">兑换花种</div>
@@ -197,43 +198,43 @@ onBeforeUnmount(() => {
         <h2 class="section-title">岛上足迹</h2>
         <div class="stat-grid">
           <button class="stat-card card" @click="goDiary">
-            <div class="stat-card__emoji">📖</div>
-            <div class="stat-card__num">{{ profile.stats.diary_count }}</div>
-            <div class="stat-card__label">日记</div>
-            <div class="stat-card__sub" v-if="profile.stats.public_diary_count">
-              公开 {{ profile.stats.public_diary_count }}
-            </div>
-          </button>
-          <button class="stat-card card" @click="goCalendar">
-            <div class="stat-card__emoji">🌙</div>
-            <div class="stat-card__num">{{ profile.stats.checkin_count }}</div>
-            <div class="stat-card__label">打卡</div>
-            <div class="stat-card__sub">连续 {{ profile.stats.streak }} 天</div>
-          </button>
-          <button class="stat-card card" @click="goMusic">
-            <div class="stat-card__emoji">🎵</div>
-            <div class="stat-card__num">{{ profile.stats.listen_count }}</div>
-            <div class="stat-card__label">听曲</div>
-            <div class="stat-card__sub">古琴疗愈</div>
-          </button>
-          <button class="stat-card card" @click="goGarden">
-            <div class="stat-card__emoji">🌸</div>
-            <div class="stat-card__num">{{ flowerStats.total }}</div>
-            <div class="stat-card__label">花朵</div>
-            <div class="stat-card__sub">盛开 {{ flowerStats.bloom }}</div>
-          </button>
-          <div class="stat-card card">
-            <div class="stat-card__emoji">💛</div>
-            <div class="stat-card__num">{{ profile.stats.received_encouragement_count }}</div>
-            <div class="stat-card__label">收到鼓励</div>
-            <div class="stat-card__sub">来自漂流瓶</div>
-          </div>
-          <div class="stat-card card">
-            <div class="stat-card__emoji">🎁</div>
-            <div class="stat-card__num">{{ profile.stats.garden_item_count }}</div>
-            <div class="stat-card__label">岛上物件</div>
-            <div class="stat-card__sub">装扮/徽章</div>
-          </div>
+                  <div class="stat-card__emoji"><EmojiIcon emoji="📖" /></div>
+                  <div class="stat-card__num">{{ profile.stats.diary_count }}</div>
+                  <div class="stat-card__label">日记</div>
+                  <div class="stat-card__sub" v-if="profile.stats.public_diary_count">
+                    公开 {{ profile.stats.public_diary_count }}
+                  </div>
+                </button>
+                <button class="stat-card card" @click="goCalendar">
+                  <div class="stat-card__emoji"><EmojiIcon emoji="🌙" /></div>
+                  <div class="stat-card__num">{{ profile.stats.checkin_count }}</div>
+                  <div class="stat-card__label">打卡</div>
+                  <div class="stat-card__sub">连续 {{ profile.stats.streak }} 天</div>
+                </button>
+                <button class="stat-card card" @click="goMusic">
+                  <div class="stat-card__emoji"><EmojiIcon emoji="🎵" /></div>
+                  <div class="stat-card__num">{{ profile.stats.listen_count }}</div>
+                  <div class="stat-card__label">听曲</div>
+                  <div class="stat-card__sub">古琴疗愈</div>
+                </button>
+                <button class="stat-card card" @click="goGarden">
+                  <div class="stat-card__emoji"><EmojiIcon emoji="🌸" /></div>
+                  <div class="stat-card__num">{{ flowerStats.total }}</div>
+                  <div class="stat-card__label">花朵</div>
+                  <div class="stat-card__sub">盛开 {{ flowerStats.bloom }}</div>
+                </button>
+                <div class="stat-card card">
+                  <div class="stat-card__emoji"><EmojiIcon emoji="💛" /></div>
+                  <div class="stat-card__num">{{ profile.stats.received_encouragement_count }}</div>
+                  <div class="stat-card__label">收到鼓励</div>
+                  <div class="stat-card__sub">来自漂流瓶</div>
+                </div>
+                <div class="stat-card card">
+                  <div class="stat-card__emoji"><EmojiIcon emoji="🎁" /></div>
+                  <div class="stat-card__num">{{ profile.stats.garden_item_count }}</div>
+                  <div class="stat-card__label">岛上物件</div>
+                  <div class="stat-card__sub">装扮/徽章</div>
+                </div>
         </div>
       </section>
 
@@ -242,27 +243,27 @@ onBeforeUnmount(() => {
         <h2 class="section-title">前往各处</h2>
         <div class="quick-grid">
           <button class="quick-card card" @click="goGarden">
-            <span class="quick-card__emoji">🌸</span>
+            <span class="quick-card__emoji"><EmojiIcon emoji="🌸" /></span>
             <span class="quick-card__label">屿上花田</span>
           </button>
           <button class="quick-card card" @click="goShop">
-            <span class="quick-card__emoji">🍂</span>
+            <span class="quick-card__emoji"><EmojiIcon emoji="🍂" /></span>
             <span class="quick-card__label">落叶画坊</span>
           </button>
           <button class="quick-card card" @click="goDiary">
-            <span class="quick-card__emoji">📖</span>
+            <span class="quick-card__emoji"><EmojiIcon emoji="📖" /></span>
             <span class="quick-card__label">日记海岸</span>
           </button>
           <button class="quick-card card" @click="goCalendar">
-            <span class="quick-card__emoji">🌙</span>
+            <span class="quick-card__emoji"><EmojiIcon emoji="🌙" /></span>
             <span class="quick-card__label">情绪日历</span>
           </button>
           <button class="quick-card card" @click="goMusic">
-            <span class="quick-card__emoji">🎵</span>
+            <span class="quick-card__emoji"><EmojiIcon emoji="🎵" /></span>
             <span class="quick-card__label">琴音疗心</span>
           </button>
           <button class="quick-card card" @click="goAiChat">
-            <span class="quick-card__emoji">🌳</span>
+            <span class="quick-card__emoji"><EmojiIcon emoji="🌳" /></span>
             <span class="quick-card__label">心语树洞</span>
           </button>
         </div>
@@ -304,7 +305,7 @@ onBeforeUnmount(() => {
             class="flower-mini"
             :title="`${f.flower_type} · ${STAGE_INFO[f.stage]?.label || ''}`"
           >
-            <div class="flower-mini__emoji">{{ STAGE_INFO[f.stage]?.emoji || '🌱' }}</div>
+            <div class="flower-mini__emoji"><EmojiIcon :emoji="STAGE_INFO[f.stage]?.emoji || '🌱'" /></div>
             <div class="flower-mini__name">{{ f.flower_type }}</div>
             <div class="flower-mini__stage">{{ STAGE_INFO[f.stage]?.label || f.stage }}</div>
           </div>
@@ -316,7 +317,7 @@ onBeforeUnmount(() => {
 
       <!-- 空岛提示 -->
       <section v-if="!myItems.length && !flowers.length && !profile.stats.diary_count" class="empty-island card">
-        <div class="empty-island__emoji">🏝️</div>
+        <div class="empty-island__emoji"><EmojiIcon emoji="🏝️" /></div>
         <p class="empty-island__text">
           你的小岛还很安静，<br>
           去写一篇日记、听一曲古琴，或种下一朵花吧。
