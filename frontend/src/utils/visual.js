@@ -140,7 +140,12 @@ export function isMobile() {
 
 /**
  * 是否为低性能设备（启发式）
- * 综合：核心数、设备内存、节电模式
+ *
+ * Safari 兼容性（v2.3.4 修复）：
+ * - iOS Safari 的 navigator.hardwareConcurrency 经常返回 undefined 或较小值（如 4）
+ * - 旧逻辑 `cores <= 4` 把所有 iPhone 误判为低性能 → shouldUseThreeJS() 返回 false
+ *   → FlowerField 不渲染 3D（用户看到纯色渐变而非 3D 花田）
+ * - 新逻辑：只有明确的低性能信号才降级（节电 / 内存≤2GB / 核心数≤2）
  */
 export function isLowPower() {
   if (_isLowPower !== null) return _isLowPower
@@ -148,12 +153,17 @@ export function isLowPower() {
     _isLowPower = false
     return false
   }
-  const cores = navigator.hardwareConcurrency || 4
-  const memory = navigator.deviceMemory || 4
+  // 注意：不 fallback 到 4，undefined 表示「未知」而非「低性能」
+  const cores = navigator.hardwareConcurrency
+  const memory = navigator.deviceMemory
   // 节电模式（实验性 API，仅部分浏览器支持）
   const saveData =
     navigator.connection && navigator.connection.saveData === true
-  _isLowPower = cores <= 4 || memory <= 2 || saveData
+  // 只有明确信号才判为低性能：
+  // - 节电模式开启
+  // - 内存 ≤ 2GB（老设备）
+  // - 核心数明确 ≤ 2（非常老旧的设备，undefined 不算）
+  _isLowPower = saveData || memory <= 2 || (cores !== undefined && cores <= 2)
   return _isLowPower
 }
 
