@@ -76,6 +76,51 @@ def create_app() -> FastAPI:
         redoc_url=None,
     )
 
+    # ─────────────────────────────────────────────────────────────
+    # 安全响应头中间件（v2.3.5 加）
+    # 参考：https://owasp.org/www-project-secure-headers/
+    # ─────────────────────────────────────────────────────────────
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        # 不覆盖已设置的 header（比如 /docs 自己的 CSP）
+        # X-Content-Type-Options：防止 MIME 嗅探
+        if "X-Content-Type-Options" not in response.headers:
+            response.headers["X-Content-Type-Options"] = "nosniff"
+        # X-Frame-Options：防点击劫持（DENY = 完全禁止 iframe 嵌入）
+        if "X-Frame-Options" not in response.headers:
+            response.headers["X-Frame-Options"] = "DENY"
+        # Referrer-Policy：跨站只传 origin，不传完整 URL
+        if "Referrer-Policy" not in response.headers:
+            response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Permissions-Policy：禁用不必要的设备访问
+        if "Permissions-Policy" not in response.headers:
+            response.headers["Permissions-Policy"] = (
+                "geolocation=(), microphone=(), camera=(), "
+                "payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+            )
+        # Content-Security-Policy：限制资源加载来源
+        # - default-src 'self'：默认只允许同源
+        # - script-src：允许 inline + eval（Vue 3 SPA 需要）
+        # - style-src：允许 inline（Tailwind/Vite 注入）
+        # - img-src：允许 data: URI（emoji favicon）+ https（OG image）
+        # - connect-src：允许 https（API 调用）
+        # - frame-ancestors 'none'：禁止任何嵌入
+        if "Content-Security-Policy" not in response.headers:
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data: https: blob:; "
+                "font-src 'self' data:; "
+                "connect-src 'self' https: ws: wss:; "
+                "media-src 'self' https: blob:; "
+                "frame-ancestors 'none'; "
+                "base-uri 'self'; "
+                "form-action 'self'"
+            )
+        return response
+
     # 静态资源
     app.mount(
         "/static",
@@ -125,10 +170,18 @@ def create_app() -> FastAPI:
         ".jpeg": "image/jpeg",
         ".gif": "image/gif",
         ".ico": "image/x-icon",
+        ".webp": "image/webp",
+        ".avif": "image/avif",
         ".woff": "font/woff",
         ".woff2": "font/woff2",
         ".ttf": "font/ttf",
+        ".otf": "font/otf",
         ".map": "application/json; charset=utf-8",
+        # v2.3.5：SEO 文件 + PWA manifest
+        ".txt": "text/plain; charset=utf-8",
+        ".xml": "application/xml; charset=utf-8",
+        ".webmanifest": "application/manifest+json",
+        ".webp": "image/webp",
     }
 
     @app.get("/{full_path:path}", include_in_schema=False)

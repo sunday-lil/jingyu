@@ -1,0 +1,27 @@
+feat(v2.3.5): SEO + 安全响应头 + OG 分享图
+
+## SEO 优化
+- 新增 frontend/public/robots.txt（禁止 /admin /api/，含 Sitemap 引用）
+- 新增 frontend/public/sitemap.xml（9 个 URL：首页 + 8 个功能页）
+- frontend/index.html 加 Open Graph + Twitter Card + canonical + JSON-LD 结构化数据
+  - WebSite schema（含 SearchAction）
+  - Service schema（含 Offer 免费使用）
+
+## 安全响应头（FastAPI 中间件）
+- X-Content-Type-Options: nosniff（防 MIME 嗅探）
+- X-Frame-Options: DENY（防点击劫持）
+- Referrer-Policy: strict-origin-when-cross-origin
+- Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), ...
+- Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; ...
+
+## OG 分享图
+- static/og-image.png（172 KB，治愈系浮岛海景，landscape_16_9）
+
+## MIME 映射补全
+- EXT_TO_MIME 补 .txt / .xml / .webmanifest / .webp / .avif / .otf
+- 确保 robots.txt 和 sitemap.xml 返回正确 Content-Type
+
+## 验证
+- /robots.txt → 200 OK，text/plain
+- /sitemap.xml → 200 OK，application/xml
+- 5 个安全响应头全部在 / 响应中生效
