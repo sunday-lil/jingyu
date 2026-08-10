@@ -3,8 +3,10 @@ import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import gsap from 'gsap'
 import api from '@/api'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const goBack = () => router.back()
 
 // 当前对话 ID（后端文件存储用）
@@ -313,7 +315,7 @@ onBeforeUnmount(() => {
         >
           <!-- 头像 -->
           <div class="msg-avatar">
-            {{ msg.role === 'user' ? '🙂' : '🌳' }}
+            {{ msg.role === 'user' ? userStore.avatar : '🌳' }}
           </div>
           <!-- 气泡 -->
           <div class="msg-bubble" :class="msg.role === 'user' ? 'msg-bubble--user' : 'msg-bubble--ai'">

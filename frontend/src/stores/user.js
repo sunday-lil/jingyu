@@ -12,6 +12,7 @@ export const useUserStore = defineStore('user', {
     energy: (state) => state.user?.total_energy ?? 0,
     leaves: (state) => state.user?.leaves ?? 0,
     nickname: (state) => state.user?.nickname || '',
+    avatar: (state) => state.user?.avatar || '🙂',
     userId: (state) => state.user?.id ?? null,
     encryptionSalt: (state) => state.user?.encryption_salt ?? null,
   },
@@ -61,6 +62,18 @@ export const useUserStore = defineStore('user', {
       if (typeof total_energy === 'number') this.user.total_energy = total_energy
       if (typeof leaves === 'number') this.user.leaves = leaves
       localStorage.setItem('qi_user', JSON.stringify(this.user))
+    },
+
+    // 更新个人资料（头像 / 昵称）—— 同步到本地 store
+    async updateProfile({ nickname, avatar } = {}) {
+      const updated = await api.patch('/profile', { nickname, avatar })
+      // 同步到本地 user 对象
+      if (this.user) {
+        if (updated?.nickname) this.user.nickname = updated.nickname
+        if (updated?.avatar) this.user.avatar = updated.avatar
+        localStorage.setItem('qi_user', JSON.stringify(this.user))
+      }
+      return updated
     },
 
     async logout() {

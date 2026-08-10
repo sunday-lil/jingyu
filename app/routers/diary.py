@@ -150,10 +150,15 @@ def encourage(
 ):
     """给一条漂流瓶留匿名鼓励语（评论返回发布者 + 消息提醒）。"""
     enc = leave_encouragement(db, user, diary_id, body.content)
+    # 留言鼓励发 +1 露水
+    grant_energy(db, user, amount=1, source="encourage", note="留言鼓励")
     db.commit()
+    new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
     return {
         "id": enc.id,
         "content": enc.content,
         "created_at": enc.created_at.isoformat(),
+        "granted_energy": 1,
+        "new_total_energy": new_total,
     }
 

@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 from datetime import datetime, date
-from sqlalchemy import Integer, String, Date, DateTime, Text, ForeignKey, UniqueConstraint, func
+from sqlalchemy import Integer, String, Date, DateTime, Text, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
 
 class MoodCheckin(Base):
-    """每日心情打卡表。
+    """每日心情打卡表（支持一天多条记录）。
 
-    - ``check_date``：日期字符串（YYYY-MM-DD），与 user_id 联合唯一。
+    - ``check_date``：日期字符串（YYYY-MM-DD）。
     - ``mood_emoji``：心情枚举字符串。
     - ``note``：一句话备注（可选，<= 200 字）。
+    - ``created_at``：记录创建时间，用于一天内多次打卡的时间排序。
     """
 
     __tablename__ = "mood_checkins"
@@ -32,10 +33,6 @@ class MoodCheckin(Base):
 
     # 关系
     user: Mapped["User"] = relationship("User", back_populates="mood_checkins")  # type: ignore[name-defined]
-
-    __table_args__ = (
-        UniqueConstraint("user_id", "check_date", name="uq_user_checkin_date"),
-    )
 
     def __repr__(self) -> str:
         return f"<MoodCheckin id={self.id} user_id={self.user_id} date={self.check_date} mood={self.mood_emoji}>"

@@ -73,6 +73,11 @@ def _migrate_legacy_columns() -> None:
                 "ALTER TABLE users ADD COLUMN leaves INTEGER DEFAULT 0 NOT NULL"
             ))
             logger.info("[MIGRATE] users.leaves 已添加（落叶资源，v2.3）")
+        if "avatar" not in cols:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN avatar VARCHAR(16) DEFAULT '🙂' NOT NULL"
+            ))
+            logger.info("[MIGRATE] users.avatar 已添加（v2.4，用户头像 emoji）")
 
     # energy_records 表（2026-07-20 加 music_id，用于同歌 24h 去重）
     if insp.has_table("energy_records"):
@@ -122,6 +127,32 @@ def _migrate_legacy_columns() -> None:
                     "ALTER TABLE musics ADD COLUMN category VARCHAR(20) DEFAULT 'classic' NOT NULL"
                 ))
                 logger.info("[MIGRATE] musics.category 已添加（v2.3）")
+
+    # mood_checkins 表（v2.4：移除 user_id+check_date 唯一约束，支持一天多条心情记录）
+    if insp.has_table("mood_checkins"):
+        existing_uqs = {
+            tuple(c["column_names"])
+            for c in insp.get_unique_constraints("mood_checkins")
+        }
+        if ("user_id", "check_date") in existing_uqs:
+            with engine.begin() as conn:
+                # SQLite 重建表方式删除唯一约束
+                conn.execute(text(
+                    "CREATE TABLE mood_checkins_new AS SELECT * FROM mood_checkins"
+                ))
+                conn.execute(text("DROP TABLE mood_checkins"))
+                conn.execute(text(
+                    "ALTER TABLE mood_checkins_new RENAME TO mood_checkins"
+                ))
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_mood_checkins_user_id "
+                    "ON mood_checkins (user_id)"
+                ))
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_mood_checkins_check_date "
+                    "ON mood_checkins (check_date)"
+                ))
+            logger.info("[MIGRATE] mood_checkins 唯一约束已移除（v2.4，支持一天多条心情）")
 
 
 def init_db() -> None:

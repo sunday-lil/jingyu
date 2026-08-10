@@ -116,26 +116,35 @@ def seed_music(db: Session) -> int:
 
 
 def seed_shop_items(db: Session) -> int:
-    """插入商店物品（仅当表为空时）。返回插入条数。
+    """插入商店物品（按 name 幂等：缺失的补齐，已有的跳过）。返回新增条数。
 
+    v2.4：改为按 name 幂等，老库已有物品时新物品也能补种进去。
     v2.3：若老库 shop_items 已存在但缺少 cost_currency（DEFAULT NULL），
     按物品类型回填：flower → leaves，其他 → dew。
     """
-    if db.query(ShopItem).count() > 0:
-        # 老库回填 cost_currency（migration 已加列，但老行默认 'dew'）
-        # 花种应为 leaves
-        from sqlalchemy import text
-        db.execute(text(
-            "UPDATE shop_items SET cost_currency='leaves' "
-            "WHERE item_type='flower' AND cost_currency='dew'"
-        ))
-        db.commit()
-        return 0
-    rows = [ShopItem(**item) for item in DEFAULT_SHOP_ITEMS]
-    db.add_all(rows)
+    from sqlalchemy import text
+
+    # 老库回填 cost_currency（migration 已加列，但老行默认 'dew'）
+    # 花种应为 leaves
+    db.execute(text(
+        "UPDATE shop_items SET cost_currency='leaves' "
+        "WHERE item_type='flower' AND cost_currency='dew'"
+    ))
     db.commit()
-    logger.info("已插入 %d 个商店物品", len(rows))
-    return len(rows)
+
+    # 按 name 幂等：补种缺失的物品
+    existing_names = {n for (n,) in db.query(ShopItem.name).all()}
+    new_rows: list[ShopItem] = []
+    for item in DEFAULT_SHOP_ITEMS:
+        if item["name"] in existing_names:
+            continue
+        new_rows.append(ShopItem(**item))
+    if not new_rows:
+        return 0
+    db.add_all(new_rows)
+    db.commit()
+    logger.info("已插入 %d 个商店物品", len(new_rows))
+    return len(new_rows)
 
 
 def run_seed(db: Session) -> None:

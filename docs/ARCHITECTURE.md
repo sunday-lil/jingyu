@@ -18,6 +18,8 @@
 
 > 🔒 **2026-07-30 v2.3.3 Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）**：① §1.1.6 视觉组件群加 **Safari 兼容**增强——[utils/visual.js](../../frontend/src/utils/visual.js) **`hasWebGL` 重写**（区分 WebGL1/2 + 检测扩展 + max texture size）+ 新增 `getWebGLCaps()` / `isSafari()` / `isIOS()` 工具函数；[utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听处理 **WebGL 上下文丢失**（iOS Safari 切后台→前台触发）；[HeroScene.vue](../../frontend/src/components/HeroScene.vue) **iOS 降级**（**Bloom 降级**：iOS 关闭 UnrealBloomPass；**PMREM 降级**：iOS PMREM 256→128、阴影 2048→1024、dpr 上限 2→1.5；老 iOS 缺 `EXT_color_buffer_half_float` 扩展时关闭 PMREM + Bloom）。② 新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件，使用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**（解决 Safari Apple Color Emoji vs 系统 emoji 字体差异），替换 AppLayout.vue + ProfileView.vue 所有 emoji。关键词 `Safari 兼容` / `WebGL 上下文丢失` / `webglcontextlost` / `iOS 降级` / `EmojiIcon` / `Iconify` / `twemoji` / `SVG emoji` / `跨浏览器一致` / `hasWebGL 重写` / `getWebGLCaps` / `isSafari` / `isIOS` / `Bloom 降级` / `PMREM 降级` / `v2.3.3` 在 6 份文档中都要出现。
 
+> 🔒 **2026-08-10 v2.4.0 UI/UX 大改 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充**：① §1.1.7.1 六大四字名板块表中'落叶画坊'改名'花坊'（[HomeView.vue](../../frontend/src/views/HomeView.vue) 模块名更新）；② §4.2 关键表字段 `mood_checkins` 唯一约束移除（支持**一天多条心情**，SQLite 重建表方式）；③ §1.1.8 新增 v2.4.0 架构要点节——头像/昵称编辑流程（`User.avatar` + `PATCH /api/profile` + `ProfileUpdateIn` + **头像同步树洞**）+ 一天多条心情数据模型（`mood_checkins` 唯一约束移除 + `add_checkin` + `get_today_moods` + 30 天趋势**平均分**）+ 花坊双资源经济扩充（`DEFAULT_SHOP_ITEMS` 27 件：12 花种 + 9 装扮 + 6 徽章；'古琴初学者' → '琴音知音' + **每板块徽章**）；④ §1.1.7.3 花田 AI 显示基于实际种花情况（没种花不显示）；⑤ 心语树洞 AI 系统提示词 **humanize**（更接地气、像朋友聊天）；⑥ 首页文案 '潮声不止，心安自屿' + 删'今日打卡'板块 + '漂流日记'入口统一；⑦ **静屿使用指南**（7 个模块详细介绍）+ **露水累加修复**（写日记和留言鼓励后正确发放露水）。关键词 `v2.4` / `潮声不止心安自屿` / `花坊` / `一天多条心情` / `mood_checkins 唯一约束移除` / `add_checkin` / `get_today_moods` / `平均分` / `humanize` / `琴音知音` / `每板块徽章` / `User.avatar` / `PATCH /api/profile` / `ProfileUpdateIn` / `头像同步树洞` / `静屿使用指南` / `露水累加修复` 在 6 份文档中都要出现。
+
 ---
 
 ## 1. 总体架构
@@ -307,18 +309,18 @@ const FlowerField = defineAsyncComponent(() =>
 | 漂流日记 | `/diary` | [DiaryListView.vue](../../frontend/src/views/diary/DiaryListView.vue) | `/api/diary/*` |
 | 情绪日历 | `/calendar` | [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue) | `/api/mood/*` |
 | 心语树洞 | `/ai-chat` | [AIChatView.vue](../../frontend/src/views/ai/AIChatView.vue) | `/api/ai/chat` |
-| 落叶画坊 | `/shop` | [ShopView.vue](../../frontend/src/views/garden/ShopView.vue) | `/api/garden/shop` + `/api/energy/exchange` |
+| 花坊 | `/shop` | [ShopView.vue](../../frontend/src/views/garden/ShopView.vue) | `/api/garden/shop` + `/api/energy/exchange` |
 | 屿上花田 | `/garden` | [GardenView.vue](../../frontend/src/views/garden/GardenView.vue)（含花田生长网格） | `/api/garden/*` + `/api/garden/flowers/*` |
 
 辅助入口：拾瓶 `/diary/pick` 🍶（漂流日记子路由）/ 我的 `/profile` 👤（个人主页，`requiresAuth`）；通知中心 `/notifications`（独立页，`requiresAuth`）。
 
-[AppLayout.vue](../../frontend/src/components/AppLayout.vue) 顶部品牌图标由 🌿 草本更新为 🏝️ 岛屿 emoji；桌面/平板/移动三档导航同步四字短标签；移动端 tabbar 4 项固定（静屿 / 漂流日记 / 情绪日历 / 我的）+ 中央「更多」抽屉（琴音疗心 / 拾瓶 / 心语树洞 / 落叶画坊 / 屿上花田）。
+[AppLayout.vue](../../frontend/src/components/AppLayout.vue) 顶部品牌图标由 🌿 草本更新为 🏝️ 岛屿 emoji；桌面/平板/移动三档导航同步四字短标签；移动端 tabbar 4 项固定（静屿 / 漂流日记 / 情绪日历 / 我的）+ 中央「更多」抽屉（琴音疗心 / 拾瓶 / 心语树洞 / 花坊 / 屿上花田）。
 
 ### 1.1.7.2 双资源系统（露水 + 落叶）
 
 **资源哲学**：
 - `露水` = `User.total_energy`（保留原字段，语义即露水）= **向内获得**：听歌 / 打卡 / 写日记；**不可兑换商品**，仅用于浇灌已播种的花朵
-- `落叶` = `User.leaves`（v2.3 新增）= **向外获得**：花朵枯萎后拾取；用于在落叶画坊兑换花种（寓意「落叶归根能施肥种花」）
+- `落叶` = `User.leaves`（v2.3 新增）= **向外获得**：花朵枯萎后拾取；用于在花坊兑换花种（寓意「落叶归根能施肥种花」）
 - `EnergyRecord` **不**加 `resource_type` 字段；资源类型由 `source` + `ShopItem.cost_currency` 体现
 
 **模型层**（[app/models/user.py](../../app/models/user.py) + [app/models/garden.py](../../app/models/garden.py)）：
@@ -476,6 +478,127 @@ send_to_ai_hole: Mapped[bool] = mapped_column(Boolean, default=False, nullable=F
 3. `constants.py` 业务常量同步（→ [§4.3](#43-单日能量上限)）
 4. `.env.example` 配置同步
 5. README / HANDOFF 速查表同步
+
+---
+
+## 1.1.8 v2.4.0 头像/昵称编辑 + 一天多条心情 + 花坊扩充（2026-08-10 加）
+
+> 设计原则：**「情绪多变允许多次记录 + 头像个性化同步树洞 + 花坊扩充丰富经济」** —— 情绪是多变的，一天可以有多次心情打卡；用户头像/昵称可自定义并同步到树洞对话；花坊扩充花种/装扮/徽章让双资源经济更丰富。
+
+### 1.1.8.1 头像/昵称编辑流程（User.avatar + PATCH /api/profile + ProfileUpdateIn + 头像同步树洞）
+
+**模型**（[app/models/user.py](../../app/models/user.py)）：
+```python
+avatar: Mapped[str] = mapped_column(String(16), default="🙂", nullable=False)
+# emoji 字符，默认 🙂，与树洞中显示的头像一致
+```
+
+**数据库迁移**（[app/database.py](../../app/database.py) `_migrate_legacy_columns()`）：
+- `ALTER TABLE users ADD COLUMN avatar VARCHAR(16) DEFAULT '🙂' NOT NULL`（v2.4 用户头像）
+
+**Schema**（[app/schemas/profile.py](../../app/schemas/profile.py)，v2.4 新增）：
+```python
+class ProfileUpdateIn(BaseModel):
+    nickname: str | None = Field(None, min_length=2, max_length=20)
+    avatar: str | None = Field(None, min_length=1, max_length=16)
+```
+
+**Router**（[app/routers/profile.py](../../app/routers/profile.py)）：
+- `PATCH /api/profile` — 更新头像/昵称（昵称查重 409，头像 1-16 字符）
+
+**前端**：
+- [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue) 头像/昵称编辑弹窗（24 个可选 emoji）
+- [stores/user.js](../../frontend/src/stores/user.js) 新增 `updateProfile` action（调用 `PATCH /api/profile`）
+- **头像同步树洞**：[AIChatView.vue](../../frontend/src/views/ai/AIChatView.vue) 使用 `userStore.avatar` 显示头像（与个人主页一致）
+
+**调用流**：
+```
+浏览器                                FastAPI
+  │                                      │
+  │ PATCH /api/profile                   │
+  │ {nickname?, avatar?}                 │
+  │ Cookie: qi_session=...               │
+  ├─────────────────────────────────────→│
+  │                                      │ 1. get_current_user 鉴权
+  │                                      │ 2. nickname 查重（409 冲突）
+  │                                      │ 3. avatar 长度校验（1-16 字符）
+  │                                      │ 4. UPDATE users SET ... 
+  │                                      │ 5. 返回更新后 user 对象
+  │ ←─ 200 + {user}                      │
+  │                                      │
+  │ Pinia userStore.setUser(user)        │
+  │ → AIChatView 头像同步更新            │
+```
+
+### 1.1.8.2 一天多条心情数据模型（mood_checkins 唯一约束移除 + add_checkin + get_today_moods + 平均分）
+
+**背景**：情绪是多变的，一天可以有多次心情打卡，原 `(user_id, check_date)` 唯一约束限制了这一表达。
+
+**数据库迁移**（[app/database.py](../../app/database.py) `_migrate_legacy_columns()`，SQLite 重建表方式）：
+```sql
+-- SQLite 不支持 DROP CONSTRAINT，用重建表方式
+CREATE TABLE _mood_checkins_new AS SELECT * FROM mood_checkins;
+DROP TABLE mood_checkins;
+RENAME TABLE _mood_checkins_new TO mood_checkins;
+CREATE INDEX ix_mood_checkins_user_id ON mood_checkins (user_id);
+-- 移除 (user_id, check_date) 唯一约束，仅保留 user_id 普通索引
+```
+
+**Service**（[app/services/mood_service.py](../../app/services/mood_service.py) 重构）：
+- `upsert_checkin` → `add_checkin`（不再 UPSERT，允许一天多条）
+- 新增 `get_today_moods(db, user_id)` — 获取今日所有心情
+- `get_recent_trend` 多条取**平均分**（MOOD_SCORE 映射：ecstatic=5 / happy=4 / calm=3 / tired=2 / anxious=2 / angry=1 / sad=1）
+
+**评分系统**（1-5 分）：
+
+| 心情 | emoji | 评分 |
+|---|---|---|
+| 极度开心 ecstatic | 🤩 | 5 |
+| 开心 happy | 😊 | 4 |
+| 平静 calm | 😌 | 3 |
+| 疲惫 tired | 😪 | 2 |
+| 焦虑 anxious | 😰 | 2 |
+| 生气 angry | 😠 | 1 |
+| 悲伤 sad | 😢 | 1 |
+
+**数据模型对比**：
+
+| 维度 | v2.3（原） | v2.4.0（新） |
+|---|---|---|
+| 唯一约束 | `(user_id, check_date)` 唯一 | **移除**，仅 `user_id` 索引 |
+| 一天打卡次数 | 1 次（UPSERT 覆盖） | 多次（INSERT 新增） |
+| service 函数 | `upsert_checkin` | `add_checkin` + `get_today_moods` |
+| 30 天趋势 | 单条直接读 | 多条取**平均分**（MOOD_SCORE 映射） |
+
+### 1.1.8.3 花坊双资源经济扩充（DEFAULT_SHOP_ITEMS 27 件 + 每板块徽章）
+
+**改名**：'落叶画坊' → '花坊'（[HomeView.vue](../../frontend/src/views/HomeView.vue) 模块名更新）
+
+**常量**（[app/utils/constants.py](../../app/utils/constants.py) `DEFAULT_SHOP_ITEMS` 扩充至 27 件）：
+- 12 花种（leaves 资源）：向日葵 / 竹子 / 雏菊 / 莲花 / 薰衣草 / 郁金香 / 梅花 / 桃花 / 兰花 / 青松 / 桂花 / 银杏
+- 9 装扮（dew 资源）：草帽（'竹编帽'描述改'种花人遮阳的草帽'）/ 长袍 / 蒲扇 + 新增 6 件：油纸伞 / 蓑衣 / 乌篷船 / 鱼竿 / 橘猫 / 白鹤
+- 6 徽章（dew 资源，自动触发，**每板块徽章**）：琴音知音（原'古琴初学者'改名）/ 日记达人 / 七日静心 / 拾瓶旅人 / 树洞倾心 / 花田主人
+
+**每板块徽章对应关系**：
+
+| 徽章 | 对应板块 | 触发条件 |
+|---|---|---|
+| 琴音知音 | 琴音疗心 | 听曲达到一定次数 |
+| 日记达人 | 漂流日记 | 写日记达到一定篇数 |
+| 七日静心 | 情绪日历 | 连续打卡 7 天 |
+| 拾瓶旅人 | 拾瓶 | 拾瓶达到一定次数 |
+| 树洞倾心 | 心语树洞 | 树洞对话达到一定次数 |
+| 花田主人 | 屿上花田 | 花朵盛开达到一定数量 |
+
+### 1.1.8.4 其他 v2.4.0 改动
+
+- **首页文案**：'海上有座岛，岛上有人听' → '潮声不止，心安自屿'，删除'静屿'副标题 + 删除'今日打卡'板块
+- **'漂流日记'入口统一**：直接显示'日记海岸'界面（含拾瓶/写日记模块）
+- **情绪日历 emoji 显示/选择修复**：[MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue) 多条打卡支持
+- **心语树洞 AI 系统提示词 humanize**：更接地气、像朋友聊天
+- **花田 AI 显示基于实际种花情况**：[GardenView.vue](../../frontend/src/views/garden/GardenView.vue) 没种花不显示 AI
+- **'我的'页面修复**：'收到鼓励'/'岛上物件'可点击跳转，删除重复'岛上物件'，新增**静屿使用指南**（7 个模块详细介绍：琴音疗心 / 日记海岸 / 情绪日历 / 心语树洞 / 花坊 / 屿上花田 / 我的）
+- **露水累加修复**：写日记和留言鼓励后正确发放露水
 
 ---
 
@@ -640,7 +763,7 @@ routers/  →  services/  →  models/  →  database
 | `users.is_admin` | bool | 是否后台管理员（**默认 False**；首管由 `app/seed.py` 自动创建） |
 | `diaries.content_encrypted` | str | Fernet 密文，前端传上来直接存 |
 | `diaries.is_public` | bool | 是否可被陌生人拾取 |
-| `mood_checkins.check_date` | date | 当天日期（unique + user_id） |
+| `mood_checkins.check_date` | date | 当天日期（v2.4.0 移除 `(user_id, check_date)` 唯一约束，支持**一天多条心情**记录） |
 | `energy_records.source` | enum | `listen_music` / `write_diary` / `checkin` / `streak_7` / `exchange` / **`admin_adjust`** |
 | `garden_items.item_id` | int | FK → `shop_items.id` |
 | `encouragements.from_user_id` | int | 拾取者，**不**记录被鼓励者的 ID（保护匿名） |

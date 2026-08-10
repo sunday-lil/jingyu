@@ -3,8 +3,10 @@ import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import gsap from 'gsap'
 import api from '@/api'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 // 心情 emoji 映射（与后端 MOOD_INFO 对齐 —— v2.3 七种心情）
 const MOOD_EMOJI = {
@@ -135,8 +137,12 @@ const sendEncourage = async () => {
   }
   encourageSubmitting.value = true
   try {
-    await api.post(`/diary/${bottle.value.id}/encourage`, { content: text })
-    showToast('你的鼓励已被海风带走 💛')
+    const res = await api.post(`/diary/${bottle.value.id}/encourage`, { content: text })
+    // 更新露水余额
+    if (typeof res?.new_total_energy === 'number') {
+      userStore.updateEnergy(res.new_total_energy)
+    }
+    showToast('你的鼓励已被海风带走 💛 +1露水')
     encourageText.value = ''
     // 鼓励数 +1
     bottle.value = {

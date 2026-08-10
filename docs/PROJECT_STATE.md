@@ -7,7 +7,9 @@
 
 > 🔒 **2026-07-30 v2.3.3 Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）**：解决 Safari / iOS 用户反馈的两类问题。① **Safari 主页 3D 不渲染**：根因包括 `hasWebGL()` 检测 bug、iOS Safari 切后台→前台后 WebGL 上下文丢失无恢复逻辑、老 iOS 缺 `EXT_color_buffer_half_float` 扩展、Bloom + 高分辨率 PMREM 内存超限。修复：**`hasWebGL` 重写**（区分 WebGL1/2 + 检测扩展 + max texture size），新增 `getWebGLCaps()` / `isSafari()` / `isIOS()` 工具函数；[frontend/src/utils/three-helpers.js](../../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听，上下文丢失时保存场景状态、恢复时重建；[HeroScene.vue](../../frontend/src/components/HeroScene.vue) 实现 **iOS 降级**策略（**Bloom 降级**：iOS 关闭 UnrealBloomPass；**PMREM 降级**：iOS PMREM 分辨率 256→128、阴影 2048→1024、dpr 上限 2→1.5；老 iOS 缺扩展时关闭 PMREM + Bloom）。② **Safari emoji 显示不一致**：根因为跨平台 emoji 字体风格差异（Apple Color Emoji vs 系统 emoji）。修复：新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件，使用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**；替换 [AppLayout.vue](../../frontend/src/components/AppLayout.vue)（品牌 / 导航 / 通知 / 资源）+ [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（头像 / 通知 / 资源 / 统计 / 快捷入口 / 花朵阶段）所有 emoji。构建 209 modules / 12.30s，HeroScene +0.71KB（降级逻辑）。关键词 `Safari 兼容` / `WebGL 上下文丢失` / `webglcontextlost` / `iOS 降级` / `EmojiIcon` / `Iconify` / `twemoji` / `SVG emoji` / `跨浏览器一致` / `hasWebGL 重写` / `getWebGLCaps` / `isSafari` / `isIOS` / `Bloom 降级` / `PMREM 降级` / `v2.3.3` 在 6 份文档中都要出现。
 
-**最后更新**：2026-07-30（v2.3.3 Safari 兼容性修复 — 3D 上下文恢复 + emoji 跨浏览器一致：① **`hasWebGL` 重写** + `getWebGLCaps` / `isSafari` / `isIOS` 工具函数；② [three-helpers.js](../../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听处理 **WebGL 上下文丢失**；③ [HeroScene.vue](../../frontend/src/components/HeroScene.vue) **iOS 降级**（**Bloom 降级** + **PMREM 降级**）；④ 新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 组件（**Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，**跨浏览器一致**），替换 AppLayout.vue + ProfileView.vue 所有 emoji。前一阶段 v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱 — 10 项大改））
+> 🔒 **2026-08-10 v2.4.0 UI/UX 大改 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充**：18 项改动覆盖文案/功能/数据模型/AI/商店。① **首页文案**：'海上有座岛，岛上有人听' → '潮声不止，心安自屿'，删'静屿'副标题 + 删'今日打卡'板块；'漂流日记'入口统一显示'日记海岸'界面。② **一天多条心情**：移除 `mood_checkins` 表 `(user_id, check_date)` 唯一约束（SQLite 重建表方式：CREATE TABLE _new AS SELECT * → DROP → RENAME → CREATE INDEX），支持一天多次打卡（情绪是多变的）；[app/services/mood_service.py](../../app/services/mood_service.py) `upsert_checkin` → `add_checkin`（不再 UPSERT）+ 新增 `get_today_moods`；30 天心情趋势用 1-5 评分系统，多条取**平均分**（MOOD_SCORE：ecstatic=5/happy=4/calm=3/tired=2/anxious=2/angry=1/sad=1）。③ **头像/昵称修改**：[app/models/user.py](../../app/models/user.py) 新增 `User.avatar: str = "🙂"`（String(16)，默认 🙂）+ 新增 `PATCH /api/profile` 端点 + [app/schemas/profile.py](../../app/schemas/profile.py) `ProfileUpdateIn`（nickname 2-20 字符可选 / avatar 1-16 字符可选，昵称查重 409）+ 前端 [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue) 编辑弹窗（24 个可选 emoji）+ **头像同步树洞**（[AIChatView.vue](../../frontend/src/views/ai/AIChatView.vue) 用 `userStore.avatar`）。④ **花坊扩充**：'落叶画坊' → '花坊'（改名）；花种扩充至 12 种（向日葵/竹子/雏菊/莲花/薰衣草/郁金香/梅花/桃花/兰花/青松/桂花/银杏）+ 新装扮（油纸伞/蓑衣/乌篷船/鱼竿/橘猫/白鹤）+ '古琴初学者' → '琴音知音'（徽章改名）+ **每板块徽章**（琴音知音/日记达人/七日静心/拾瓶旅人/树洞倾心/花田主人）+ '竹编帽' 描述改'种花人遮阳的草帽'；`DEFAULT_SHOP_ITEMS` 扩充至 27 件。⑤ **AI 系统提示词 humanize**：心语树洞更接地气、像朋友聊天。⑥ **'我的'页面修复**：'收到鼓励'/'岛上物件'可点击跳转，删除重复'岛上物件'，新增**静屿使用指南**（详细介绍 7 个模块功能）。⑦ **花田 AI 显示基于实际种花情况**（没种花不显示）。⑧ **露水累加修复**：写日记和留言鼓励后正确发放露水。⑨ 情绪日历 emoji 显示/选择修复。数据库迁移 `_migrate_legacy_columns()`：`ALTER TABLE users ADD COLUMN avatar VARCHAR(16) DEFAULT '🙂' NOT NULL` + 移除 `mood_checkins` 唯一约束。关键词 `v2.4` / `潮声不止心安自屿` / `花坊` / `一天多条心情` / `mood_checkins 唯一约束移除` / `add_checkin` / `get_today_moods` / `平均分` / `humanize` / `琴音知音` / `每板块徽章` / `User.avatar` / `PATCH /api/profile` / `ProfileUpdateIn` / `头像同步树洞` / `静屿使用指南` / `露水累加修复` 在 6 份文档中都要出现。
+
+**最后更新**：2026-08-10（v2.4.0 UI/UX 大改 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充 — 18 项改动：① 首页文案 '潮声不止，心安自屿' + 删今日打卡 + 漂流日记入口统一；② **一天多条心情**（`mood_checkins` 唯一约束移除 + `add_checkin` + `get_today_moods` + 30 天趋势**平均分**）；③ **头像/昵称修改**（`User.avatar` + `PATCH /api/profile` + `ProfileUpdateIn` + **头像同步树洞**）；④ '落叶画坊' → '花坊' + 12 花种 + 6 新装扮 + '古琴初学者' → '琴音知音' + **每板块徽章**；⑤ AI 提示词 **humanize**；⑥ '我的'页面修复 + **静屿使用指南**；⑦ 花田 AI 基于实际种花；⑧ **露水累加修复**）。前一阶段 v2.3.3（2026-07-30 Safari 兼容性修复 — 3D 上下文恢复 + emoji 跨浏览器一致）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱 — 10 项大改））
 
 ---
 
@@ -25,6 +27,7 @@
 | **v2.3 六大四字名模块 + 双资源 + 花朵生命周期 + 通知 + 个人主页 + 西方曲谱** | ✅ 完成 | 2026-07-25，10 项大改：六大四字名板块 + 双资源（露水/落叶）+ UserFlower + Notification + ProfileView + 古琴弹西洋曲谱子菜单 + 日记调整 + 情绪日历对齐 + 树洞改进 + 漂流瓶评论返回通知，详见 §2 |
 | **v2.3.2 start.py 默认生产模式 + 自动构建简化** | ✅ 完成 | 2026-07-28，`python start.py` 默认回滚为**生产模式**（FastAPI :5000 单进程），**`dist 存在检测`** + **`自动构建`**（dist 不存在则 `npm install + npm run build`）；开发需显式 `--dev`（**应用模式**）；`--prod` 改为兼容别名；服务器部署 2 步。回滚 v2.2.2 默认应用模式（服务器端口代理 :5000 不能动），详见 §2 |
 | **v2.3.3 Safari 兼容性修复** | ✅ 完成 | 2026-07-30，**Safari 兼容**两类问题修复：① 3D 不渲染（**`hasWebGL` 重写** + `getWebGLCaps` / `isSafari` / `isIOS` + `webglcontextlost` / `webglcontextrestored` 处理 **WebGL 上下文丢失** + **iOS 降级**：**Bloom 降级** + **PMREM 降级**）；② emoji 不一致（新建 **EmojiIcon** 组件，**Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，**跨浏览器一致**），详见 §2 |
+| **v2.4.0 UI/UX 大改 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充** | ✅ 完成 | 2026-08-10，18 项改动：首页文案 '潮声不止，心安自屿' + 删今日打卡 + 漂流日记入口统一；**一天多条心情**（`mood_checkins` 唯一约束移除 + `add_checkin` + `get_today_moods` + 30 天趋势**平均分**）；**头像/昵称修改**（`User.avatar` + `PATCH /api/profile` + `ProfileUpdateIn` + **头像同步树洞**）；'落叶画坊' → '花坊' + 12 花种 + 6 新装扮 + '古琴初学者' → '琴音知音' + **每板块徽章**；AI 提示词 **humanize**；'我的'页面修复 + **静屿使用指南**；花田 AI 基于实际种花；**露水累加修复**，详见 §2 |
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
 | **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 / **3D + 伪 3D 视觉增强** — 全部 ✅ |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
@@ -39,6 +42,42 @@
 ---
 
 ## 2. 最近改动（按时间倒序）
+
+### 2026-08-10（v2.4.0）— UI/UX 大改 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充
+
+- [x] 起因：用户要求 18 项 UI/UX 和功能调整，覆盖文案、数据模型、AI、商店、个人主页
+- [x] **改动 1：首页文案更新** — '海上有座岛，岛上有人听' → '潮声不止，心安自屿'，删除'静屿'副标题；[HomeView.vue](../../frontend/src/views/HomeView.vue) 文案更新
+- [x] **改动 2：删除首页'今日打卡'板块** — [HomeView.vue](../../frontend/src/views/HomeView.vue) 移除今日打卡模块
+- [x] **改动 3：'漂流日记'入口统一** — 不管从哪进入，直接显示'日记海岸'界面（含拾瓶/写日记模块）
+- [x] **改动 4：情绪日历 emoji 显示/选择修复** — [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue) emoji 显示/选择修复
+- [x] **改动 5：一天多条心情记录**（数据模型 + service 重构）：
+  - 移除 `mood_checkins` 表 `(user_id, check_date)` 唯一约束（SQLite 重建表方式：CREATE TABLE _new AS SELECT * → DROP → RENAME → CREATE INDEX），支持一天多次打卡（情绪是多变的）
+  - [app/services/mood_service.py](../../app/services/mood_service.py) 重构：`upsert_checkin` → `add_checkin`（不再 UPSERT，允许一天多条）+ 新增 `get_today_moods`（获取今日所有心情）
+- [x] **改动 6：30 天心情趋势评分系统**（多条取平均分）：
+  - 1-5 评分系统：极度开心=5 / 开心=4 / 平静=3 / 疲惫=2 / 焦虑=2 / 生气=1 / 悲伤=1
+  - `get_recent_trend` 多条取**平均分**（MOOD_SCORE 映射：ecstatic=5/happy=4/calm=3/tired=2/anxious=2/angry=1/sad=1）
+- [x] **改动 7：心语树洞 AI 系统提示词 humanize** — 更接地气、像朋友聊天
+- [x] **改动 8：'落叶画坊' → '花坊'**（改名）— [HomeView.vue](../../frontend/src/views/HomeView.vue) 模块名更新
+- [x] **改动 9：花种种类扩充** — 12 种植物：向日葵 / 竹子 / 雏菊 / 莲花 / 薰衣草 / 郁金香 / 梅花 / 桃花 / 兰花 / 青松 / 桂花 / 银杏
+- [x] **改动 10：新装扮** — 油纸伞 / 蓑衣 / 乌篷船 / 鱼竿 / 橘猫 / 白鹤
+- [x] **改动 11：'古琴初学者' → '琴音知音'**（徽章改名）
+- [x] **改动 12：每板块对应徽章** — 琴音知音 / 日记达人 / 七日静心 / 拾瓶旅人 / 树洞倾心 / 花田主人
+- [x] **改动 13：'竹编帽'介绍改为'种花人遮阳的草帽'**
+- [x] **改动 14：花田 AI 显示基于实际种花情况** — [GardenView.vue](../../frontend/src/views/garden/GardenView.vue) 没种花不显示 AI
+- [x] **改动 15：'我的'页面修复** — [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue) '收到鼓励'/'岛上物件'可点击跳转，删除重复'岛上物件'，新增**静屿使用指南**（详细介绍所有模块功能）
+- [x] **改动 16：头像/昵称修改**（模型 + API + schema + 前端）：
+  - 模型：[app/models/user.py](../../app/models/user.py) 新增 `User.avatar: str = "🙂"`（String(16)，默认 🙂，与树洞中显示的头像一致）
+  - 数据库迁移：`_migrate_legacy_columns()` 加 `ALTER TABLE users ADD COLUMN avatar VARCHAR(16) DEFAULT '🙂' NOT NULL`
+  - Schema：新增 [app/schemas/profile.py](../../app/schemas/profile.py) + `ProfileUpdateIn`（nickname 2-20 字符可选 / avatar 1-16 字符可选）
+  - Router：`PATCH /api/profile` 更新头像/昵称（昵称查重 409，头像 1-16 字符）
+  - 前端：[ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue) 头像/昵称编辑弹窗（24 个可选 emoji）+ [stores/user.js](../../frontend/src/stores/user.js) 新增 `updateProfile` action（调用 PATCH /api/profile）
+  - **头像同步树洞**：[AIChatView.vue](../../frontend/src/views/ai/AIChatView.vue) 使用 `userStore.avatar` 显示头像（与个人主页一致）
+- [x] **改动 17：露水累加修复** — 写日记和留言鼓励后正确发放露水
+- [x] **改动 18：常量扩充** — [app/utils/constants.py](../../app/utils/constants.py) `DEFAULT_SHOP_ITEMS` 扩充至 27 件（12 花种 + 9 装扮 + 6 徽章）；'古琴初学者' → '琴音知音'；'竹编帽' 描述改为'种花人遮阳的草帽'；新增装扮：油纸伞/蓑衣/乌篷船/鱼竿/橘猫/白鹤
+- [x] **数据库迁移**（`_migrate_legacy_columns()`）：
+  - `ALTER TABLE users ADD COLUMN avatar VARCHAR(16) DEFAULT '🙂' NOT NULL`（v2.4 用户头像）
+  - 移除 `mood_checkins` 表 `(user_id, check_date)` 唯一约束（SQLite 重建表方式：CREATE TABLE _new AS SELECT * → DROP → RENAME → CREATE INDEX），支持一天多条心情记录
+- [x] 文档同步（Iron Rule）：6 份文档同步更新 — README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT
 
 ### 2026-07-30（v2.3.3）— Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）
 

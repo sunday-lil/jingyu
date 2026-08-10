@@ -16,7 +16,8 @@ from app.services.diary_service import (
     list_diary_encouragements,
 )
 from app.services.mood_service import (
-    upsert_checkin,
+    add_checkin,
+    get_today_moods,
     get_month_checkins,
     get_recent_trend,
     get_current_streak,
@@ -27,5 +28,5 @@ __all__ = [
     "exchange_item", "check_achievements",
     "create_diary", "list_my_diaries", "get_diary_detail",
     "pick_random_bottle", "leave_encouragement", "list_diary_encouragements",
-    "upsert_checkin", "get_month_checkins", "get_recent_trend", "get_current_streak",
+    "add_checkin", "get_today_moods", "get_month_checkins", "get_recent_trend", "get_current_streak",
 ]

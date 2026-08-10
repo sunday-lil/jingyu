@@ -2,9 +2,10 @@
 
 from app.schemas.auth import RegisterIn, LoginIn, AuthOut
 from app.schemas.diary import DiaryCreateIn, DiaryOut, EncouragementIn, EncouragementOut, DiaryPublicOut
-from app.schemas.mood import MoodCheckinIn, MoodCheckinOut
+from app.schemas.mood import MoodCheckinIn, MoodBatchIn, MoodCheckinOut
 from app.schemas.music import MusicOut, ListenCompleteIn
 from app.schemas.energy import EnergyRecordOut, ExchangeIn, ExchangeOut
+from app.schemas.profile import ProfileUpdateIn
 from app.schemas.admin import (
     DashboardStats, RecentActivity,
     UserListItem, UserListOut, UserDetailOut,
@@ -23,9 +24,10 @@ from app.schemas.ai import (
 for _m in (
     RegisterIn, LoginIn, AuthOut,
     DiaryCreateIn, DiaryOut, EncouragementIn, EncouragementOut, DiaryPublicOut,
-    MoodCheckinIn, MoodCheckinOut,
+    MoodCheckinIn, MoodBatchIn, MoodCheckinOut,
     MusicOut, ListenCompleteIn,
     EnergyRecordOut, ExchangeIn, ExchangeOut,
+    ProfileUpdateIn,
     DashboardStats, RecentActivity,
     UserListItem, UserListOut, UserDetailOut,
     ResetPasswordIn, CreateUserIn, AdjustEnergyIn,
@@ -43,9 +45,10 @@ for _m in (
 __all__ = [
     "RegisterIn", "LoginIn", "AuthOut",
     "DiaryCreateIn", "DiaryOut", "DiaryPublicOut", "EncouragementIn", "EncouragementOut",
-    "MoodCheckinIn", "MoodCheckinOut",
+    "MoodCheckinIn", "MoodBatchIn", "MoodCheckinOut",
     "MusicOut", "ListenCompleteIn",
     "EnergyRecordOut", "ExchangeIn", "ExchangeOut",
+    "ProfileUpdateIn",
     "DashboardStats", "RecentActivity",
     "UserListItem", "UserListOut", "UserDetailOut",
     "ResetPasswordIn", "CreateUserIn", "AdjustEnergyIn",

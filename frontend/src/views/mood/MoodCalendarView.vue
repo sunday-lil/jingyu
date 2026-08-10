@@ -2,6 +2,9 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import gsap from 'gsap'
 import api from '@/api'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 // 心情常量（与后端 app/utils/constants.py:MOOD_INFO 完全对齐 —— v2.3 七种心情）
 // score 用于趋势条高度计算（1~5）
@@ -28,15 +31,28 @@ const today = new Date()
 const viewYear = ref(today.getFullYear())
 const viewMonth = ref(today.getMonth()) // 0-indexed
 
-// 选中的心情（存 mood key，如 'happy'）
-const selectedMood = ref(null)
+// 选中的心情列表（支持多选，存 mood key 数组，如 ['happy', 'calm']）
+const selectedMoods = ref([])
+
+// 切换心情选择（可多选）
+const toggleMood = (key) => {
+  const idx = selectedMoods.value.indexOf(key)
+  if (idx > -1) {
+    selectedMoods.value.splice(idx, 1)
+  } else {
+    selectedMoods.value.push(key)
+  }
+}
 
 // 数据
-const checkins = ref([])         // 后端 items: [{check_date, mood_emoji, note}]
+const checkins = ref([])         // 后端 items: [{check_date, mood_emojis, moods, ...}]
 const calendarLoading = ref(false)
-const trend = ref([])            // 后端 items: [{date, mood_emoji, label, color, note}]
+const trend = ref([])            // 后端 items: [{date, mood_emoji, label, color, note, mood_count, avg_score}]
 const currentStreak = ref(0)
 const submitting = ref(false)
+
+// 今日已记录的心情列表
+const todayMoods = ref([])
 
 // 简易 toast
 const toastVisible = ref(false)
@@ -76,13 +92,17 @@ const calendarCells = computed(() => {
   if (firstWeekday < 0) firstWeekday = 6
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
-  // checkin 映射：'YYYY-MM-DD' -> mood_emoji (mood key)
+  // checkin 映射：'YYYY-MM-DD' -> [mood_key, ...]（支持一天多条）
   const checkinMap = {}
   checkins.value.forEach(c => {
-    // 兼容字段名：后端返回 check_date + mood_emoji
     const d = c.check_date || c.date
-    const m = c.mood_emoji || c.mood_type
-    if (d) checkinMap[d] = m
+    if (!d) return
+    // 兼容新字段 mood_emojis（数组）和旧字段 mood_emoji（单值）
+    if (c.mood_emojis && Array.isArray(c.mood_emojis)) {
+      checkinMap[d] = c.mood_emojis
+    } else if (c.mood_emoji) {
+      checkinMap[d] = [c.mood_emoji]
+    }
   })
 
   const cells = []
@@ -93,28 +113,31 @@ const calendarCells = computed(() => {
   // 日期格
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-    const moodKey = checkinMap[dateStr] || null
+    const moodKeys = checkinMap[dateStr] || []
+    const moodInfos = moodKeys.map(k => MOOD_INFO[k]).filter(Boolean)
     cells.push({
       day: d,
       date: dateStr,
-      moodKey,
-      moodInfo: moodKey ? MOOD_INFO[moodKey] : null,
+      moodKeys,
+      moodInfos,
       isToday: dateStr === todayStr.value,
     })
   }
   return cells
 })
 
-// 趋势条形数据（高度按 score/5 换算百分比）
+// 趋势条形数据（高度按 score/5 换算百分比；多条取平均分）
 const trendBars = computed(() => {
   return trend.value.map(t => {
     const moodKey = t.mood_emoji || t.mood_type
     const info = moodKey ? MOOD_INFO[moodKey] : null
-    const score = info?.score || 0
+    // 优先用后端返回的 avg_score（多条记录的平均分）
+    const score = t.avg_score || info?.score || 0
     return {
       date: t.date,
       score,
       moodInfo: info,
+      moodCount: t.mood_count || 1,
       heightPct: score ? (score / 5) * 100 : 6,
       isEmpty: !score,
     }
@@ -123,14 +146,12 @@ const trendBars = computed(() => {
 
 // 根据心情分数取色（治愈系雾粉/雾蓝/暖米）
 const scoreColor = (score) => {
-  const map = {
-    5: 'linear-gradient(180deg, #F5C5D0, #E8A8B8)', // 雾粉
-    4: 'linear-gradient(180deg, #F5DCC8, #E8C5A8)', // 暖米
-    3: 'linear-gradient(180deg, #EDE0D0, #D5C5A8)', // 浅米
-    2: 'linear-gradient(180deg, #C5D5E8, #A8C0D8)', // 雾蓝
-    1: 'linear-gradient(180deg, #A8B8D5, #8898C0)', // 深雾蓝
-  }
-  return map[score] || 'rgba(139, 123, 94, 0.12)'
+  // 支持小数分数（多条平均）
+  if (score >= 4.5) return 'linear-gradient(180deg, #F5C5D0, #E8A8B8)' // 雾粉
+  if (score >= 3.5) return 'linear-gradient(180deg, #F5DCC8, #E8C5A8)' // 暖米
+  if (score >= 2.5) return 'linear-gradient(180deg, #EDE0D0, #D5C5A8)' // 浅米
+  if (score >= 1.5) return 'linear-gradient(180deg, #C5D5E8, #A8C0D8)' // 雾蓝
+  return 'linear-gradient(180deg, #A8B8D5, #8898C0)' // 深雾蓝
 }
 
 // 上一月
@@ -164,18 +185,29 @@ const fetchCalendar = async () => {
     })
     // 后端返回 { year, month, items: [...] }；兼容旧字段 checkins
     checkins.value = res?.items || res?.checkins || []
-    // 若当前月包含今天，且今日已打卡，预选心情
+    // 若当前月包含今天，拉取今日已记录的心情
     const t = new Date()
     if (t.getFullYear() === viewYear.value && t.getMonth() === viewMonth.value) {
-      const todayC = checkins.value.find(c => (c.check_date || c.date) === todayStr.value)
-      if (todayC && !selectedMood.value) {
-        selectedMood.value = todayC.mood_emoji || todayC.mood_type
-      }
+      await fetchTodayMoods()
     }
   } catch (e) {
     showToast(e.message || '日历加载失败', 2500)
   } finally {
     calendarLoading.value = false
+  }
+}
+
+// 拉取今日已记录的心情
+const fetchTodayMoods = async () => {
+  try {
+    const res = await api.get('/mood/today')
+    if (res?.checked_in && res?.moods) {
+      todayMoods.value = res.moods.map(m => m.mood_emoji).filter(Boolean)
+    } else {
+      todayMoods.value = []
+    }
+  } catch {
+    todayMoods.value = []
   }
 }
 
@@ -190,40 +222,50 @@ const fetchTrend = async () => {
   }
 }
 
-// 今日打卡
+// 今日打卡（支持多选）
 const doCheckin = async () => {
-  if (!selectedMood.value) {
-    showToast('先选一个今天的心情吧 🌿', 2200)
+  if (selectedMoods.value.length === 0) {
+    showToast('先选一个或多个今天的心情吧 🌿', 2200)
     return
   }
   if (submitting.value) return
   submitting.value = true
-  const moodKey = selectedMood.value
-  const moodInfo = MOOD_INFO[moodKey]
+  const moods = [...selectedMoods.value]
   try {
-    // 1. 提交打卡 —— 后端字段为 mood_emoji（实际存 mood key，如 'happy'）
-    await api.post('/mood/checkin', { mood_emoji: moodKey })
-    // 2. 刷新日历与趋势
-    fetchCalendar()
-    fetchTrend()
-    // 3. 请求 AI 治愈语
+    // 批量提交多个心情
+    const res = await api.post('/mood/checkin/batch', {
+      mood_emojis: moods,
+    })
+    // 更新露水
+    if (typeof res?.new_total_energy === 'number') {
+      userStore.updateEnergy(res.new_total_energy)
+    }
+    // 刷新数据
+    await fetchCalendar()
+    await fetchTrend()
+    // 清空选择
+    selectedMoods.value = []
+    // 更新今日心情列表
+    await fetchTodayMoods()
+    // 请求 AI 治愈语（用第一个心情）
+    const firstMoodKey = moods[0]
+    const firstMoodInfo = MOOD_INFO[firstMoodKey]
     let healingShown = false
     try {
       const aiRes = await api.post('/ai/healing', {
-        mood_emoji: moodKey,
-        mood_label: moodInfo.label,
+        mood_emoji: firstMoodKey,
+        mood_label: firstMoodInfo.label,
       })
       if (aiRes?.available && aiRes?.text) {
-        // 治愈语显示 3 秒
         showToast(aiRes.text, 3000)
         healingShown = true
       }
     } catch (aiErr) {
-      // AI 失败静默，下方给基础确认
+      // AI 失败静默
     }
-    // 4. AI 不可用或失败时，给出基础确认
     if (!healingShown) {
-      showToast(`今日心情已记下 ${moodInfo.emoji}`, 2200)
+      const moodEmojis = moods.map(k => MOOD_INFO[k]?.emoji).join(' ')
+      showToast(`今日心情已记下 ${moodEmojis}`, 2200)
     }
   } catch (e) {
     showToast(e.message || '打卡失败，请稍后再试', 2500)
@@ -269,14 +311,14 @@ onBeforeUnmount(() => {
     <!-- 顶部心情打卡区 -->
     <section class="mood-picker card">
       <div class="mood-picker__date">今日 · {{ todayLabel }}</div>
-      <p class="mood-picker__hint">此刻你感觉怎么样？</p>
+      <p class="mood-picker__hint">此刻你感觉怎么样？可以多选哦</p>
       <div class="mood-picker__row">
         <button
           v-for="m in moodList"
           :key="m.key"
           class="mood-picker__btn"
-          :class="{ 'is-selected': selectedMood === m.key }"
-          @click="selectedMood = m.key"
+          :class="{ 'is-selected': selectedMoods.includes(m.key) }"
+          @click="toggleMood(m.key)"
           :aria-label="m.label"
           :title="m.label"
         >
@@ -284,12 +326,22 @@ onBeforeUnmount(() => {
           <span class="mood-picker__btn-label">{{ m.label }}</span>
         </button>
       </div>
+      <!-- 今日已记录的心情 -->
+      <div v-if="todayMoods.length > 0" class="mood-picker__today">
+        <span class="mood-picker__today-label">今日已记：</span>
+        <span
+          v-for="key in todayMoods"
+          :key="key"
+          class="mood-picker__today-emoji"
+          :title="MOOD_INFO[key]?.label"
+        >{{ MOOD_INFO[key]?.emoji }}</span>
+      </div>
       <button
         class="btn btn--primary mood-picker__submit"
-        :disabled="submitting"
+        :disabled="submitting || selectedMoods.length === 0"
         @click="doCheckin"
       >
-        {{ submitting ? '记录中…' : '今日打卡' }}
+        {{ submitting ? '记录中…' : `今日打卡${selectedMoods.length > 0 ? ` (${selectedMoods.length})` : ''}` }}
       </button>
     </section>
 
@@ -313,12 +365,19 @@ onBeforeUnmount(() => {
           :class="{
             'calendar-cell--empty': cell.empty,
             'calendar-cell--today': cell.isToday,
-            'calendar-cell--has-mood': cell.moodKey,
+            'calendar-cell--has-mood': cell.moodKeys.length > 0,
           }"
-          :title="cell.moodInfo ? `${cell.date} · ${cell.moodInfo.label}` : (cell.date || '')"
+          :title="cell.moodInfos.length ? `${cell.date} · ${cell.moodInfos.map(m => m.label).join('、')}` : (cell.date || '')"
         >
           <template v-if="!cell.empty">
-            <div v-if="cell.moodInfo" class="calendar-cell__emoji">{{ cell.moodInfo.emoji }}</div>
+            <div v-if="cell.moodInfos.length > 0" class="calendar-cell__emojis">
+              <span
+                v-for="(info, idx) in cell.moodInfos.slice(0, 3)"
+                :key="idx"
+                class="calendar-cell__emoji"
+              >{{ info.emoji }}</span>
+              <span v-if="cell.moodInfos.length > 3" class="calendar-cell__more">+{{ cell.moodInfos.length - 3 }}</span>
+            </div>
             <div v-else class="calendar-cell__day">{{ cell.day }}</div>
           </template>
         </div>
@@ -340,7 +399,7 @@ onBeforeUnmount(() => {
     <!-- 趋势图 -->
     <section class="trend-section card">
       <h2 class="trend-section__title">30 天心情趋势</h2>
-      <p class="trend-section__subtitle">每一条小柱子，都是你那天的心情</p>
+      <p class="trend-section__subtitle">每一条小柱子，都是你那天的心情 · 一天多条记录取平均分</p>
       <div v-if="trendBars.length === 0" class="trend-section__empty">还没有趋势数据</div>
       <div v-else class="trend-chart">
         <div
@@ -352,6 +411,7 @@ onBeforeUnmount(() => {
         >
           <div class="trend-bar__tip">
             {{ bar.date?.slice(5) }} {{ bar.moodInfo?.emoji || '·' }}
+            <span v-if="bar.moodCount > 1">（{{ bar.moodCount }}条）</span>
           </div>
         </div>
       </div>
@@ -432,11 +492,11 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
 }
 .mood-picker__btn {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.7);
   border: 2px solid transparent;
@@ -444,23 +504,25 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   transition: all 0.3s var(--ease-soft, ease);
   cursor: pointer;
   backdrop-filter: blur(8px);
+  overflow: visible;
 }
 .mood-picker__btn:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-md, 0 6px 20px rgba(139, 123, 94, 0.1));
 }
 .mood-picker__btn-emoji {
-  font-size: 28px;
+  font-size: 30px;
   line-height: 1;
 }
 .mood-picker__btn-label {
   font-size: 11px;
   color: var(--color-text-muted, #8B7B5E);
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 .mood-picker__btn.is-selected {
   background: linear-gradient(135deg, rgba(232, 184, 197, 0.45) 0%, rgba(168, 197, 232, 0.45) 100%);
@@ -468,8 +530,24 @@ onBeforeUnmount(() => {
   transform: translateY(-3px);
   box-shadow: 0 8px 24px rgba(184, 165, 144, 0.28);
 }
+.mood-picker__today {
+  margin-bottom: 18px;
+  font-size: 13px;
+  color: var(--color-text-muted, #8B7B5E);
+}
+.mood-picker__today-label {
+  margin-right: 4px;
+}
+.mood-picker__today-emoji {
+  font-size: 18px;
+  margin-right: 2px;
+}
 .mood-picker__submit {
   min-width: 140px;
+}
+.mood-picker__submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 月份切换 */
@@ -541,6 +619,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   position: relative;
   transition: all 0.25s var(--ease-soft, ease);
+  overflow: hidden;
 }
 .calendar-cell--empty {
   background: transparent;
@@ -557,9 +636,21 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--color-text-muted, #8B7B5E);
 }
+.calendar-cell__emojis {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1px;
+  padding: 2px;
+}
 .calendar-cell__emoji {
-  font-size: 26px;
+  font-size: 20px;
   line-height: 1;
+}
+.calendar-cell__more {
+  font-size: 10px;
+  color: var(--color-text-muted, #8B7B5E);
 }
 
 /* 心情图例：让所有 emoji 都能完整显示 */
@@ -698,11 +789,11 @@ onBeforeUnmount(() => {
     gap: 8px;
   }
   .mood-picker__btn {
-    width: 56px;
-    height: 56px;
+    width: 64px;
+    height: 64px;
   }
   .mood-picker__btn-emoji {
-    font-size: 24px;
+    font-size: 26px;
   }
   .mood-picker__btn-label {
     font-size: 10px;
@@ -722,7 +813,10 @@ onBeforeUnmount(() => {
     font-size: 11px;
   }
   .calendar-cell__emoji {
-    font-size: 18px;
+    font-size: 16px;
+  }
+  .calendar-cell__more {
+    font-size: 9px;
   }
   .calendar__legend {
     gap: 10px 12px;

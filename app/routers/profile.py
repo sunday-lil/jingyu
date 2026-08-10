@@ -1,11 +1,12 @@
 """个人主页 API。
 
-v2.3 新增。
+v2.3 新增。v2.4 增加头像 / 昵称修改。
 
 端点：
-- GET  /api/profile           我自己的主页（公开统计 + 资源 + 成就）
-- GET  /api/profile/stats     我的统计数据（日记数 / 打卡天数 / 听曲数 / 花朵数）
-- GET  /api/profile/{user_id} 他人主页（仅展示公开信息）
+- GET   /api/profile           我自己的主页（公开统计 + 资源 + 成就）
+- PATCH /api/profile           更新我的头像 / 昵称
+- GET   /api/profile/stats     我的统计数据（日记数 / 打卡天数 / 听曲数 / 花朵数）
+- GET   /api/profile/{user_id} 他人主页（仅展示公开信息）
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from app.models.mood import MoodCheckin
 from app.models.energy import EnergyRecord
 from app.models.garden import GardenItem, UserFlower
 from app.models.encouragement import Encouragement
+from app.schemas.profile import ProfileUpdateIn
 
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
@@ -71,6 +73,7 @@ def _build_profile(db: Session, user: User, is_self: bool) -> dict:
     data = {
         "id": user.id,
         "nickname": user.nickname,
+        "avatar": user.avatar or "🙂",
         "is_admin": user.is_admin,
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "is_self": is_self,
@@ -98,6 +101,39 @@ def my_profile(
     db: Session = Depends(get_db),
 ):
     """我自己的主页。"""
+    return _build_profile(db, user, is_self=True)
+
+
+@router.patch("")
+def update_my_profile(
+    body: ProfileUpdateIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """更新我的头像 / 昵称。
+
+    - 昵称改了要查重，不能跟别人重名。
+    - 头像只接受 1-16 字符的 emoji / 文字。
+    """
+    changed = False
+    if body.nickname is not None and body.nickname != user.nickname:
+        existing = db.query(User).filter(User.nickname == body.nickname).first()
+        if existing is not None:
+            raise HTTPException(status_code=409, detail="这个名字已经有人用了，换一个吧")
+        user.nickname = body.nickname
+        changed = True
+    if body.avatar is not None and body.avatar != user.avatar:
+        user.avatar = body.avatar
+        changed = True
+
+    if changed:
+        db.query(User).filter(User.id == user.id).update({
+            "nickname": user.nickname,
+            "avatar": user.avatar,
+        })
+        db.commit()
+        db.refresh(user)
+
     return _build_profile(db, user, is_self=True)
 
 

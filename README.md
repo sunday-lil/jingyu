@@ -5,7 +5,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Status](https://img.shields.io/badge/status-v2.3.3-success)]()
+[![Status](https://img.shields.io/badge/status-v2.4.0-success)]()
 
 一个旨在缓解现代人焦虑情绪、关注心理健康的 Web 应用。通过「古琴五音疗愈」与「私密情绪记录」相结合，提供一个安全、安静、无压力的精神角落。
 
@@ -18,6 +18,8 @@
 > 🔒 **2026-07-28 v2.3.2 start.py 默认生产模式 + 自动构建简化**：`python start.py` 默认行为再次变更——**默认走生产模式**（FastAPI :5000 单进程，前后端不再一起起），需 `static/dist/` 已构建（不存在则自动 `npm install + npm run build`）。**自动构建仅检测 `static/dist/index.html` 存在性**（`dist 存在检测`），不再比较 `frontend/src/` 与 `static/dist/` 文件修改时间。**开发需显式 `python start.py --dev`**（Vite :5000 HMR + FastAPI :5001 API，前后端一起起的「应用模式」）。`--prod` 改为兼容别名（默认就是生产模式，加不加效果一样）。**服务器部署 2 步**：① 上传代码 ② `python start.py`（首次自动构建，之后秒启，FastAPI 单进程 :5000）。本次回滚 v2.2.2「默认应用模式」决策，理由：服务器端口代理已配好 :5000 不能动，应用模式会让 Vite 占 :5000 破坏代理。关键词 `默认生产模式` / `dist 存在检测` / `自动构建` / `--dev` / `应用模式` / `v2.3.2` 在 6 份文档中都要出现。
 
 > 🔒 **2026-07-30 v2.3.3 Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）**：解决 Safari / iOS 用户反馈的两类问题。① **Safari 主页 3D 不渲染**：根因包括 `hasWebGL()` 检测 bug、iOS Safari 切后台→前台后 WebGL 上下文丢失无恢复逻辑、老 iOS 缺 `EXT_color_buffer_half_float` 扩展、Bloom + 高分辨率 PMREM 内存超限。修复：**`hasWebGL` 重写**（区分 WebGL1/2 + 检测扩展 + max texture size），新增 `getWebGLCaps()` / `isSafari()` / `isIOS()` 工具函数；[frontend/src/utils/three-helpers.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听，上下文丢失时保存场景状态、恢复时重建；[HeroScene.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/HeroScene.vue) 实现 **iOS 降级**策略（**Bloom 降级**：iOS 关闭 UnrealBloomPass；**PMREM 降级**：iOS PMREM 分辨率 256→128、阴影 2048→1024、dpr 上限 2→1.5；老 iOS 缺扩展时关闭 PMREM + Bloom）。② **Safari emoji 显示不一致**：根因为跨平台 emoji 字体风格差异（Apple Color Emoji vs 系统 emoji）。修复：新建 [EmojiIcon.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/EmojiIcon.vue) 组件，使用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**；替换 [AppLayout.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/components/AppLayout.vue)（品牌 / 导航 / 通知 / 资源）+ [ProfileView.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/profile/ProfileView.vue)（头像 / 通知 / 资源 / 统计 / 快捷入口 / 花朵阶段）所有 emoji。构建 209 modules / 12.30s，HeroScene +0.71KB（降级逻辑）。关键词 `Safari 兼容` / `WebGL 上下文丢失` / `webglcontextlost` / `iOS 降级` / `EmojiIcon` / `Iconify` / `twemoji` / `SVG emoji` / `跨浏览器一致` / `hasWebGL 重写` / `getWebGLCaps` / `isSafari` / `isIOS` / `Bloom 降级` / `PMREM 降级` / `v2.3.3` 在 6 份文档中都要出现。
+
+> 🔒 **2026-08-10 v2.4.0 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊改名 + 露水累加修复**：本次更新 18 项 UI/UX 与功能调整。① **首页文案**：'海上有座岛，岛上有人听' → '潮声不止，心安自屿'，删除'静屿'副标题；删除首页'今日打卡'板块。② **漂流日记入口统一**：不管从哪进入，直接显示'日记海岸'界面（含拾瓶/写日记模块）。③ **情绪日历 emoji 显示/选择修复**。④ **一天多条心情记录**：`mood_checkins` 表 `user_id+check_date` 唯一约束移除（`mood_checkins 唯一约束移除`，SQLite 重建表方式：CREATE TABLE _new AS SELECT * → DROP → RENAME → CREATE INDEX），支持一天多次打卡（情绪是多变的）；[mood_service.py](file:///c:/Users/Administrator/Desktop/webwrold/app/services/mood_service.py) 重构——`upsert_checkin` → `add_checkin`（不再 UPSERT，允许一天多条）+ 新增 `get_today_moods`（获取今日所有心情）。⑤ **30 天心情趋势**：1-5 评分系统（极度开心=5 / 开心=4 / 平静=3 / 疲惫·焦虑=2 / 生气·悲伤=1），多条取**平均分**（`MOOD_SCORE` 映射：ecstatic=5 / happy=4 / calm=3 / tired=2 / anxious=2 / angry=1 / sad=1）。⑥ **心语树洞 AI 系统提示词 humanize**：更接地气、像朋友聊天。⑦ **'落叶画坊' → '花坊'**（改名）。⑧ **花种种类扩充**：12 种植物（向日葵 / 竹子 / 雏菊 / 莲花 / 薰衣草 / 郁金香 / 梅花 / 桃花 / 兰花 / 青松 / 桂花 / 银杏）。⑨ **新装扮**：油纸伞 / 蓑衣 / 乌篷船 / 鱼竿 / 橘猫 / 白鹤。⑩ **'古琴初学者' → '琴音知音'**（徽章改名）+ **每板块徽章**：琴音知音 / 日记达人 / 七日静心 / 拾瓶旅人 / 树洞倾心 / 花田主人。⑪ **'竹编帽'介绍改为'种花人遮阳的草帽'**。⑫ **花田 AI 显示基于实际种花情况**：没种花不显示。⑬ **'我的'页面修复**：'收到鼓励' / '岛上物件'可点击跳转，删除重复'岛上物件'，新增'静屿使用指南'（详细介绍所有模块功能）。⑭ **头像/昵称修改**：新增 `User.avatar` 字段（emoji，默认 `🙂`，`String(16)`）+ `PATCH /api/profile` 端点 + 前端编辑弹窗（24 个可选 emoji：🙂😊😌🥰😎🤗😇🤔😴🥺😏🌴🌸🍀🌙⭐🐳🦊🐱🦌🐢🦋🌿🍄）；**头像同步树洞**（[AIChatView.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/ai/AIChatView.vue) 使用 `userStore.avatar` 显示头像，与个人主页一致）；新增 [app/schemas/profile.py](file:///c:/Users/Administrator/Desktop/webwrold/app/schemas/profile.py) + `ProfileUpdateIn`（nickname 2-20 字符可选 / avatar 1-16 字符可选，昵称查重 409）。⑮ **露水累加修复**：写日记和留言鼓励后正确发放露水。**模型/迁移**：`User.avatar: str = "🙂"`（`_migrate_legacy_columns()` 加 `ALTER TABLE users ADD COLUMN avatar VARCHAR(16) DEFAULT '🙂' NOT NULL`）+ `mood_checkins 唯一约束移除`（SQLite 重建表方式：CREATE TABLE _new AS SELECT * → DROP → RENAME → CREATE INDEX，支持一天多条心情记录）。**常量**：[constants.py](file:///c:/Users/Administrator/Desktop/webwrold/app/utils/constants.py) `DEFAULT_SHOP_ITEMS` 扩充至 27 件（12 花种 + 9 装扮 + 6 徽章）；'古琴初学者' → '琴音知音'；'竹编帽'描述改为'种花人遮阳的草帽'；新增装扮：油纸伞 / 蓑衣 / 乌篷船 / 鱼竿 / 橘猫 / 白鹤。**前端**：[ProfileView.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/profile/ProfileView.vue) 头像/昵称编辑弹窗 + 静屿使用指南（7 个模块详细介绍：琴音疗心 / 日记海岸 / 情绪日历 / 心语树洞 / 花坊 / 屿上花田 / 我的）；[HomeView.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/HomeView.vue) 文案更新（'潮声不止，心安自屿'）+ 删除今日打卡 + 模块名'花坊'；[MoodCalendarView.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/mood/MoodCalendarView.vue) emoji 显示修复 + 多条打卡支持；[GardenView.vue](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/views/garden/GardenView.vue) AI 显示基于实际种花情况（没种花不显示）；[stores/user.js](file:///c:/Users/Administrator/Desktop/webwrold/frontend/src/stores/user.js) 新增 `updateProfile` action（调用 `PATCH /api/profile`）。关键词 `v2.4` / `潮声不止心安自屿` / `花坊` / `一天多条心情` / `mood_checkins 唯一约束移除` / `add_checkin` / `get_today_moods` / `平均分` / `humanize` / `琴音知音` / `每板块徽章` / `User.avatar` / `PATCH /api/profile` / `ProfileUpdateIn` / `头像同步树洞` / `静屿使用指南` / `露水累加修复` 在 6 份文档中都要出现。
 
 ---
 
@@ -317,7 +319,7 @@ webwrold/
 
 **资源哲学**：
 - 露水（`User.total_energy`）= 向内获得（听歌 / 写日记 / 打卡），用于浇灌花朵
-- 落叶（`User.leaves`）= 花朵枯萎后拾取获得，用于在落叶画坊兑换花种（寓意「落叶归根能施肥种花」）
+- 落叶（`User.leaves`）= 花朵枯萎后拾取获得，用于在花坊兑换花种（寓意「落叶归根能施肥种花」）
 - 露水**不能**直接兑换商店花种（花种只能用落叶兑换；装扮 / 徽章用露水）
 
 | 行为 | 增量 | 资源 | 来源 code |
@@ -424,7 +426,7 @@ YIN_TYPES = {
 | 漂流日记 | `/diary` | `views/diary/*` | `routers/diary.py` |
 | 情绪日历 | `/calendar` | `views/mood/MoodCalendarView.vue` | `routers/mood.py` |
 | 心语树洞 | `/ai-chat` | `views/ai/AIChatView.vue` | `routers/ai.py` |
-| 落叶画坊 | `/shop` | `views/garden/ShopView.vue` | `routers/garden.py` |
+| 花坊 | `/shop` | `views/garden/ShopView.vue` | `routers/garden.py` |
 | 屿上花田 | `/garden` | `views/garden/*` | `routers/garden.py` |
 
 辅助入口：拾瓶 `/diary/pick`（漂流日记子路由）、我的 `/profile`（个人主页，`requiresAuth` 守卫）。

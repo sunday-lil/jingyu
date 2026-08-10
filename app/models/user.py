@@ -17,6 +17,7 @@ class User(Base):
     - ``total_energy``：露水能量（累计获得 - 消耗，用于浇灌已播种的花朵）
     - ``leaves``：落叶（用于在落叶画坊兑换花种；花朵枯萎后转化得到）
     - ``is_admin``：是否为后台管理员（默认 False）
+    - ``avatar``：用户头像（emoji，默认 🙂；与树洞中显示的头像一致）
     """
 
     __tablename__ = "users"
@@ -28,6 +29,7 @@ class User(Base):
     total_energy: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     leaves: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    avatar: Mapped[str] = mapped_column(String(16), default="🙂", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.current_timestamp(), nullable=False
     )
@@ -60,6 +62,7 @@ class User(Base):
         return {
             "id": self.id,
             "nickname": self.nickname,
+            "avatar": self.avatar or "🙂",
             "total_energy": self.total_energy,
             "leaves": self.leaves,
             "is_admin": self.is_admin,

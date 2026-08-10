@@ -218,15 +218,19 @@ def _exchange_flower_seed(db: Session, user: User, item: ShopItem) -> GardenItem
 
 def check_achievements(db: Session, user: User) -> list[GardenItem]:
     """检查并发放自动徽章：
-    - listen_10：累计听完 10 首不同曲子
-    - diary_30：累计写 30 篇日记
-    - streak_7：连续 7 天打卡
+    - listen_10：累计听完 10 首不同曲子 → 琴音知音
+    - diary_30：累计写 30 篇日记 → 日记达人
+    - streak_7：连续 7 天打卡 → 七日静心
+    - pick_10：拾满 10 个漂流瓶 → 拾瓶旅人
+    - chat_20：与树洞对话满 20 次 → 树洞倾心
+    - flower_10：种满 10 朵花 → 花田主人
 
     返回本次新获得的 GardenItem 列表。
     """
     from app.models.music import Music
     from app.models.diary import Diary
     from app.models.mood import MoodCheckin
+    from app.models.garden import UserFlower
 
     newly: list[GardenItem] = []
 
@@ -267,6 +271,48 @@ def check_achievements(db: Session, user: User) -> list[GardenItem]:
     streak = get_current_streak(db, user.id)
     if streak >= 7:
         trigger_item = _find_trigger_item(db, "streak_7")
+        if trigger_item and trigger_item.id not in owned_ids:
+            gi = GardenItem(user_id=user.id, item_id=trigger_item.id)
+            db.add(gi)
+            newly.append(gi)
+            owned_ids.add(trigger_item.id)
+
+    # 4. pick_10：拾满 10 个漂流瓶
+    pick_count = (
+        db.query(func.count(EnergyRecord.id))
+        .filter(EnergyRecord.user_id == user.id, EnergyRecord.source == "encourage")
+        .scalar()
+    )
+    if pick_count >= 10:
+        trigger_item = _find_trigger_item(db, "pick_10")
+        if trigger_item and trigger_item.id not in owned_ids:
+            gi = GardenItem(user_id=user.id, item_id=trigger_item.id)
+            db.add(gi)
+            newly.append(gi)
+            owned_ids.add(trigger_item.id)
+
+    # 5. chat_20：与树洞对话满 20 次
+    chat_count = (
+        db.query(func.count(EnergyRecord.id))
+        .filter(EnergyRecord.user_id == user.id, EnergyRecord.source == "chat")
+        .scalar()
+    )
+    if chat_count >= 20:
+        trigger_item = _find_trigger_item(db, "chat_20")
+        if trigger_item and trigger_item.id not in owned_ids:
+            gi = GardenItem(user_id=user.id, item_id=trigger_item.id)
+            db.add(gi)
+            newly.append(gi)
+            owned_ids.add(trigger_item.id)
+
+    # 6. flower_10：种满 10 朵花
+    flower_count = (
+        db.query(func.count(UserFlower.id))
+        .filter(UserFlower.user_id == user.id)
+        .scalar()
+    )
+    if flower_count >= 10:
+        trigger_item = _find_trigger_item(db, "flower_10")
         if trigger_item and trigger_item.id not in owned_ids:
             gi = GardenItem(user_id=user.id, item_id=trigger_item.id)
             db.add(gi)

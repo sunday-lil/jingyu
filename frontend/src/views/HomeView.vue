@@ -14,7 +14,7 @@ const router = useRouter()
 const userStore = useUserStore()
 
 // 六个功能板块入口（v2.3：四字文艺命名 + 岛屿图标）
-// 名字已确认：琴音疗心 / 漂流日记 / 情绪日历 / 心语树洞 / 落叶画坊 / 屿上花田
+// 名字已确认：琴音疗心 / 漂流日记 / 情绪日历 / 心语树洞 / 花坊 / 屿上花田
 const modules = [
   {
     label: '琴音疗心',
@@ -27,7 +27,7 @@ const modules = [
     label: '漂流日记',
     desc: '把心事写进瓶子 · 让它漂向远方',
     icon: '🍶',
-    to: '/diary/pick',
+    to: '/diary',
     color: 'linear-gradient(135deg, #A8C5E8 0%, #C5D5E8 100%)',
   },
   {
@@ -45,7 +45,7 @@ const modules = [
     color: 'linear-gradient(135deg, #B8C5E8 0%, #A8D5BA 100%)',
   },
   {
-    label: '落叶画坊',
+    label: '花坊',
     desc: '落叶归根 · 化作春泥换花种',
     icon: '🍂',
     to: '/shop',
@@ -80,7 +80,6 @@ onMounted(() => {
   const tl = gsap.timeline({ delay: 0.2 })
   tl.from('.hero-verse', { y: 20, opacity: 0, duration: 1, ease: 'power3.out' })
     .from('.hero-title', { y: 30, opacity: 0, duration: 1.2, ease: 'power4.out' }, '-=0.6')
-    .from('.hero-subtitle', { y: 20, opacity: 0, duration: 1, ease: 'power3.out' }, '-=0.7')
     .from('.module-card', {
       y: 30, opacity: 0, duration: 0.7, stagger: 0.08, ease: 'power3.out'
     }, '-=0.4')
@@ -100,27 +99,13 @@ onMounted(() => {
       <div class="hero__content">
         <!-- v2.3：岛屿/山形图标（替代原草本🌿） -->
         <div class="hero-icon">🏝️</div>
-        <p class="hero-verse">"海上有座岛，岛上有人听。"</p>
+        <p class="hero-verse">"潮声不止，心安自屿。"</p>
         <h1 class="hero-title">静屿</h1>
-        <p class="hero-subtitle">
-          古琴五音 · 漂流日记 · 情绪手帐 · AI 树洞<br>
-          一个属于你的治愈系身心疗愈空间
-        </p>
       </div>
       <div class="hero__scroll-hint">
         <span>向下沉入海面</span>
         <span class="hero__scroll-arrow">↓</span>
       </div>
-    </section>
-
-    <!-- 今日心情条（登录后显示） -->
-    <section v-if="userStore.isLoggedIn" class="today-strip card">
-      <div class="today-strip__date">
-        {{ new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }) }}
-      </div>
-      <router-link to="/calendar" class="today-strip__action">
-        今日打卡 →
-      </router-link>
     </section>
 
     <!-- v2.3：六个功能板块入口（四字文艺命名） -->
@@ -211,12 +196,7 @@ onMounted(() => {
   font-weight: 400;
   letter-spacing: 0.2em;
   color: var(--color-text-primary);
-  margin: 0 0 20px;
-}
-.hero-subtitle {
-  font-size: 15px;
-  color: var(--color-text-secondary);
-  line-height: 2;
+  margin: 0;
 }
 
 /* 向下滚动提示 */
@@ -261,29 +241,6 @@ onMounted(() => {
   color: var(--color-text-muted);
   margin-bottom: 32px;
   letter-spacing: 0.1em;
-}
-
-/* 今日心情条 */
-.today-strip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 28px;
-  margin: 40px 0;
-  background: linear-gradient(90deg, rgba(168, 197, 160, 0.12) 0%, rgba(232, 184, 168, 0.12) 100%);
-}
-.today-strip__date {
-  font-family: var(--font-serif);
-  font-size: 17px;
-  color: var(--color-text-secondary);
-}
-.today-strip__action {
-  color: var(--color-accent-dark);
-  font-weight: 500;
-  transition: transform 0.3s;
-}
-.today-strip__action:hover {
-  transform: translateX(4px);
 }
 
 /* 模块入口 */
@@ -433,10 +390,6 @@ onMounted(() => {
     font-size: clamp(36px, 11vw, 52px);
     margin: 0 0 12px;
   }
-  .hero-subtitle {
-    font-size: 13px;
-    line-height: 1.8;
-  }
   .hero__scroll-hint {
     bottom: 12px;
     font-size: 11px;
@@ -448,20 +401,6 @@ onMounted(() => {
   .section-subtitle {
     font-size: 12px;
     margin-bottom: 20px;
-  }
-
-  /* 今日心情条：紧凑 */
-  .today-strip {
-    padding: 14px 18px;
-    margin: 24px 0;
-    flex-direction: row;
-    gap: 8px;
-  }
-  .today-strip__date {
-    font-size: 14px;
-  }
-  .today-strip__action {
-    font-size: 13px;
   }
 
   /* 模块入口：单列大卡片，移动端展示更详细信息 */

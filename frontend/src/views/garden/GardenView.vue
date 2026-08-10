@@ -270,7 +270,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <button class="btn btn--primary action-bar__cta" @click="goShop">
-        🌿 去落叶画坊换花种
+        🌿 去花坊换花种
       </button>
     </section>
 
@@ -286,8 +286,8 @@ onBeforeUnmount(() => {
       </div>
       <div v-else-if="!flowers.length" class="empty-state card">
         <div class="empty-emoji">🌱</div>
-        <p>花田还空着，去落叶画坊用落叶换一颗花种吧</p>
-        <button class="btn btn--ghost" @click="goShop">前往落叶画坊 →</button>
+        <p>花田还空着，去花坊用落叶换一颗花种吧</p>
+        <button class="btn btn--ghost" @click="goShop">前往花坊 →</button>
       </div>
 
       <div v-else class="flower-groups">
@@ -383,7 +383,7 @@ onBeforeUnmount(() => {
       <p class="hint-section__text">
         花朵需要用<strong>露水</strong>浇灌才能从种子 → 发芽 → 花苞 → 盛开。<br>
         盛开 7 天后未浇水会枯萎，枯萎后可拾取化作<strong>落叶</strong>，<br>
-        落叶可在落叶画坊兑换新的花种 —— 寓意"落叶归根能施肥种花"。
+        落叶可在花坊兑换新的花种 —— 寓意"落叶归根能施肥种花"。
       </p>
     </section>
 

@@ -164,7 +164,7 @@ onBeforeUnmount(() => {
   <div class="shop-view">
     <!-- 顶部标题 -->
     <header class="shop-header">
-      <h1 class="shop-header__title">落叶画坊</h1>
+      <h1 class="shop-header__title">花坊</h1>
       <p class="shop-header__verse">"落叶归根能施肥种花，露水浇花使其盛开"</p>
     </header>
 

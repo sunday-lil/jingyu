@@ -16,6 +16,7 @@ class LoginIn(BaseModel):
 class AuthOut(BaseModel):
     id: int
     nickname: str
+    avatar: str = "🙂"
     total_energy: int
     leaves: int = 0
     is_admin: bool = False
