@@ -9,7 +9,9 @@
 
 > 🔒 **2026-08-10 v2.4.0 UI/UX 大改 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充**：18 项改动覆盖文案/功能/数据模型/AI/商店。① **首页文案**：'海上有座岛，岛上有人听' → '潮声不止，心安自屿'，删'静屿'副标题 + 删'今日打卡'板块；'漂流日记'入口统一显示'日记海岸'界面。② **一天多条心情**：移除 `mood_checkins` 表 `(user_id, check_date)` 唯一约束（SQLite 重建表方式：CREATE TABLE _new AS SELECT * → DROP → RENAME → CREATE INDEX），支持一天多次打卡（情绪是多变的）；[app/services/mood_service.py](../../app/services/mood_service.py) `upsert_checkin` → `add_checkin`（不再 UPSERT）+ 新增 `get_today_moods`；30 天心情趋势用 1-5 评分系统，多条取**平均分**（MOOD_SCORE：ecstatic=5/happy=4/calm=3/tired=2/anxious=2/angry=1/sad=1）。③ **头像/昵称修改**：[app/models/user.py](../../app/models/user.py) 新增 `User.avatar: str = "🙂"`（String(16)，默认 🙂）+ 新增 `PATCH /api/profile` 端点 + [app/schemas/profile.py](../../app/schemas/profile.py) `ProfileUpdateIn`（nickname 2-20 字符可选 / avatar 1-16 字符可选，昵称查重 409）+ 前端 [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue) 编辑弹窗（24 个可选 emoji）+ **头像同步树洞**（[AIChatView.vue](../../frontend/src/views/ai/AIChatView.vue) 用 `userStore.avatar`）。④ **花坊扩充**：'落叶画坊' → '花坊'（改名）；花种扩充至 12 种（向日葵/竹子/雏菊/莲花/薰衣草/郁金香/梅花/桃花/兰花/青松/桂花/银杏）+ 新装扮（油纸伞/蓑衣/乌篷船/鱼竿/橘猫/白鹤）+ '古琴初学者' → '琴音知音'（徽章改名）+ **每板块徽章**（琴音知音/日记达人/七日静心/拾瓶旅人/树洞倾心/花田主人）+ '竹编帽' 描述改'种花人遮阳的草帽'；`DEFAULT_SHOP_ITEMS` 扩充至 27 件。⑤ **AI 系统提示词 humanize**：心语树洞更接地气、像朋友聊天。⑥ **'我的'页面修复**：'收到鼓励'/'岛上物件'可点击跳转，删除重复'岛上物件'，新增**静屿使用指南**（详细介绍 7 个模块功能）。⑦ **花田 AI 显示基于实际种花情况**（没种花不显示）。⑧ **露水累加修复**：写日记和留言鼓励后正确发放露水。⑨ 情绪日历 emoji 显示/选择修复。数据库迁移 `_migrate_legacy_columns()`：`ALTER TABLE users ADD COLUMN avatar VARCHAR(16) DEFAULT '🙂' NOT NULL` + 移除 `mood_checkins` 唯一约束。关键词 `v2.4` / `潮声不止心安自屿` / `花坊` / `一天多条心情` / `mood_checkins 唯一约束移除` / `add_checkin` / `get_today_moods` / `平均分` / `humanize` / `琴音知音` / `每板块徽章` / `User.avatar` / `PATCH /api/profile` / `ProfileUpdateIn` / `头像同步树洞` / `静屿使用指南` / `露水累加修复` 在 6 份文档中都要出现。
 
-**最后更新**：2026-08-10（v2.4.0 UI/UX 大改 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充 — 18 项改动：① 首页文案 '潮声不止，心安自屿' + 删今日打卡 + 漂流日记入口统一；② **一天多条心情**（`mood_checkins` 唯一约束移除 + `add_checkin` + `get_today_moods` + 30 天趋势**平均分**）；③ **头像/昵称修改**（`User.avatar` + `PATCH /api/profile` + `ProfileUpdateIn` + **头像同步树洞**）；④ '落叶画坊' → '花坊' + 12 花种 + 6 新装扮 + '古琴初学者' → '琴音知音' + **每板块徽章**；⑤ AI 提示词 **humanize**；⑥ '我的'页面修复 + **静屿使用指南**；⑦ 花田 AI 基于实际种花；⑧ **露水累加修复**）。前一阶段 v2.3.3（2026-07-30 Safari 兼容性修复 — 3D 上下文恢复 + emoji 跨浏览器一致）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱 — 10 项大改））
+> 🔒 **2026-08-10 v2.4.1 情绪日历改用罗素情绪环模型（Russell's Circumplex Model of Affect）四象限图表**：本次将情绪日历模块的「30 天趋势柱状图」板块替换为「罗素情绪环模型四象限图表」，让用户从「效价 × 唤醒度」二维视角理解自己的情绪分布，不再只看趋势分数。**文件**：[MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue)。① **移除**：30 天趋势柱状图板块——`trendBars` computed / `scoreColor` 函数 / `.trend-section` 模板 / `.trend-bar` 样式全部删除（`30 天趋势柱状图移除`）。② **新增**：罗素情绪环模型四象限图表——横轴 **效价 Valence**（左消极 → 右积极），纵轴 **唤醒度 Arousal**（下低唤醒 → 上高唤醒），四象限 Q1(积极+高唤醒) / Q2(消极+高唤醒) / Q3(消极+低唤醒) / Q4(积极+低唤醒)（`四象限图表`）。③ **数据**：定义 `CIRCUMPLEX_EMOTIONS` 数组（`20 种情绪`），每种情绪带 `valence`(-1~+1) 和 `arousal`(-1~+1) 坐标——其中 `6 种已追踪情绪`（ecstatic / happy / calm / tired / anxious / angry / sad）映射到后端 [constants.py](../../app/utils/constants.py) `MOOD_INFO`，有真实打卡数据；`14 种参考情绪`（兴奋 / 激动 / 恐慌 / 恐惧 / 极度烦躁 / 低落 / 压抑 / 倦怠 / 空虚 / 闲适 / 舒心 / 恬淡平和 / 兴致高昂 / 狂喜）帮助用户理解情绪在环模型中的位置。④ **交互**（`点击交互`）：点击 emoji → 弹出详情卡片，显示「`本月出现次数` X 次」；已追踪情绪有边框高亮 + 次数角标（右上角小圆点）；未追踪情绪显示「该情绪暂未开放打卡记录」；`emotionPosition(emotion)` 将 valence/arousal 转为 left% / top% 百分比定位。⑤ **统计**：`moodCounts` computed 从 `checkins` 数据统计本月各心情出现次数；`totalCheckins` 显示本月总打卡数。⑥ **视觉**：治愈系配色（四象限淡色背景）+ GSAP 入场动画（emoji 逐个弹出 `back.out` 缓动）+ 移动端响应式。⑦ **保留**：`fetchTrend` 仍调用（为 `currentStreak` 连续打卡天数显示），但 `trend` 数据不再用于渲染。详见 [HANDOFF §4 Phase 10](../../HANDOFF.md)。关键词 `v2.4.1` / `Russell情绪环模型` / `Circumplex Model` / `四象限图表` / `效价Valence` / `唤醒度Arousal` / `CIRCUMPLEX_EMOTIONS` / `emotionPosition` / `moodCounts` / `20种情绪` / `6种已追踪` / `14种参考` / `点击交互` / `本月出现次数` 在 6 份文档中都要出现。
+
+**最后更新**：2026-08-10（v2.4.1 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图 — 7 项改动：① **移除** 30 天趋势柱状图（`trendBars` / `scoreColor` / `.trend-section` / `.trend-bar`）；② **新增** 罗素情绪环模型四象限图表（横轴**效价 Valence** + 纵轴**唤醒度 Arousal** + 四象限 Q1-Q4）；③ **数据** `CIRCUMPLEX_EMOTIONS` 数组（`20 种情绪`，6 种已追踪 + 14 种参考）；④ **点击交互** 弹详情卡片显示「`本月出现次数`」+ 边框高亮 + 次数角标 + `emotionPosition` 百分比定位；⑤ **统计** `moodCounts` + `totalCheckins`；⑥ **视觉** 治愈系配色 + GSAP `back.out` 入场动画 + 移动端响应式；⑦ **保留** `fetchTrend` 调用（为 `currentStreak` 连续打卡天数显示）。前一阶段 v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充 — 18 项改动）+ v2.3.3（2026-07-30 Safari 兼容性修复 — 3D 上下文恢复 + emoji 跨浏览器一致）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱 — 10 项大改））
 
 ---
 
@@ -28,6 +30,7 @@
 | **v2.3.2 start.py 默认生产模式 + 自动构建简化** | ✅ 完成 | 2026-07-28，`python start.py` 默认回滚为**生产模式**（FastAPI :5000 单进程），**`dist 存在检测`** + **`自动构建`**（dist 不存在则 `npm install + npm run build`）；开发需显式 `--dev`（**应用模式**）；`--prod` 改为兼容别名；服务器部署 2 步。回滚 v2.2.2 默认应用模式（服务器端口代理 :5000 不能动），详见 §2 |
 | **v2.3.3 Safari 兼容性修复** | ✅ 完成 | 2026-07-30，**Safari 兼容**两类问题修复：① 3D 不渲染（**`hasWebGL` 重写** + `getWebGLCaps` / `isSafari` / `isIOS` + `webglcontextlost` / `webglcontextrestored` 处理 **WebGL 上下文丢失** + **iOS 降级**：**Bloom 降级** + **PMREM 降级**）；② emoji 不一致（新建 **EmojiIcon** 组件，**Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，**跨浏览器一致**），详见 §2 |
 | **v2.4.0 UI/UX 大改 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充** | ✅ 完成 | 2026-08-10，18 项改动：首页文案 '潮声不止，心安自屿' + 删今日打卡 + 漂流日记入口统一；**一天多条心情**（`mood_checkins` 唯一约束移除 + `add_checkin` + `get_today_moods` + 30 天趋势**平均分**）；**头像/昵称修改**（`User.avatar` + `PATCH /api/profile` + `ProfileUpdateIn` + **头像同步树洞**）；'落叶画坊' → '花坊' + 12 花种 + 6 新装扮 + '古琴初学者' → '琴音知音' + **每板块徽章**；AI 提示词 **humanize**；'我的'页面修复 + **静屿使用指南**；花田 AI 基于实际种花；**露水累加修复**，详见 §2 |
+| **v2.4.1 情绪日历改用罗素情绪环模型四象限图表** | ✅ 完成 | 2026-08-10，7 项改动：**移除** 30 天趋势柱状图（`trendBars` / `scoreColor` / `.trend-section` / `.trend-bar`）；**新增** 罗素情绪环模型四象限图表（横轴**效价 Valence** + 纵轴**唤醒度 Arousal** + 四象限 Q1-Q4）；**数据** `CIRCUMPLEX_EMOTIONS` 数组（`20 种情绪`，6 种已追踪 + 14 种参考）；**点击交互** 弹详情卡片显示「`本月出现次数`」+ 边框高亮 + 次数角标 + `emotionPosition` 百分比定位；**统计** `moodCounts` + `totalCheckins`；**视觉** 治愈系配色 + GSAP `back.out` 入场动画 + 移动端响应式；**保留** `fetchTrend` 调用（为 `currentStreak` 连续打卡天数显示），详见 §2 |
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
 | **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 / **3D + 伪 3D 视觉增强** — 全部 ✅ |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
@@ -77,6 +80,47 @@
 - [x] **数据库迁移**（`_migrate_legacy_columns()`）：
   - `ALTER TABLE users ADD COLUMN avatar VARCHAR(16) DEFAULT '🙂' NOT NULL`（v2.4 用户头像）
   - 移除 `mood_checkins` 表 `(user_id, check_date)` 唯一约束（SQLite 重建表方式：CREATE TABLE _new AS SELECT * → DROP → RENAME → CREATE INDEX），支持一天多条心情记录
+- [x] 文档同步（Iron Rule）：6 份文档同步更新 — README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT
+
+### 2026-08-10（v2.4.1）— 情绪日历改用罗素情绪环模型四象限图表
+
+- [x] 起因：v2.4.0 的 30 天趋势柱状图只能反映「开心程度」随时间的变化，无法回答「我最近是处于高唤醒的焦虑还是低唤醒的平静」这类二维情绪分布问题。引入罗素情绪环模型（Russell's Circumplex Model of Affect，1980）让用户从「效价 × 唤醒度」二维视角理解情绪分布
+- [x] **改动 1：移除 30 天趋势柱状图板块**（`30 天趋势柱状图移除`）：
+  - [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue) 删除 `trendBars` computed（按天数聚合 1-5 评分）
+  - 删除 `scoreColor` 函数（按评分映射颜色）
+  - 删除 `.trend-section` 模板块（30 根柱子）
+  - 删除 `.trend-bar` 样式（柱子渐变色 + 高度动画）
+- [x] **改动 2：新增罗素情绪环模型四象限图表**（`四象限图表`，`Russell情绪环模型`，`Circumplex Model`）：
+  - [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue) 新增 `.circumplex-section` 模板
+  - 横轴 **效价 Valence**（`效价Valence`，左消极 → 右积极）
+  - 纵轴 **唤醒度 Arousal**（`唤醒度Arousal`，下低唤醒 → 上高唤醒）
+  - 四象限：Q1(积极+高唤醒，右上) / Q2(消极+高唤醒，左上) / Q3(消极+低唤醒，左下) / Q4(积极+低唤醒，右下)
+  - 每个象限淡色背景（治愈系配色）+ 标签（如「积极 · 高唤醒」）
+- [x] **改动 3：定义 `CIRCUMPLEX_EMOTIONS` 数组**（`CIRCUMPLEX_EMOTIONS`，`20 种情绪`）：
+  - 每个元素 `{ key, label, emoji, valence, arousal, tracked }`
+  - `valence` / `arousal` 取值范围 -1~+1（-1 极消极/低唤醒，+1 极积极/高唤醒）
+  - **6 种已追踪情绪**（`6 种已追踪`，`tracked: true`）：ecstatic(🤩 valence=+0.9, arousal=+0.8) / happy(😊 +0.7, +0.4) / calm(😌 +0.4, -0.5) / tired(😪 -0.2, -0.8) / anxious(😰 -0.6, +0.7) / angry(😠 -0.8, +0.8) / sad(😢 -0.7, -0.4) —— 映射到后端 [constants.py](../../app/utils/constants.py) `MOOD_INFO`，有真实打卡数据
+  - **14 种参考情绪**（`14 种参考`，`tracked: false`）：兴奋 / 激动 / 恐慌 / 恐惧 / 极度烦躁 / 低落 / 压抑 / 倦怠 / 空虚 / 闲适 / 舒心 / 恬淡平和 / 兴致高昂 / 狂喜 —— 补全象限位置，帮助用户理解情绪地图
+- [x] **改动 4：点击交互**（`点击交互`）：
+  - 点击 emoji → 弹出详情卡片
+  - **已追踪情绪**：边框高亮（治愈系 accent 色）+ 右上角小圆点角标显示本月打卡次数；卡片内容「本月出现 X 次」（`本月出现次数` 由 `moodCounts[emotion.key]` 提供）
+  - **未追踪情绪**（参考情绪）：无角标；卡片内容「该情绪暂未开放打卡记录」
+  - `emotionPosition(emotion)` helper：将 `valence`/`arousal` 坐标转为 CSS `left%` / `top%` 百分比定位
+    - `left% = (valence + 1) / 2 * 100`（-1 → 0%，+1 → 100%）
+    - `top% = (1 - arousal) / 2 * 100`（+1 → 0% 顶部，-1 → 100% 底部，注意翻转）
+- [x] **改动 5：统计 `moodCounts` + `totalCheckins`**：
+  - `moodCounts` computed 从 `checkins`（本月打卡数据）按 `mood_emoji` 统计每种心情出现次数（`{ ecstatic: 3, happy: 5, ... }`）
+  - `totalCheckins` computed 显示本月总打卡数（所有心情次数之和），显示在四象限图表上方
+- [x] **改动 6：视觉设计**：
+  - **治愈系配色**：四象限淡色背景（Q1 浅黄积极 / Q2 浅红警示 / Q3 浅蓝低落 / Q4 浅绿平静）+ emoji 圆形背景 + 边框
+  - **GSAP 入场动画**：emoji 逐个弹出（`gsap.from('.emotion-dot', { scale: 0, opacity: 0, stagger: 0.05, ease: 'back.out(1.7)' })`，`back.out` 缓动让 emoji 有弹性出现感）
+  - **移动端响应式**：图表 `aspect-ratio: 1` 自适应宽度，emoji 字号随屏幕宽度缩放（`clamp(20px, 4vw, 32px)`）；详情卡片移动端居中底部弹出
+- [x] **改动 7：保留 `fetchTrend` 调用**：
+  - `onMounted` 仍调 `fetchTrend()` 拉取 30 天趋势数据
+  - `trend` 数据**不再用于渲染柱状图**——仅用于 `currentStreak`（连续打卡天数）显示在页面顶部连胜卡片
+  - **渐进重构**而非「全部删除」，保留向后兼容性
+- [x] **新增文件**：无（仅修改 [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue)）
+- [x] **数据库迁移**：无（不改后端模型 / 不改 API / 不改 service）
 - [x] 文档同步（Iron Rule）：6 份文档同步更新 — README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT
 
 ### 2026-07-30（v2.3.3）— Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）

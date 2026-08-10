@@ -20,6 +20,8 @@
 
 > 🔒 **2026-08-10 v2.4.0 UI/UX 大改 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充**：① §1.1.7.1 六大四字名板块表中'落叶画坊'改名'花坊'（[HomeView.vue](../../frontend/src/views/HomeView.vue) 模块名更新）；② §4.2 关键表字段 `mood_checkins` 唯一约束移除（支持**一天多条心情**，SQLite 重建表方式）；③ §1.1.8 新增 v2.4.0 架构要点节——头像/昵称编辑流程（`User.avatar` + `PATCH /api/profile` + `ProfileUpdateIn` + **头像同步树洞**）+ 一天多条心情数据模型（`mood_checkins` 唯一约束移除 + `add_checkin` + `get_today_moods` + 30 天趋势**平均分**）+ 花坊双资源经济扩充（`DEFAULT_SHOP_ITEMS` 27 件：12 花种 + 9 装扮 + 6 徽章；'古琴初学者' → '琴音知音' + **每板块徽章**）；④ §1.1.7.3 花田 AI 显示基于实际种花情况（没种花不显示）；⑤ 心语树洞 AI 系统提示词 **humanize**（更接地气、像朋友聊天）；⑥ 首页文案 '潮声不止，心安自屿' + 删'今日打卡'板块 + '漂流日记'入口统一；⑦ **静屿使用指南**（7 个模块详细介绍）+ **露水累加修复**（写日记和留言鼓励后正确发放露水）。关键词 `v2.4` / `潮声不止心安自屿` / `花坊` / `一天多条心情` / `mood_checkins 唯一约束移除` / `add_checkin` / `get_today_moods` / `平均分` / `humanize` / `琴音知音` / `每板块徽章` / `User.avatar` / `PATCH /api/profile` / `ProfileUpdateIn` / `头像同步树洞` / `静屿使用指南` / `露水累加修复` 在 6 份文档中都要出现。
 
+> 🔒 **2026-08-10 v2.4.1 情绪日历罗素情绪环模型四象限图表**：① §1.1.9 新增 v2.4.1 架构要点节——情绪环模型四象限图表数据流（`CIRCUMPLEX_EMOTIONS` 数组 20 种情绪带 `valence`/`arousal` 坐标 → `emotionPosition(emotion)` 转 `left%`/`top%` 百分比定位 → 点击 emoji 弹详情卡片 → `moodCounts` computed 从 `checkins` 统计本月各心情次数 → `totalCheckins` 显示本月总打卡数）；② [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue) 移除 30 天趋势柱状图（`trendBars` computed / `scoreColor` 函数 / `.trend-section` 模板 / `.trend-bar` 样式全部删除），新增罗素情绪环模型四象限图表（横轴效价 Valence 左消极→右积极 / 纵轴唤醒度 Arousal 下低唤醒→上高唤醒 / 四象限 Q1 积极+高唤醒 · Q2 消极+高唤醒 · Q3 消极+低唤醒 · Q4 积极+低唤醒）；③ 7 种已追踪情绪（ecstatic/happy/calm/tired/anxious/angry/sad）映射后端 [MOOD_INFO](../../app/utils/constants.py) 有真实打卡数据（边框高亮 + 次数角标）+ 13 种参考情绪帮助用户理解位置（点击显示「该情绪暂未开放打卡记录」）；④ `fetchTrend` 仍调用（为 `currentStreak` 连续打卡天数显示），但 `trend` 数据不再用于渲染。关键词 `v2.4.1` / `Russell情绪环模型` / `Circumplex Model` / `四象限图表` / `效价Valence` / `唤醒度Arousal` / `CIRCUMPLEX_EMOTIONS` / `emotionPosition` / `moodCounts` / `20种情绪` / `点击交互` / `本月出现次数` 在 6 份文档中都要出现。
+
 ---
 
 ## 1. 总体架构
@@ -599,6 +601,73 @@ CREATE INDEX ix_mood_checkins_user_id ON mood_checkins (user_id);
 - **花田 AI 显示基于实际种花情况**：[GardenView.vue](../../frontend/src/views/garden/GardenView.vue) 没种花不显示 AI
 - **'我的'页面修复**：'收到鼓励'/'岛上物件'可点击跳转，删除重复'岛上物件'，新增**静屿使用指南**（7 个模块详细介绍：琴音疗心 / 日记海岸 / 情绪日历 / 心语树洞 / 花坊 / 屿上花田 / 我的）
 - **露水累加修复**：写日记和留言鼓励后正确发放露水
+
+---
+
+## 1.1.9 v2.4.1 情绪日历罗素情绪环模型四象限图表（2026-08-10 加）
+
+> 设计原则：**「情绪可视化从线性趋势升级为二维情绪空间」** —— 将情绪日历的 30 天趋势柱状图替换为罗素情绪环模型（Russell's Circumplex Model of Affect）四象限图表，用效价（Valence）+ 唤醒度（Arousal）二维坐标系把情绪可视化，帮助用户更立体地理解自己的情绪分布。
+
+**文件**：[frontend/src/views/mood/MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue)
+
+### 数据流
+
+```
+CIRCUMPLEX_EMOTIONS（20 种情绪静态数组）
+  │ 每种情绪带 { key, emoji, label, valence, arousal, tracked }
+  │   valence: -1~+1（消极 → 积极，横轴）
+  │   arousal: -1~+1（低唤醒 → 高唤醒，纵轴）
+  │   tracked: 是否映射后端 MOOD_INFO（7 种已追踪 / 13 种参考）
+  ↓
+emotionPosition(emotion) 百分比转换
+  │ left% = (valence + 1) / 2 * 100
+  │ top%  = (1 - (arousal + 1) / 2) * 100（反转，上=高唤醒）
+  ↓
+四象限图表渲染（百分比绝对定位 emoji 到象限内）
+  ├─ Q1 右上：积极 + 高唤醒（ecstatic 🤩 / happy 😊）
+  ├─ Q2 左上：消极 + 高唤醒（anxious 😰 / angry 😠）
+  ├─ Q3 左下：消极 + 低唤醒（sad 😢 / tired 😪）
+  └─ Q4 右下：积极 + 低唤醒（calm 😌）
+  ↓
+点击 emoji → 弹详情卡片
+  │ 已追踪情绪：显示「本月出现 X 次」（X = moodCounts[key]）
+  │ 未追踪情绪：显示「该情绪暂未开放打卡记录」
+  ↓
+moodCounts computed（从 checkins 统计本月各心情出现次数）
+  └─ totalCheckins：本月总打卡数
+```
+
+### 四象限划分
+
+| 象限 | 位置 | 效价 + 唤醒度 | 典型情绪 |
+|---|---|---|---|
+| Q1 | 右上 | 积极 + 高唤醒 | ecstatic 🤩 / happy 😊 |
+| Q2 | 左上 | 消极 + 高唤醒 | anxious 😰 / angry 😠 |
+| Q3 | 左下 | 消极 + 低唤醒 | sad 😢 / tired 😪 |
+| Q4 | 右下 | 积极 + 低唤醒 | calm 😌 |
+
+### 已追踪情绪与参考情绪
+
+- **已追踪情绪（7 种）**：ecstatic / happy / calm / tired / anxious / angry / sad —— 映射后端 [MOOD_INFO](../../app/utils/constants.py)，有真实打卡数据，边框高亮 + 次数角标
+- **参考情绪（13 种）**：帮助用户理解情绪在环模型中的位置，点击显示「该情绪暂未开放打卡记录」
+
+### 移除项与保留项
+
+| 维度 | v2.4.0（原） | v2.4.1（新） |
+|---|---|---|
+| 30 天趋势柱状图 | `trendBars` computed / `scoreColor` 函数 / `.trend-section` 模板 / `.trend-bar` 样式 | **全部删除** |
+| 情绪可视化 | 线性 1-5 分趋势柱状图 | **罗素情绪环模型四象限图表** |
+| `fetchTrend` 调用 | 渲染趋势柱状图 | **仍调用**（为 `currentStreak` 连续打卡天数显示） |
+| `trend` 数据 | 用于渲染柱状图 | **不再用于渲染** |
+| `currentStreak` | 连续打卡天数显示 | **保留** |
+
+### 视觉与交互
+
+- 治愈系配色（四象限淡色背景区分）
+- GSAP 入场动画
+- 移动端响应式
+- 已追踪情绪：边框高亮 + 次数角标（`moodCounts[key]`）
+- 未追踪情绪：无角标，点击提示「该情绪暂未开放打卡记录」
 
 ---
 

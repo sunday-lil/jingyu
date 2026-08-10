@@ -23,6 +23,52 @@ const moodList = Object.entries(MOOD_INFO)
   .map(([key, info]) => ({ key, ...info }))
   .sort((a, b) => b.score - a.score)
 
+// ─── 罗素情绪环模型（Russell's Circumplex Model of Affect）───
+// 横轴 valence：-1（消极）→ +1（积极）
+// 纵轴 arousal：-1（低唤醒）→ +1（高唤醒）
+// tracked=true 表示该情绪在系统中已追踪（有真实打卡数据）
+// moodKey 映射到后端 MOOD_INFO 的 key，用于查询本月出现次数
+const CIRCUMPLEX_EMOTIONS = [
+  // 第一象限（右上：积极 + 高唤醒）
+  { emoji: '🤩', label: '狂喜',     valence: 0.85, arousal: 0.85, tracked: true,  moodKey: 'ecstatic' },
+  { emoji: '😆', label: '兴奋',     valence: 0.65, arousal: 0.70, tracked: false },
+  { emoji: '🤗', label: '激动',     valence: 0.50, arousal: 0.55, tracked: false },
+  { emoji: '✨', label: '兴致高昂', valence: 0.55, arousal: 0.40, tracked: false },
+  // 第二象限（左上：消极 + 高唤醒）
+  { emoji: '😠', label: '暴怒',     valence: -0.80, arousal: 0.85, tracked: true,  moodKey: 'angry' },
+  { emoji: '😱', label: '恐慌',     valence: -0.75, arousal: 0.65, tracked: false },
+  { emoji: '😰', label: '焦虑',     valence: -0.55, arousal: 0.50, tracked: true,  moodKey: 'anxious' },
+  { emoji: '😨', label: '恐惧',     valence: -0.65, arousal: 0.35, tracked: false },
+  { emoji: '😤', label: '极度烦躁', valence: -0.45, arousal: 0.45, tracked: false },
+  // 第三象限（左下：消极 + 低唤醒）
+  { emoji: '😢', label: '悲伤',     valence: -0.70, arousal: -0.30, tracked: true,  moodKey: 'sad' },
+  { emoji: '😞', label: '低落',     valence: -0.55, arousal: -0.20, tracked: false },
+  { emoji: '😔', label: '压抑',     valence: -0.45, arousal: -0.45, tracked: false },
+  { emoji: '😪', label: '疲惫',     valence: -0.25, arousal: -0.60, tracked: true,  moodKey: 'tired' },
+  { emoji: '😩', label: '倦怠',     valence: -0.35, arousal: -0.70, tracked: false },
+  { emoji: '😶', label: '空虚',     valence: -0.50, arousal: -0.55, tracked: false },
+  // 第四象限（右下：积极 + 低唤醒）
+  { emoji: '😊', label: '开心',     valence: 0.60, arousal: 0.25, tracked: true,  moodKey: 'happy' },
+  { emoji: '😌', label: '平静',     valence: 0.45, arousal: -0.30, tracked: true,  moodKey: 'calm' },
+  { emoji: '😎', label: '闲适',     valence: 0.55, arousal: -0.50, tracked: false },
+  { emoji: '😇', label: '舒心',     valence: 0.40, arousal: -0.65, tracked: false },
+  { emoji: '🍃', label: '恬淡平和', valence: 0.35, arousal: -0.75, tracked: false },
+]
+
+// 四象限信息
+const QUADRANT_INFO = [
+  { id: 'q1', label: '积极 · 高唤醒', desc: '亢奋愉悦', color: 'rgba(255, 213, 107, 0.08)' },
+  { id: 'q2', label: '消极 · 高唤醒', desc: '紧张激烈', color: 'rgba(232, 154, 154, 0.08)' },
+  { id: 'q3', label: '消极 · 低唤醒', desc: '低沉消沉', color: 'rgba(165, 168, 197, 0.08)' },
+  { id: 'q4', label: '积极 · 低唤醒', desc: '松弛平和', color: 'rgba(168, 213, 186, 0.08)' },
+]
+
+// 将 valence/arousal 坐标转换为图表内的百分比位置
+const emotionPosition = (emotion) => ({
+  left: ((emotion.valence + 1) / 2) * 100,
+  top: ((1 - emotion.arousal) / 2) * 100,
+})
+
 // 周一 ~ 周日
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 
@@ -126,32 +172,42 @@ const calendarCells = computed(() => {
   return cells
 })
 
-// 趋势条形数据（高度按 score/5 换算百分比；多条取平均分）
-const trendBars = computed(() => {
-  return trend.value.map(t => {
-    const moodKey = t.mood_emoji || t.mood_type
-    const info = moodKey ? MOOD_INFO[moodKey] : null
-    // 优先用后端返回的 avg_score（多条记录的平均分）
-    const score = t.avg_score || info?.score || 0
-    return {
-      date: t.date,
-      score,
-      moodInfo: info,
-      moodCount: t.mood_count || 1,
-      heightPct: score ? (score / 5) * 100 : 6,
-      isEmpty: !score,
-    }
+// 本月各心情出现次数（从 checkins 数据统计）
+const moodCounts = computed(() => {
+  const counts = {}
+  checkins.value.forEach(c => {
+    const moods = c.mood_emojis || (c.mood_emoji ? [c.mood_emoji] : [])
+    moods.forEach(m => {
+      counts[m] = (counts[m] || 0) + 1
+    })
   })
+  return counts
 })
 
-// 根据心情分数取色（治愈系雾粉/雾蓝/暖米）
-const scoreColor = (score) => {
-  // 支持小数分数（多条平均）
-  if (score >= 4.5) return 'linear-gradient(180deg, #F5C5D0, #E8A8B8)' // 雾粉
-  if (score >= 3.5) return 'linear-gradient(180deg, #F5DCC8, #E8C5A8)' // 暖米
-  if (score >= 2.5) return 'linear-gradient(180deg, #EDE0D0, #D5C5A8)' // 浅米
-  if (score >= 1.5) return 'linear-gradient(180deg, #C5D5E8, #A8C0D8)' // 雾蓝
-  return 'linear-gradient(180deg, #A8B8D5, #8898C0)' // 深雾蓝
+// 获取某个情绪在本月的出现次数
+const emotionCount = (emotion) => {
+  if (!emotion.tracked || !emotion.moodKey) return 0
+  return moodCounts.value[emotion.moodKey] || 0
+}
+
+// 本月总打卡数
+const totalCheckins = computed(() => {
+  return Object.values(moodCounts.value).reduce((sum, n) => sum + n, 0)
+})
+
+// 选中的情绪（点击交互）
+const selectedEmotion = ref(null)
+
+const onEmotionClick = (emotion) => {
+  if (selectedEmotion.value?.label === emotion.label) {
+    selectedEmotion.value = null
+  } else {
+    selectedEmotion.value = emotion
+  }
+}
+
+const closeEmotionPopup = () => {
+  selectedEmotion.value = null
 }
 
 // 上一月
@@ -286,8 +342,11 @@ onMounted(() => {
     gsap.from('.calendar-cell:not(.calendar-cell--empty)', {
       y: 16, opacity: 0, duration: 0.45, stagger: 0.012, ease: 'power2.out', delay: 0.25,
     })
-    gsap.from('.trend-bar', {
-      scaleY: 0, transformOrigin: 'bottom', duration: 0.55, stagger: 0.02, ease: 'power2.out', delay: 0.5,
+    gsap.from('.circumplex-section', {
+      y: 20, opacity: 0, duration: 0.6, ease: 'power2.out', delay: 0.4,
+    })
+    gsap.from('.circumplex-emotion', {
+      scale: 0, opacity: 0, duration: 0.4, stagger: 0.04, ease: 'back.out(1.7)', delay: 0.6,
     })
   })
 })
@@ -396,24 +455,90 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <!-- 趋势图 -->
-    <section class="trend-section card">
-      <h2 class="trend-section__title">30 天心情趋势</h2>
-      <p class="trend-section__subtitle">每一条小柱子，都是你那天的心情 · 一天多条记录取平均分</p>
-      <div v-if="trendBars.length === 0" class="trend-section__empty">还没有趋势数据</div>
-      <div v-else class="trend-chart">
-        <div
-          v-for="(bar, i) in trendBars"
-          :key="i"
-          class="trend-bar"
-          :class="{ 'trend-bar--empty': bar.isEmpty }"
-          :style="{ height: bar.heightPct + '%', background: bar.isEmpty ? '' : scoreColor(bar.score) }"
-        >
-          <div class="trend-bar__tip">
-            {{ bar.date?.slice(5) }} {{ bar.moodInfo?.emoji || '·' }}
-            <span v-if="bar.moodCount > 1">（{{ bar.moodCount }}条）</span>
-          </div>
+    <!-- 情绪环状模型（Russell's Circumplex Model） -->
+    <section class="circumplex-section card">
+      <h2 class="circumplex-section__title">情绪环状图</h2>
+      <p class="circumplex-section__subtitle">
+        基于「罗素情绪环模型」· 横轴为效价（消极→积极），纵轴为唤醒度（平静→激烈）
+        <span class="circumplex-section__total">本月共记录 {{ totalCheckins }} 次</span>
+      </p>
+
+      <div class="circumplex-chart" @click.self="closeEmotionPopup">
+        <!-- 四象限背景 -->
+        <div class="circumplex-quadrant circumplex-quadrant--q1" :style="{ background: QUADRANT_INFO[0].color }">
+          <span class="circumplex-quadrant__label">{{ QUADRANT_INFO[0].desc }}</span>
         </div>
+        <div class="circumplex-quadrant circumplex-quadrant--q2" :style="{ background: QUADRANT_INFO[1].color }">
+          <span class="circumplex-quadrant__label">{{ QUADRANT_INFO[1].desc }}</span>
+        </div>
+        <div class="circumplex-quadrant circumplex-quadrant--q3" :style="{ background: QUADRANT_INFO[2].color }">
+          <span class="circumplex-quadrant__label">{{ QUADRANT_INFO[2].desc }}</span>
+        </div>
+        <div class="circumplex-quadrant circumplex-quadrant--q4" :style="{ background: QUADRANT_INFO[3].color }">
+          <span class="circumplex-quadrant__label">{{ QUADRANT_INFO[3].desc }}</span>
+        </div>
+
+        <!-- 坐标轴 -->
+        <div class="circumplex-axis circumplex-axis--x"></div>
+        <div class="circumplex-axis circumplex-axis--y"></div>
+
+        <!-- 轴标注 -->
+        <div class="circumplex-axis-label circumplex-axis-label--x-pos">积极</div>
+        <div class="circumplex-axis-label circumplex-axis-label--x-neg">消极</div>
+        <div class="circumplex-axis-label circumplex-axis-label--y-pos">高唤醒</div>
+        <div class="circumplex-axis-label circumplex-axis-label--y-neg">低唤醒</div>
+
+        <!-- 情绪 emoji -->
+        <button
+          v-for="(emotion, i) in CIRCUMPLEX_EMOTIONS"
+          :key="i"
+          class="circumplex-emotion"
+          :class="{
+            'circumplex-emotion--tracked': emotion.tracked,
+            'circumplex-emotion--active': selectedEmotion?.label === emotion.label,
+          }"
+          :style="{
+            left: emotionPosition(emotion).left + '%',
+            top: emotionPosition(emotion).top + '%',
+          }"
+          @click.stop="onEmotionClick(emotion)"
+          :aria-label="emotion.label"
+          :title="emotion.label"
+        >
+          <span class="circumplex-emotion__emoji">{{ emotion.emoji }}</span>
+          <span v-if="emotion.tracked && emotionCount(emotion) > 0" class="circumplex-emotion__badge">
+            {{ emotionCount(emotion) }}
+          </span>
+        </button>
+      </div>
+
+      <!-- 点击弹出详情 -->
+      <transition name="circumplex-popup">
+        <div v-if="selectedEmotion" class="circumplex-detail">
+          <div class="circumplex-detail__emoji">{{ selectedEmotion.emoji }}</div>
+          <div class="circumplex-detail__body">
+            <div class="circumplex-detail__label">{{ selectedEmotion.label }}</div>
+            <div v-if="selectedEmotion.tracked" class="circumplex-detail__count">
+              本月出现 <strong>{{ emotionCount(selectedEmotion) }}</strong> 次
+            </div>
+            <div v-else class="circumplex-detail__count circumplex-detail__count--muted">
+              该情绪暂未开放打卡记录
+            </div>
+          </div>
+          <button class="circumplex-detail__close" @click="closeEmotionPopup" aria-label="关闭">×</button>
+        </div>
+      </transition>
+
+      <!-- 图例 -->
+      <div class="circumplex-legend">
+        <span class="circumplex-legend__item">
+          <span class="circumplex-legend__dot circumplex-legend__dot--tracked"></span>
+          已追踪（可打卡）
+        </span>
+        <span class="circumplex-legend__item">
+          <span class="circumplex-legend__dot"></span>
+          参考情绪
+        </span>
       </div>
     </section>
 
@@ -679,11 +804,11 @@ onBeforeUnmount(() => {
   font-family: var(--font-serif, serif);
 }
 
-/* 趋势图 */
-.trend-section {
+/* 情绪环状图（Russell's Circumplex Model） */
+.circumplex-section {
   padding: 24px;
 }
-.trend-section__title {
+.circumplex-section__title {
   font-family: var(--font-serif, serif);
   font-size: 18px;
   font-weight: 500;
@@ -691,58 +816,240 @@ onBeforeUnmount(() => {
   margin: 0 0 6px;
   letter-spacing: 0.05em;
 }
-.trend-section__subtitle {
+.circumplex-section__subtitle {
   font-size: 13px;
   color: var(--color-text-muted, #8B7B5E);
   margin: 0 0 20px;
+  line-height: 1.6;
 }
-.trend-section__empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--color-text-muted, #8B7B5E);
-  font-size: 13px;
+.circumplex-section__total {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: rgba(184, 165, 144, 0.12);
+  color: var(--color-accent-dark, #8B7B5E);
+  font-size: 12px;
 }
-.trend-chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 140px;
-  padding: 0 4px;
-  overflow-x: auto;
-}
-.trend-bar {
-  flex: 1 0 8px;
-  min-width: 6px;
-  border-radius: 6px 6px 2px 2px;
+
+/* 四象限图表容器 */
+.circumplex-chart {
   position: relative;
-  transition: transform 0.2s var(--ease-soft, ease), filter 0.2s;
-  cursor: pointer;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 480px;
+  margin: 0 auto 20px;
+  border-radius: var(--radius-lg, 20px);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--color-border, rgba(139, 123, 94, 0.1));
 }
-.trend-bar:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.05);
-}
-.trend-bar--empty {
-  background: rgba(139, 123, 94, 0.1);
-}
-.trend-bar__tip {
+
+/* 四象限背景 */
+.circumplex-quadrant {
   position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(90, 70, 50, 0.92);
-  color: #fff;
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-  margin-bottom: 6px;
+  width: 50%;
+  height: 50%;
+  display: flex;
+  padding: 8px 10px;
 }
-.trend-bar:hover .trend-bar__tip {
-  opacity: 1;
+.circumplex-quadrant--q1 { top: 0; right: 0; align-items: flex-start; justify-content: flex-end; }
+.circumplex-quadrant--q2 { top: 0; left: 0; align-items: flex-start; justify-content: flex-start; }
+.circumplex-quadrant--q3 { bottom: 0; left: 0; align-items: flex-end; justify-content: flex-start; }
+.circumplex-quadrant--q4 { bottom: 0; right: 0; align-items: flex-end; justify-content: flex-end; }
+.circumplex-quadrant__label {
+  font-family: var(--font-serif, serif);
+  font-size: 11px;
+  color: var(--color-text-muted, #8B7B5E);
+  opacity: 0.6;
+  letter-spacing: 0.05em;
+}
+
+/* 坐标轴 */
+.circumplex-axis {
+  position: absolute;
+  background: var(--color-border, rgba(139, 123, 94, 0.2));
+  pointer-events: none;
+}
+.circumplex-axis--x {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+}
+.circumplex-axis--y {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+}
+
+/* 轴标注 */
+.circumplex-axis-label {
+  position: absolute;
+  font-family: var(--font-serif, serif);
+  font-size: 11px;
+  color: var(--color-text-muted, #8B7B5E);
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  z-index: 2;
+}
+.circumplex-axis-label--x-pos { right: 8px; top: calc(50% + 6px); }
+.circumplex-axis-label--x-neg { left: 8px; top: calc(50% + 6px); }
+.circumplex-axis-label--y-pos { top: 6px; left: calc(50% + 8px); }
+.circumplex-axis-label--y-neg { bottom: 6px; left: calc(50% + 8px); }
+
+/* 情绪 emoji 节点 */
+.circumplex-emotion {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-soft, ease);
+  backdrop-filter: blur(4px);
+  z-index: 3;
+  padding: 0;
+}
+.circumplex-emotion__emoji {
+  font-size: 22px;
+  line-height: 1;
+}
+.circumplex-emotion:hover {
+  transform: translate(-50%, -50%) scale(1.18);
+  box-shadow: 0 4px 14px rgba(139, 123, 94, 0.2);
+  z-index: 5;
+}
+.circumplex-emotion--tracked {
+  border-color: var(--color-accent, #B8A590);
+}
+.circumplex-emotion--active {
+  transform: translate(-50%, -50%) scale(1.2);
+  border-color: var(--color-accent-dark, #8B7B5E);
+  box-shadow: 0 4px 18px rgba(184, 165, 144, 0.4);
+  background: rgba(255, 255, 255, 0.95);
+  z-index: 6;
+}
+/* 出现次数角标 */
+.circumplex-emotion__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-accent, #B8A590);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* 点击弹出详情 */
+.circumplex-detail {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md, 14px);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 246, 240, 0.9) 100%);
+  border: 1px solid var(--color-border, rgba(139, 123, 94, 0.15));
+  margin-bottom: 16px;
+}
+.circumplex-detail__emoji {
+  font-size: 32px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.circumplex-detail__body {
+  flex: 1;
+}
+.circumplex-detail__label {
+  font-family: var(--font-serif, serif);
+  font-size: 16px;
+  color: var(--color-text-primary, #3D3327);
+  margin-bottom: 2px;
+  letter-spacing: 0.05em;
+}
+.circumplex-detail__count {
+  font-size: 13px;
+  color: var(--color-text-secondary, #5C4F3E);
+}
+.circumplex-detail__count strong {
+  color: var(--color-accent-dark, #8B7B5E);
+  font-size: 16px;
+  font-weight: 600;
+}
+.circumplex-detail__count--muted {
+  color: var(--color-text-muted, #8B7B5E);
+  font-style: italic;
+}
+.circumplex-detail__close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(139, 123, 94, 0.1);
+  color: var(--color-text-muted, #8B7B5E);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.circumplex-detail__close:hover {
+  background: rgba(139, 123, 94, 0.2);
+  color: var(--color-text-primary, #3D3327);
+}
+
+/* 弹出动画 */
+.circumplex-popup-enter-active,
+.circumplex-popup-leave-active {
+  transition: opacity 0.25s, transform 0.25s;
+}
+.circumplex-popup-enter-from,
+.circumplex-popup-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* 图例 */
+.circumplex-legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 4px;
+}
+.circumplex-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted, #8B7B5E);
+  letter-spacing: 0.05em;
+}
+.circumplex-legend__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--color-border, rgba(139, 123, 94, 0.2));
+}
+.circumplex-legend__dot--tracked {
+  border-color: var(--color-accent, #B8A590);
+  border-width: 2px;
 }
 
 /* toast */
@@ -833,12 +1140,24 @@ onBeforeUnmount(() => {
     height: 32px;
     font-size: 18px;
   }
-  .trend-section {
+  .circumplex-section {
     padding: 18px 14px;
   }
-  .trend-chart {
-    height: 110px;
-    gap: 2px;
+  .circumplex-chart {
+    max-width: 100%;
+  }
+  .circumplex-emotion {
+    width: 34px;
+    height: 34px;
+  }
+  .circumplex-emotion__emoji {
+    font-size: 18px;
+  }
+  .circumplex-quadrant__label {
+    font-size: 10px;
+  }
+  .circumplex-axis-label {
+    font-size: 10px;
   }
   /* toast 上移避开 tabbar */
   .toast {
