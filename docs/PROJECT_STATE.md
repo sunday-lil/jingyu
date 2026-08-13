@@ -11,7 +11,9 @@
 
 > 🔒 **2026-08-10 v2.4.1 情绪日历改用罗素情绪环模型（Russell's Circumplex Model of Affect）四象限图表**：本次将情绪日历模块的「30 天趋势柱状图」板块替换为「罗素情绪环模型四象限图表」，让用户从「效价 × 唤醒度」二维视角理解自己的情绪分布，不再只看趋势分数。**文件**：[MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue)。① **移除**：30 天趋势柱状图板块——`trendBars` computed / `scoreColor` 函数 / `.trend-section` 模板 / `.trend-bar` 样式全部删除（`30 天趋势柱状图移除`）。② **新增**：罗素情绪环模型四象限图表——横轴 **效价 Valence**（左消极 → 右积极），纵轴 **唤醒度 Arousal**（下低唤醒 → 上高唤醒），四象限 Q1(积极+高唤醒) / Q2(消极+高唤醒) / Q3(消极+低唤醒) / Q4(积极+低唤醒)（`四象限图表`）。③ **数据**：定义 `CIRCUMPLEX_EMOTIONS` 数组（`20 种情绪`），每种情绪带 `valence`(-1~+1) 和 `arousal`(-1~+1) 坐标——其中 `6 种已追踪情绪`（ecstatic / happy / calm / tired / anxious / angry / sad）映射到后端 [constants.py](../../app/utils/constants.py) `MOOD_INFO`，有真实打卡数据；`14 种参考情绪`（兴奋 / 激动 / 恐慌 / 恐惧 / 极度烦躁 / 低落 / 压抑 / 倦怠 / 空虚 / 闲适 / 舒心 / 恬淡平和 / 兴致高昂 / 狂喜）帮助用户理解情绪在环模型中的位置。④ **交互**（`点击交互`）：点击 emoji → 弹出详情卡片，显示「`本月出现次数` X 次」；已追踪情绪有边框高亮 + 次数角标（右上角小圆点）；未追踪情绪显示「该情绪暂未开放打卡记录」；`emotionPosition(emotion)` 将 valence/arousal 转为 left% / top% 百分比定位。⑤ **统计**：`moodCounts` computed 从 `checkins` 数据统计本月各心情出现次数；`totalCheckins` 显示本月总打卡数。⑥ **视觉**：治愈系配色（四象限淡色背景）+ GSAP 入场动画（emoji 逐个弹出 `back.out` 缓动）+ 移动端响应式。⑦ **保留**：`fetchTrend` 仍调用（为 `currentStreak` 连续打卡天数显示），但 `trend` 数据不再用于渲染。详见 [HANDOFF §4 Phase 10](../../HANDOFF.md)。关键词 `v2.4.1` / `Russell情绪环模型` / `Circumplex Model` / `四象限图表` / `效价Valence` / `唤醒度Arousal` / `CIRCUMPLEX_EMOTIONS` / `emotionPosition` / `moodCounts` / `20种情绪` / `6种已追踪` / `14种参考` / `点击交互` / `本月出现次数` 在 6 份文档中都要出现。
 
-**最后更新**：2026-08-10（v2.4.1 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图 — 7 项改动：① **移除** 30 天趋势柱状图（`trendBars` / `scoreColor` / `.trend-section` / `.trend-bar`）；② **新增** 罗素情绪环模型四象限图表（横轴**效价 Valence** + 纵轴**唤醒度 Arousal** + 四象限 Q1-Q4）；③ **数据** `CIRCUMPLEX_EMOTIONS` 数组（`20 种情绪`，6 种已追踪 + 14 种参考）；④ **点击交互** 弹详情卡片显示「`本月出现次数`」+ 边框高亮 + 次数角标 + `emotionPosition` 百分比定位；⑤ **统计** `moodCounts` + `totalCheckins`；⑥ **视觉** 治愈系配色 + GSAP `back.out` 入场动画 + 移动端响应式；⑦ **保留** `fetchTrend` 调用（为 `currentStreak` 连续打卡天数显示）。前一阶段 v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充 — 18 项改动）+ v2.3.3（2026-07-30 Safari 兼容性修复 — 3D 上下文恢复 + emoji 跨浏览器一致）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱 — 10 项大改））
+> 🔒 **2026-08-13 v2.4.2 整体架构优化与冗余清理（维护性清理版本）**：本次为维护性清理版本，**无功能变化 / 无数据库迁移 / 无新依赖**，7 项改动专注代码瘦身与一致性对齐。① **删除 15 个死模板 + 1 空目录**（`死模板清理`）：Vue 3 SPA 迁移前遗留的旧 Jinja2 SSR 模板——[templates/](../../templates/) 下 `base/_nav/_toast/index/login/register/music_list/diary_write/diary_detail/my_bottles/pick_bottle/mood_calendar/garden/shop/ai_chat.html` 全部删除 + `templates/partials/` 空目录删除；**仅保留** [templates/admin/](../../templates/admin/)（[admin_pages.py](../../app/routers/admin_pages.py) 仍使用 Jinja2 SSR）。② **删除 10 个死页面脚本**（`死页面脚本`）：[static/js/pages/](../../static/js/pages/) 下非 admin 脚本——`ai_chat/auth/diary/diary_detail/home/mood_calendar/music/my_bottles/pick/shop.js` 全部删除，仅被死模板引用，迁移后已无入口。③ **[app/main.py](../../app/main.py) 版本号 1.0.0 → 2.4.2**（`版本号对齐`）：与 git tag / README badge 对齐。④ **[app/main.py](../../app/main.py) `EXT_TO_MIME` 删除重复 `.webp` 条目**（`EXT_TO_MIME`）：字典中定义了两次，删除后者。⑤ **修复过时端口注释**（`过时注释`）：[app/routers/pages.py](../../app/routers/pages.py) / [frontend/vite.config.js](../../frontend/vite.config.js) / [static/js/app.js](../../static/js/app.js) 中 `:5173 → :5000`（Vite）/ `:5000 → :5001`（FastAPI 开发）。⑥ **新增 5 个五音封面 SVG**（`SVG封面`）：[static/img/cover_gong.svg](../../static/img/cover_gong.svg) / `cover_shang.svg` / `cover_jue.svg` / `cover_zhi.svg` / `cover_yu.svg`，颜色取自 [app/utils/constants.py](../../app/utils/constants.py) `YIN_INFO`，修复 [app/seed.py](../../app/seed.py) 引用的缺失资源。⑦ **[app/routers/admin_pages.py](../../app/routers/admin_pages.py) admin_users N+1 查询优化**（`N+1优化` / `GROUP BY`）：原 for 循环内 3 个 COUNT/用户 × 50 用户 = 151 次查询 → 1 次查用户 + 3 个 `GROUP BY` 聚合 + 字典拼接 = 4 次查询。**不动**：[static/css/](../../static/css/) 全部保留（admin/_base.html 加载 style.css）/ [static/js/app.js](../../static/js/app.js) 保留（仅改注释）/ [static/audio/](../../static/audio/) 保留（seed.py 生成占位 mp3）/ [templates/admin/](../../templates/admin/) 保留 / [config.py](../../config.py) / [app/database.py](../../app/database.py) / [requirements.txt](../../requirements.txt) 不动。关键词 `v2.4.2` / `死模板清理` / `死页面脚本` / `N+1优化` / `GROUP BY` / `SVG封面` / `EXT_TO_MIME` / `版本号对齐` / `过时注释` 在 6 份文档中都要出现。
+
+**最后更新**：2026-08-13（v2.4.2 整体架构优化与冗余清理，维护性清理版本 — 7 项改动：① **删除 15 个死模板 + 1 空目录**（`死模板清理`，仅保留 templates/admin/）；② **删除 10 个死页面脚本**（`死页面脚本`，static/js/pages/ 下非 admin）；③ **版本号对齐** main.py 1.0.0 → 2.4.2；④ **EXT_TO_MIME 去重** 删除重复 .webp；⑤ **过时注释修复** :5173→:5000 / :5000→:5001；⑥ **新增 5 个五音封面 SVG**（`SVG封面`）；⑦ **admin_users N+1 优化**（`N+1优化` / `GROUP BY`，151 次→4 次查询）。无功能变化 / 无数据库迁移 / 无新依赖。前一阶段 v2.4.1（2026-08-10 情绪日历改用罗素情绪环模型四象限图表 — 7 项改动）+ v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充 — 18 项改动）+ v2.3.3（2026-07-30 Safari 兼容性修复 — 3D 上下文恢复 + emoji 跨浏览器一致）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱 — 10 项大改））
 
 ---
 
@@ -31,6 +33,7 @@
 | **v2.3.3 Safari 兼容性修复** | ✅ 完成 | 2026-07-30，**Safari 兼容**两类问题修复：① 3D 不渲染（**`hasWebGL` 重写** + `getWebGLCaps` / `isSafari` / `isIOS` + `webglcontextlost` / `webglcontextrestored` 处理 **WebGL 上下文丢失** + **iOS 降级**：**Bloom 降级** + **PMREM 降级**）；② emoji 不一致（新建 **EmojiIcon** 组件，**Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，**跨浏览器一致**），详见 §2 |
 | **v2.4.0 UI/UX 大改 + 一天多条心情 + 头像/昵称编辑 + 花坊扩充** | ✅ 完成 | 2026-08-10，18 项改动：首页文案 '潮声不止，心安自屿' + 删今日打卡 + 漂流日记入口统一；**一天多条心情**（`mood_checkins` 唯一约束移除 + `add_checkin` + `get_today_moods` + 30 天趋势**平均分**）；**头像/昵称修改**（`User.avatar` + `PATCH /api/profile` + `ProfileUpdateIn` + **头像同步树洞**）；'落叶画坊' → '花坊' + 12 花种 + 6 新装扮 + '古琴初学者' → '琴音知音' + **每板块徽章**；AI 提示词 **humanize**；'我的'页面修复 + **静屿使用指南**；花田 AI 基于实际种花；**露水累加修复**，详见 §2 |
 | **v2.4.1 情绪日历改用罗素情绪环模型四象限图表** | ✅ 完成 | 2026-08-10，7 项改动：**移除** 30 天趋势柱状图（`trendBars` / `scoreColor` / `.trend-section` / `.trend-bar`）；**新增** 罗素情绪环模型四象限图表（横轴**效价 Valence** + 纵轴**唤醒度 Arousal** + 四象限 Q1-Q4）；**数据** `CIRCUMPLEX_EMOTIONS` 数组（`20 种情绪`，6 种已追踪 + 14 种参考）；**点击交互** 弹详情卡片显示「`本月出现次数`」+ 边框高亮 + 次数角标 + `emotionPosition` 百分比定位；**统计** `moodCounts` + `totalCheckins`；**视觉** 治愈系配色 + GSAP `back.out` 入场动画 + 移动端响应式；**保留** `fetchTrend` 调用（为 `currentStreak` 连续打卡天数显示），详见 §2 |
+| **v2.4.2 整体架构优化与冗余清理（维护性清理版本）** | ✅ 完成 | 2026-08-13，7 项改动：**死模板清理**（15 个 Jinja2 SSR 模板 + templates/partials/ 空目录，仅保留 templates/admin/）+ **死页面脚本**（10 个 static/js/pages/ 非 admin）+ **版本号对齐**（main.py 1.0.0 → 2.4.2）+ **EXT_TO_MIME 去重**（删除重复 .webp）+ **过时注释**（:5173→:5000 / :5000→:5001）+ **SVG封面**（5 个五音 cover_gong/shang/jue/zhi/yu.svg）+ **N+1优化**（admin_users 151 次→4 次 `GROUP BY` 聚合），无功能变化 / 无数据库迁移 / 无新依赖，详见 §2 |
 | **6 个 Phase** | ✅ 全部完成 | 古琴五音 / 漂流瓶 / 情绪日历 / 精神花园 / **秘密后台** / **AI 全面接入** |
 | **功能完整性** | ✅ 一个功能都不丢 | 古琴五音疗愈 / AI 选音 / 漂流瓶日记 / 拾瓶 / 情绪日历 / AI 树洞 / 精神花园 / 露水商店 / 鉴权 / 404 / 响应式 / GSAP 动效 / 治愈系配色 / **3D + 伪 3D 视觉增强** — 全部 ✅ |
 | **端到端测试** | ✅ 通过 | 注册→登录→发日记→打卡→听歌→兑换 |
@@ -120,6 +123,33 @@
   - `trend` 数据**不再用于渲染柱状图**——仅用于 `currentStreak`（连续打卡天数）显示在页面顶部连胜卡片
   - **渐进重构**而非「全部删除」，保留向后兼容性
 - [x] **新增文件**：无（仅修改 [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue)）
+- [x] **数据库迁移**：无（不改后端模型 / 不改 API / 不改 service）
+- [x] 文档同步（Iron Rule）：6 份文档同步更新 — README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT
+
+### 2026-08-13（v2.4.2）— 整体架构优化与冗余清理（维护性清理版本）
+
+- [x] 起因：v2.4.0/v2.4.1 功能迭代后积累冗余——Vue 3 SPA 迁移前遗留的旧 Jinja2 SSR 模板与死页面脚本仍在仓库、main.py 版本号（1.0.0）与 git tag / README badge（2.4.x）不一致、EXT_TO_MIME 字典中 .webp 重复定义、多处端口注释过时（:5173/:5000 残留）、seed.py 引用的五音封面 SVG 缺失、admin_users 接口存在 N+1 查询（151 次）
+- [x] **改动 1：删除 15 个死模板 + 1 空目录**（`死模板清理`）：
+  - [templates/](../../templates/) 下 Vue 3 SPA 迁移前遗留的旧 Jinja2 SSR 模板全部删除：`base.html` / `_nav.html` / `_toast.html` / `index.html` / `login.html` / `register.html` / `music_list.html` / `diary_write.html` / `diary_detail.html` / `my_bottles.html` / `pick_bottle.html` / `mood_calendar.html` / `garden.html` / `shop.html` / `ai_chat.html`
+  - `templates/partials/` 空目录删除
+  - **仅保留** [templates/admin/](../../templates/admin/)（[admin_pages.py](../../app/routers/admin_pages.py) 仍使用 Jinja2 SSR）
+- [x] **改动 2：删除 10 个死页面脚本**（`死页面脚本`）：
+  - [static/js/pages/](../../static/js/pages/) 下非 admin 脚本全部删除：`ai_chat.js` / `auth.js` / `diary.js` / `diary_detail.js` / `home.js` / `mood_calendar.js` / `music.js` / `my_bottles.js` / `pick.js` / `shop.js`
+  - 仅被死模板引用，Vue 3 SPA 迁移后已无入口
+- [x] **改动 3：[app/main.py](../../app/main.py) 版本号 1.0.0 → 2.4.2**（`版本号对齐`）：与 git tag / README badge 对齐
+- [x] **改动 4：[app/main.py](../../app/main.py) `EXT_TO_MIME` 删除重复 `.webp` 条目**（`EXT_TO_MIME`）：字典中定义了两次，删除后者
+- [x] **改动 5：修复过时端口注释**（`过时注释`）：
+  - [app/routers/pages.py](../../app/routers/pages.py)：`:5173 → :5000`（Vite）
+  - [frontend/vite.config.js](../../frontend/vite.config.js)：`:5000 → :5001`（FastAPI 开发）
+  - [static/js/app.js](../../static/js/app.js)：端口注释更新
+- [x] **改动 6：新增 5 个五音封面 SVG**（`SVG封面`）：
+  - [static/img/cover_gong.svg](../../static/img/cover_gong.svg) / `cover_shang.svg` / `cover_jue.svg` / `cover_zhi.svg` / `cover_yu.svg`
+  - 颜色取自 [app/utils/constants.py](../../app/utils/constants.py) `YIN_INFO`
+  - 修复 [app/seed.py](../../app/seed.py) 引用的缺失资源
+- [x] **改动 7：[app/routers/admin_pages.py](../../app/routers/admin_pages.py) admin_users N+1 查询优化**（`N+1优化` / `GROUP BY`）：
+  - 原 for 循环内 3 个 COUNT/用户 × 50 用户 = 151 次查询
+  - 优化为 1 次查用户 + 3 个 `GROUP BY` 聚合 + 字典拼接 = 4 次查询
+- [x] **不动**：[static/css/](../../static/css/) 全部保留（admin/_base.html 加载 style.css）/ [static/js/app.js](../../static/js/app.js) 保留（仅改注释）/ [static/audio/](../../static/audio/) 保留（seed.py 生成占位 mp3）/ [templates/admin/](../../templates/admin/) 保留 / [config.py](../../config.py) / [app/database.py](../../app/database.py) / [requirements.txt](../../requirements.txt) 不动
 - [x] **数据库迁移**：无（不改后端模型 / 不改 API / 不改 service）
 - [x] 文档同步（Iron Rule）：6 份文档同步更新 — README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT
 

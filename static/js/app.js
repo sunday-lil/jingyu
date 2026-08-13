@@ -367,7 +367,7 @@
   window.QI = QI;
 
   // ── 自动初始化全局增强效果（页面进入过渡 / 滚动渐显 / 按钮涟漪 / 数字计数 / 环境花瓣）──
-  // app.js 在 base.html 末尾以非 defer 方式加载，此时 DOM 已解析完成；
+  // app.js 在 admin/_base.html 末尾以非 defer 方式加载，此时 DOM 已解析完成；
   // 但仍兼容 readyState=loading 的极端情况。
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => QI.initAll());

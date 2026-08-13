@@ -96,22 +96,39 @@ def admin_users(
     if user is None:
         return RedirectResponse(f"{settings.admin_path_prefix}/login", status_code=302)
     users = db.query(User).order_by(User.id.desc()).limit(50).all()
+    user_ids = [u.id for u in users]
+
+    # 3 个 GROUP BY 聚合查询替代 N+1（v2.4.2 优化：151 → 4 个查询）
+    diary_counts = dict(
+        db.query(Diary.user_id, sa_func.count(Diary.id))
+        .filter(Diary.user_id.in_(user_ids))
+        .group_by(Diary.user_id)
+        .all()
+    ) if user_ids else {}
+    public_counts = dict(
+        db.query(Diary.user_id, sa_func.count(Diary.id))
+        .filter(Diary.user_id.in_(user_ids), Diary.is_public == True)  # noqa: E712
+        .group_by(Diary.user_id)
+        .all()
+    ) if user_ids else {}
+    mood_counts = dict(
+        db.query(MoodCheckin.user_id, sa_func.count(MoodCheckin.id))
+        .filter(MoodCheckin.user_id.in_(user_ids))
+        .group_by(MoodCheckin.user_id)
+        .all()
+    ) if user_ids else {}
+
     items = []
     for u in users:
-        diary_count = db.query(sa_func.count(Diary.id)).filter(Diary.user_id == u.id).scalar() or 0
-        public_count = db.query(sa_func.count(Diary.id)).filter(
-            Diary.user_id == u.id, Diary.is_public == True  # noqa: E712
-        ).scalar() or 0
-        mood_count = db.query(sa_func.count(MoodCheckin.id)).filter(MoodCheckin.user_id == u.id).scalar() or 0
         items.append({
             "id": u.id,
             "nickname": u.nickname,
             "total_energy": u.total_energy,
             "is_admin": u.is_admin,
             "created_at": u.created_at,
-            "diary_count": diary_count,
-            "public_diary_count": public_count,
-            "mood_count": mood_count,
+            "diary_count": diary_counts.get(u.id, 0),
+            "public_diary_count": public_counts.get(u.id, 0),
+            "mood_count": mood_counts.get(u.id, 0),
         })
     return admin_templates.TemplateResponse(
         request,

@@ -1,7 +1,7 @@
 """页面路由：Vue 3 SPA 重构后的兼容层。
 
 前台所有页面已由 Vue 3 SPA（frontend/）接管：
-- 开发：访问 http://127.0.0.1:5173（Vite dev server，proxy /api 到 FastAPI :5000）
+- 开发：访问 http://127.0.0.1:5000（Vite dev server，proxy /api 到 FastAPI :5001）
 - 生产：访问 http://127.0.0.1:5000，FastAPI 挂载 static/dist 并 SPA fallback
 
 本模块只保留旧 SSR 链接到新 SPA 路由的 302 重定向（兼容历史书签）。

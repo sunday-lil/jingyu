@@ -70,7 +70,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="静屿 — 治愈系身心疗愈平台",
         description="古琴五音 · 漂流瓶日记 · 心情手帐 · 精神花园",
-        version="1.0.0",
+        version="2.4.2",
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url=None,
@@ -181,7 +181,6 @@ def create_app() -> FastAPI:
         ".txt": "text/plain; charset=utf-8",
         ".xml": "application/xml; charset=utf-8",
         ".webmanifest": "application/manifest+json",
-        ".webp": "image/webp",
     }
 
     @app.get("/{full_path:path}", include_in_schema=False)

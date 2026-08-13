@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <rect width="400" height="400" fill="#E8D5A8"/>
+  <text x="50%" y="46%" dominant-baseline="central" text-anchor="middle"
+        font-family="'Songti SC','STSong','SimSun',serif" font-size="220"
+        fill="#6B5E47" opacity="0.85">宫</text>
+  <text x="50%" y="88%" dominant-baseline="central" text-anchor="middle"
+        font-family="'PingFang SC','Microsoft YaHei',sans-serif" font-size="28"
+        fill="#6B5E47" opacity="0.6">土 · 健脾</text>
+</svg>

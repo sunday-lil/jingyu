@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
 // 静屿前端配置
-// 开发：vite dev server :5173，proxy /api 和 /static 到 FastAPI :5000
+// 开发：vite dev server :5000，proxy /api 和 /static 到 FastAPI :5001
 // 构建：输出到 ../static/dist（FastAPI 挂载）
 export default defineConfig(({ command }) => ({
   // 生产环境前端构建产物会被 FastAPI 挂载到 /static/dist/
