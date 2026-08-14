@@ -225,8 +225,12 @@ onBeforeUnmount(() => {
       <p class="garden-header__verse">"在静屿的土壤里，种下属于你的花"</p>
     </header>
 
-    <!-- 3D 花田场景（异步加载 Three.js，移动端降级花朵数） -->
-    <section class="garden-hero" :class="{ 'garden-hero--mobile': flowerCount === 24 }">
+    <!-- 3D 花田场景（v2.4.2：仅当用户已种花时才显示，避免空花田显示无关 AI 生成花朵） -->
+    <section
+      v-if="flowers.length > 0"
+      class="garden-hero"
+      :class="{ 'garden-hero--mobile': flowerCount === 24 }"
+    >
       <FlowerField :flower-count="flowerCount" height="360px" />
       <div class="garden-hero__overlay">
         <p class="garden-hero__hint">{{ flowerCount === 24 ? '轻触花田，看花朵绽放' : '移动鼠标，看花田随风摆动' }}</p>
@@ -270,7 +274,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <button class="btn btn--primary action-bar__cta" @click="goShop">
-        🌿 去花坊换花种
+        🌿 去落叶花坊换花种
       </button>
     </section>
 
@@ -286,8 +290,8 @@ onBeforeUnmount(() => {
       </div>
       <div v-else-if="!flowers.length" class="empty-state card">
         <div class="empty-emoji">🌱</div>
-        <p>花田还空着，去花坊用落叶换一颗花种吧</p>
-        <button class="btn btn--ghost" @click="goShop">前往花坊 →</button>
+        <p>花田还空着，去落叶花坊用落叶换一颗花种吧</p>
+        <button class="btn btn--ghost" @click="goShop">前往落叶花坊 →</button>
       </div>
 
       <div v-else class="flower-groups">
@@ -351,7 +355,7 @@ onBeforeUnmount(() => {
     <!-- 我的装扮/徽章 -->
     <section class="items-section" v-if="myItems.length">
       <div class="section-head">
-        <h2 class="section-title">岛上物件</h2>
+        <h2 class="section-title">🏝️ 岛上物件</h2>
         <span class="section-count">{{ myItems.length }} 件</span>
       </div>
       <div class="items-groups">
@@ -383,7 +387,7 @@ onBeforeUnmount(() => {
       <p class="hint-section__text">
         花朵需要用<strong>露水</strong>浇灌才能从种子 → 发芽 → 花苞 → 盛开。<br>
         盛开 7 天后未浇水会枯萎，枯萎后可拾取化作<strong>落叶</strong>，<br>
-        落叶可在花坊兑换新的花种 —— 寓意"落叶归根能施肥种花"。
+        落叶可在落叶花坊兑换新的花种 —— 寓意"落叶归根能施肥种花"。
       </p>
     </section>
 

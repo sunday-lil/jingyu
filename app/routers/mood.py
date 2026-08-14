@@ -47,16 +47,25 @@ def checkin(
             db, user, amount=5, source="streak_7",
             note="连续 7 天打卡", bypass_limit=True
         )
-    check_achievements(db, user)
+    achievement = check_achievements(db, user)
     db.commit()
+    # expire_on_commit=False：重新查 DB 取最新余额
+    new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
 
-    return MoodCheckinOut(
+    out = MoodCheckinOut(
         id=record.id,
         check_date=record.check_date.isoformat(),
         mood_emoji=record.mood_emoji,
         note=record.note,
         created_at=record.created_at.isoformat() if record.created_at else "",
     )
+    # v2.4.2：附加资源变动信息（前端用于 toast + 更新余额）
+    out_dict = out.model_dump()
+    out_dict["new_total_energy"] = new_total
+    out_dict["new_leaves"] = achievement.get("new_leaves", 0)
+    out_dict["leaves_balance"] = achievement.get("leaves_balance", 0)
+    out_dict["new_badges"] = achievement.get("new_badges", [])
+    return out_dict
 
 
 @router.post("/checkin/batch")
@@ -88,8 +97,10 @@ def batch_checkin(
             db, user, amount=5, source="streak_7",
             note="连续 7 天打卡", bypass_limit=True
         )
-    check_achievements(db, user)
+    achievement = check_achievements(db, user)
     db.commit()
+    # expire_on_commit=False：重新查 DB 取最新余额
+    new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
 
     return {
         "count": len(records),
@@ -103,6 +114,11 @@ def batch_checkin(
             }
             for r in records
         ],
+        # v2.4.2：附加资源变动信息（前端用于 toast + 更新余额）
+        "new_total_energy": new_total,
+        "new_leaves": achievement.get("new_leaves", 0),
+        "leaves_balance": achievement.get("leaves_balance", 0),
+        "new_badges": achievement.get("new_badges", []),
     }
 
 

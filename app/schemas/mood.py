@@ -23,3 +23,8 @@ class MoodCheckinOut(BaseModel):
     mood_emoji: str
     note: Optional[str] = None
     created_at: str
+    # v2.4.2：附加资源变动信息（前端用于 toast + 更新余额）
+    new_total_energy: Optional[int] = None
+    new_leaves: Optional[int] = None
+    leaves_balance: Optional[int] = None
+    new_badges: Optional[List[dict]] = None

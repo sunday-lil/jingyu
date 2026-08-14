@@ -1,6 +1,6 @@
 """能量 / 兑换相关 Pydantic。"""
 
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, Field
 
@@ -22,3 +22,7 @@ class ExchangeOut(BaseModel):
     new_total_energy: int
     new_leaves: int = 0
     garden_item: dict
+    # v2.4.2：附加资源变动信息（种满 10 朵花 → 花间客徽章）
+    badge_new_leaves: int = 0
+    badge_leaves_balance: int = 0
+    new_badges: Optional[List[dict]] = None

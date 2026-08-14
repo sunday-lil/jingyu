@@ -34,13 +34,14 @@ onBeforeUnmount(() => {
 })
 
 // 导航项（v2.3：四字文艺命名 + 岛屿图标 + 商店/Profile 入口）
+// v2.4.2：静屿 🏝️ → 🌊；花坊 → 落叶花坊
 const navItems = [
-  { name: 'home', label: '静屿', path: '/', icon: '🏝️' },
+  { name: 'home', label: '静屿', path: '/', icon: '🌊' },
   { name: 'music-list', label: '琴音疗心', path: '/music', icon: '🎵' },
   { name: 'diary-list', label: '漂流日记', path: '/diary', icon: '📖' },
   { name: 'calendar', label: '情绪日历', path: '/calendar', icon: '🌙' },
   { name: 'ai-chat', label: '心语树洞', path: '/ai-chat', icon: '🌳' },
-  { name: 'shop', label: '花坊', path: '/shop', icon: '🍂' },
+  { name: 'shop', label: '落叶花坊', path: '/shop', icon: '🍂' },
   { name: 'garden', label: '屿上花田', path: '/garden', icon: '🌸' },
   { name: 'profile', label: '我的', path: '/profile', icon: '👤' },
 ]
@@ -53,7 +54,7 @@ const isFullscreen = computed(() => !!route.meta?.fullscreen)
 
 // 移动端 tabbar：4 个固定核心 + 中央「更多」按钮
 // v2.3 调整：固定 静屿 / 漂流日记 / [更多] / 情绪日历 / 我的
-// 「更多」展开后访问：琴音疗心 / 心语树洞 / 花坊 / 屿上花田
+// 「更多」展开后访问：琴音疗心 / 心语树洞 / 落叶花坊 / 屿上花田
 const tabbarFixed = computed(() => [
   navItems[0],  // 静屿
   navItems[2],  // 漂流日记
@@ -63,7 +64,7 @@ const tabbarFixed = computed(() => [
 const tabbarMore = computed(() => [
   navItems[1],  // 琴音疗心
   navItems[4],  // 心语树洞
-  navItems[5],  // 花坊
+  navItems[5],  // 落叶花坊
   navItems[6],  // 屿上花田
 ])
 
@@ -113,7 +114,7 @@ onBeforeUnmount(() => {
     <header class="desktop-nav safe-top">
       <div class="nav-inner nav-inner--desktop">
         <router-link to="/" class="nav-brand">
-          <EmojiIcon emoji="🏝️" class="nav-brand__icon" />
+          <EmojiIcon emoji="🌊" class="nav-brand__icon" />
           <span class="nav-brand__name">静屿</span>
         </router-link>
 
@@ -157,7 +158,7 @@ onBeforeUnmount(() => {
     <header class="tablet-nav safe-top">
       <div class="nav-inner nav-inner--tablet">
         <router-link to="/" class="nav-brand">
-          <EmojiIcon emoji="🏝️" class="nav-brand__icon" />
+          <EmojiIcon emoji="🌊" class="nav-brand__icon" />
           <span class="nav-brand__name">静屿</span>
         </router-link>
 

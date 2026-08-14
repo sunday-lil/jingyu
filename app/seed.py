@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models.music import Music
-from app.models.garden import ShopItem
+from app.models.garden import ShopItem, GardenItem
 from app.models.user import User
 from app.utils.constants import DEFAULT_SHOP_ITEMS, YinType
 from app.utils.crypto import generate_salt, hash_password
@@ -118,6 +118,10 @@ def seed_music(db: Session) -> int:
 def seed_shop_items(db: Session) -> int:
     """插入商店物品（按 name 幂等：缺失的补齐，已有的跳过）。返回新增条数。
 
+    v2.4.2：新增「改名迁移」+「字段同步」——
+      - 把老库里已被改名的物品（旧名→新名）的 name 改过来，并同步 user_flowers.flower_type。
+      - 删除已被废弃的徽章（如「古琴初学者」）及其已发放的 GardenItem。
+      - 已存在的物品同步 image / description / cost / cost_currency 字段（保持与 constants 一致）。
     v2.4：改为按 name 幂等，老库已有物品时新物品也能补种进去。
     v2.3：若老库 shop_items 已存在但缺少 cost_currency（DEFAULT NULL），
     按物品类型回填：flower → leaves，其他 → dew。
@@ -130,6 +134,89 @@ def seed_shop_items(db: Session) -> int:
         "UPDATE shop_items SET cost_currency='leaves' "
         "WHERE item_type='flower' AND cost_currency='dew'"
     ))
+    db.commit()
+
+    # ── v2.4.2 改名迁移表（旧名 → 新名）──
+    # 因 emoji 不匹配或命名调整而改名的花种 / 装扮 / 徽章
+    RENAME_MAP = {
+        # 花种（emoji 与名称对齐）
+        "桂花":   "小麦",   # 🌾 对应小麦而非桂花
+        "银杏":   "青叶",   # 🍃 对应青叶而非银杏
+        "兰花":   "樱花",   # 🌸 对应樱花；与原「梅花」合并
+        "梅花":   "樱花",   # 🌸 对应樱花；删一留一
+        # 装扮（emoji 与名称对齐）
+        "白鹤":   "火烈鸟", # 🦩 对应火烈鸟
+        "蓑衣":   "斗篷",   # 🧥 对应斗篷
+        # 徽章（命名调整）
+        "花田主人": "花间客", # 太直白 → 花间客
+    }
+    for old_name, new_name in RENAME_MAP.items():
+        # 1. 改 shop_items.name（若新名已存在则直接删旧名行）
+        existing_new = db.query(ShopItem).filter(ShopItem.name == new_name).first()
+        old_rows = db.query(ShopItem).filter(ShopItem.name == old_name).all()
+        if old_rows:
+            if existing_new:
+                # 新名已存在（来自 DEFAULT_SHOP_ITEMS 补种）：删旧名行 + 迁移 garden_items.item_id
+                for r in old_rows:
+                    db.query(GardenItem).filter(GardenItem.item_id == r.id).update(
+                        {GardenItem.item_id: existing_new.id}
+                    )
+                    db.delete(r)
+            else:
+                # 新名不存在：直接改名
+                for r in old_rows:
+                    r.name = new_name
+        # 2. 迁移 user_flowers.flower_type（仅对花种改名）
+        if any(old_name == k for k in ("桂花", "银杏", "兰花", "梅花")):
+            db.execute(text(
+                "UPDATE user_flowers SET flower_type=:new WHERE flower_type=:old"
+            ), {"new": new_name, "old": old_name})
+    db.commit()
+
+    # ── v2.4.2 去重：合并同名物品（如兰花+梅花都改名为樱花时会重复）──
+    from sqlalchemy import func as _func
+    dup_names = (
+        db.query(ShopItem.name, _func.count(ShopItem.id))
+        .group_by(ShopItem.name)
+        .having(_func.count(ShopItem.id) > 1)
+        .all()
+    )
+    for dup_name, _cnt in dup_names:
+        rows = db.query(ShopItem).filter(ShopItem.name == dup_name).order_by(ShopItem.id.asc()).all()
+        if len(rows) <= 1:
+            continue
+        keeper = rows[0]  # 保留 id 最小的
+        for r in rows[1:]:
+            # 把 garden_items.item_id 迁移到 keeper
+            db.query(GardenItem).filter(GardenItem.item_id == r.id).update(
+                {GardenItem.item_id: keeper.id}
+            )
+            db.delete(r)
+        logger.info("去重：%s 保留 id=%d，删除 %d 个重复行", dup_name, keeper.id, len(rows) - 1)
+    db.commit()
+
+    # ── v2.4.2 删除废弃徽章 ──
+    # 「古琴初学者」废弃（保留「琴音知音」）；删 shop_items 行 + 已发放的 GardenItem
+    DEPRECATED_BADGES = ["古琴初学者"]
+    for badge_name in DEPRECATED_BADGES:
+        rows = db.query(ShopItem).filter(ShopItem.name == badge_name).all()
+        for r in rows:
+            db.query(GardenItem).filter(GardenItem.item_id == r.id).delete()
+            db.delete(r)
+    db.commit()
+
+    # ── v2.4.2 已存在物品字段同步（image/description/cost/cost_currency）──
+    existing_items = {it.name: it for it in db.query(ShopItem).all()}
+    for item in DEFAULT_SHOP_ITEMS:
+        row = existing_items.get(item["name"])
+        if row is None:
+            continue
+        row.image = item.get("image", row.image)
+        row.description = item.get("description", row.description)
+        row.cost = item.get("cost", row.cost)
+        row.cost_currency = item.get("cost_currency", row.cost_currency)
+        if "trigger" in item:
+            row.trigger = item["trigger"]
     db.commit()
 
     # 按 name 幂等：补种缺失的物品

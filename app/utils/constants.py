@@ -132,38 +132,46 @@ class ItemType(str, Enum):
 # 默认兑换商店
 # v2.3：花种用落叶（leaves）兑换，装饰物用露水（dew）兑换
 # v2.4：花坊改名 + 花种种类增多 + 装扮扩充 + 每板块对应徽章
+# v2.4.2：花种介绍统一为花语 / emoji 与名称对齐 / 装扮动物扩充 / 徽章奖励落叶
 DEFAULT_SHOP_ITEMS: Final[list[dict]] = [
-    # 花种（落叶兑换 —— 落叶归根能施肥种花）
-    {"name": "向日葵", "item_type": "flower", "cost": 3,  "cost_currency": "leaves", "image": "🌻", "description": "阳光之子"},
-    {"name": "竹子",   "item_type": "flower", "cost": 5,  "cost_currency": "leaves", "image": "🎋", "description": "虚心有节"},
-    {"name": "雏菊",   "item_type": "flower", "cost": 5,  "cost_currency": "leaves", "image": "🌼", "description": "天真烂漫"},
-    {"name": "莲花",   "item_type": "flower", "cost": 8,  "cost_currency": "leaves", "image": "🪷", "description": "出淤泥而不染"},
-    {"name": "薰衣草", "item_type": "flower", "cost": 8,  "cost_currency": "leaves", "image": "💜", "description": "紫色花海，安神助眠"},
-    {"name": "郁金香", "item_type": "flower", "cost": 10, "cost_currency": "leaves", "image": "🌷", "description": "花中皇后"},
-    {"name": "梅花",   "item_type": "flower", "cost": 12, "cost_currency": "leaves", "image": "🌸", "description": "凌寒独自开"},
-    {"name": "桃花",   "item_type": "flower", "cost": 12, "cost_currency": "leaves", "image": "🌺", "description": "人面桃花相映红"},
-    {"name": "兰花",   "item_type": "flower", "cost": 15, "cost_currency": "leaves", "image": "🌸", "description": "空谷幽兰，君子之花"},
-    {"name": "青松",   "item_type": "flower", "cost": 18, "cost_currency": "leaves", "image": "🌲", "description": "岁寒三友"},
-    {"name": "桂花",   "item_type": "flower", "cost": 18, "cost_currency": "leaves", "image": "🌾", "description": "八月桂花香满园"},
-    {"name": "银杏",   "item_type": "flower", "cost": 20, "cost_currency": "leaves", "image": "🍃", "description": "千年银杏，金黄满地"},
-    # 装扮（露水兑换）
+    # 花种（落叶兑换 —— 落叶归根能施肥种花；介绍统一为花语）
+    {"name": "向日葵", "item_type": "flower", "cost": 3,  "cost_currency": "leaves", "image": "🌻", "description": "花语：信念与爱慕，向阳而生"},
+    {"name": "竹子",   "item_type": "flower", "cost": 5,  "cost_currency": "leaves", "image": "🎋", "description": "花语：坚韧虚心，节节高升"},
+    {"name": "雏菊",   "item_type": "flower", "cost": 5,  "cost_currency": "leaves", "image": "🌼", "description": "花语：天真纯洁，深藏心底的爱"},
+    {"name": "莲花",   "item_type": "flower", "cost": 8,  "cost_currency": "leaves", "image": "🪷", "description": "花语：清白坚贞，出淤泥而不染"},
+    {"name": "薰衣草", "item_type": "flower", "cost": 8,  "cost_currency": "leaves", "image": "🪻", "description": "花语：等待爱情，安静与坚守"},
+    {"name": "郁金香", "item_type": "flower", "cost": 10, "cost_currency": "leaves", "image": "🌷", "description": "花语：完美的爱，体贴与高雅"},
+    {"name": "樱花",   "item_type": "flower", "cost": 12, "cost_currency": "leaves", "image": "🌸", "description": "花语：生命之美，纯洁与幸福"},
+    {"name": "桃花",   "item_type": "flower", "cost": 12, "cost_currency": "leaves", "image": "🌺", "description": "花语：爱情降临，美好生活的开始"},
+    {"name": "青松",   "item_type": "flower", "cost": 18, "cost_currency": "leaves", "image": "🌲", "description": "花语：坚定长寿，傲骨长青"},
+    {"name": "小麦",   "item_type": "flower", "cost": 18, "cost_currency": "leaves", "image": "🌾", "description": "花语：丰收富足，金色的希望"},
+    {"name": "青叶",   "item_type": "flower", "cost": 20, "cost_currency": "leaves", "image": "🍃", "description": "花语：生机新生，一叶知秋"},
+    # 装扮（露水兑换 —— 点缀小岛；含动物伙伴）
     {"name": "竹编帽", "item_type": "costume", "cost": 8,  "cost_currency": "dew", "image": "👒", "description": "种花人遮阳的草帽"},
     {"name": "茶具",   "item_type": "costume", "cost": 12, "cost_currency": "dew", "image": "🍵", "description": "一套素雅茶具"},
+    {"name": "小鸟",   "item_type": "costume", "cost": 15, "cost_currency": "dew", "image": "🐦", "description": "枝头喳喳的小鸟，为你唱清晨"},
     {"name": "折扇",   "item_type": "costume", "cost": 18, "cost_currency": "dew", "image": "🪭", "description": "清风徐来"},
+    {"name": "小鸭",   "item_type": "costume", "cost": 18, "cost_currency": "dew", "image": "🦆", "description": "池边悠然踱步的小鸭"},
     {"name": "油纸伞", "item_type": "costume", "cost": 20, "cost_currency": "dew", "image": "☂️", "description": "烟雨江南的油纸伞"},
-    {"name": "蓑衣",   "item_type": "costume", "cost": 22, "cost_currency": "dew", "image": "🧥", "description": "青箬笠绿蓑衣，斜风细雨不须归"},
-    {"name": "乌篷船", "item_type": "costume", "cost": 30, "cost_currency": "dew", "image": "🛶", "description": "可在静屿海面悠然飘荡"},
+    {"name": "小狗",   "item_type": "costume", "cost": 20, "cost_currency": "dew", "image": "🐶", "description": "摇着尾巴守在岛边的小狗"},
+    {"name": "斗篷",   "item_type": "costume", "cost": 22, "cost_currency": "dew", "image": "🧥", "description": "挡风御寒的厚斗篷"},
     {"name": "鱼竿",   "item_type": "costume", "cost": 25, "cost_currency": "dew", "image": "🎣", "description": "独钓寒江雪"},
     {"name": "橘猫",   "item_type": "costume", "cost": 28, "cost_currency": "dew", "image": "🐈", "description": "一只慵懒的橘猫陪你在岛上"},
-    {"name": "白鹤",   "item_type": "costume", "cost": 35, "cost_currency": "dew", "image": "🦩", "description": "闲云野鹤，与你同游"},
-    # 徽章（自动触发，cost=0）
-    {"name": "琴音知音",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🎼", "description": "听满 10 首曲子自动获得", "trigger": "listen_10"},
-    {"name": "日记达人",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "📖", "description": "写满 30 篇日记自动获得", "trigger": "diary_30"},
-    {"name": "七日静心",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "✨", "description": "连续 7 天打卡自动获得", "trigger": "streak_7"},
-    {"name": "拾瓶旅人",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🍶", "description": "拾满 10 个漂流瓶自动获得", "trigger": "pick_10"},
-    {"name": "树洞倾心",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🌳", "description": "与树洞对话满 20 次自动获得", "trigger": "chat_20"},
-    {"name": "花田主人",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🌷", "description": "种满 10 朵花自动获得", "trigger": "flower_10"},
+    {"name": "乌篷船", "item_type": "costume", "cost": 30, "cost_currency": "dew", "image": "🛶", "description": "可在静屿海面悠然飘荡"},
+    {"name": "火烈鸟", "item_type": "costume", "cost": 35, "cost_currency": "dew", "image": "🦩", "description": "通体绯红，与你同游"},
+    # 徽章（自动触发，cost=0；解锁即赠 BADGE_LEAF_REWARD 片落叶）
+    {"name": "琴音知音",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🎼", "description": "听满 10 首曲子自动获得 · 赠 10 落叶", "trigger": "listen_10"},
+    {"name": "日记达人",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "📖", "description": "写满 30 篇日记自动获得 · 赠 10 落叶", "trigger": "diary_30"},
+    {"name": "七日静心",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "✨", "description": "连续 7 天打卡自动获得 · 赠 10 落叶", "trigger": "streak_7"},
+    {"name": "拾瓶旅人",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🏺", "description": "拾满 10 个漂流瓶自动获得 · 赠 10 落叶", "trigger": "pick_10"},
+    {"name": "树洞倾心",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🌳", "description": "与树洞对话满 20 次自动获得 · 赠 10 落叶", "trigger": "chat_20"},
+    {"name": "花间客",     "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🌷", "description": "种满 10 朵花自动获得 · 赠 10 落叶", "trigger": "flower_10"},
 ]
+
+
+# 解锁徽章奖励的落叶数（v2.4.2：打破"没花没落叶"死锁，让用户能种下第一朵花）
+BADGE_LEAF_REWARD: Final[int] = 10
+
 
 
 # ─────────────────────────────────────────────────────────────

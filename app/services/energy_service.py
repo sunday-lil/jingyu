@@ -29,6 +29,7 @@ from app.utils.constants import (
     ENERGY_LABELS,
     DAILY_ENERGY_LIMITS,
     DEFAULT_SHOP_ITEMS,
+    BADGE_LEAF_REWARD,
 )
 
 
@@ -216,16 +217,24 @@ def _exchange_flower_seed(db: Session, user: User, item: ShopItem) -> GardenItem
 # 成就检查
 # ─────────────────────────────────────────────────────────────
 
-def check_achievements(db: Session, user: User) -> list[GardenItem]:
+def check_achievements(db: Session, user: User) -> dict:
     """检查并发放自动徽章：
     - listen_10：累计听完 10 首不同曲子 → 琴音知音
     - diary_30：累计写 30 篇日记 → 日记达人
     - streak_7：连续 7 天打卡 → 七日静心
     - pick_10：拾满 10 个漂流瓶 → 拾瓶旅人
     - chat_20：与树洞对话满 20 次 → 树洞倾心
-    - flower_10：种满 10 朵花 → 花田主人
+    - flower_10：种满 10 朵花 → 花间客
 
-    返回本次新获得的 GardenItem 列表。
+    v2.4.2：每解锁一个徽章额外发放 BADGE_LEAF_REWARD 片落叶，
+    打破「没花没落叶」的死锁，让用户能种下第一朵花。
+
+    返回 dict：
+      {
+        "new_badges": [{name, image, description}, ...],  # 本次新解锁徽章
+        "new_leaves": int,    # 本次奖励的落叶总数
+        "leaves_balance": int # 当前落叶余额（DB 最新值）
+      }
     """
     from app.models.music import Music
     from app.models.diary import Diary
@@ -321,7 +330,35 @@ def check_achievements(db: Session, user: User) -> list[GardenItem]:
 
     if newly:
         db.flush()
-    return newly
+
+    # ── v2.4.2：解锁徽章奖励落叶 ──
+    new_leaves_total = 0
+    new_badges_info: list[dict] = []
+    if newly:
+        reward = BADGE_LEAF_REWARD * len(newly)
+        db.query(User).filter(User.id == user.id).update(
+            {User.leaves: User.leaves + reward}
+        )
+        db.flush()
+        new_leaves_total = reward
+        # 组装徽章信息（用于前端 toast）
+        for gi in newly:
+            item = db.get(ShopItem, gi.item_id)
+            if item:
+                new_badges_info.append({
+                    "name": item.name,
+                    "image": item.image,
+                    "description": item.description,
+                })
+
+    # 取 DB 最新落叶余额（expire_on_commit=False 场景下 user.leaves 可能是旧值）
+    leaves_balance = db.query(User.leaves).filter(User.id == user.id).scalar()
+
+    return {
+        "new_badges": new_badges_info,
+        "new_leaves": new_leaves_total,
+        "leaves_balance": int(leaves_balance or 0),
+    }
 
 
 def _find_trigger_item(db: Session, trigger: str) -> Optional[ShopItem]:

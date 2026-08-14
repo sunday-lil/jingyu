@@ -147,7 +147,7 @@ onBeforeUnmount(() => {
           <p class="diary-header__verse">"每一篇日记，都是被海风温柔保存的回声"</p>
         </div>
         <div class="diary-header__actions">
-          <button class="btn btn--ghost" @click="goPick">🍶 拾瓶</button>
+          <button class="btn btn--ghost" @click="goPick">🏺 拾瓶</button>
           <button class="btn btn--primary" @click="goWrite">✍️ 写日记</button>
         </div>
       </div>
@@ -169,7 +169,7 @@ onBeforeUnmount(() => {
           @click="openDetail(d)"
         >
           <div class="diary-item__dot" :class="{ 'diary-item__dot--bottle': d.is_public, 'diary-item__dot--secret': !d.is_public }">
-            {{ d.is_public ? '🍶' : '🌳' }}
+            {{ d.is_public ? '🏺' : '🌳' }}
           </div>
           <div class="diary-item__body">
             <div class="diary-item__date">{{ formatDate(d.created_at) }}</div>
@@ -195,7 +195,7 @@ onBeforeUnmount(() => {
           <div v-if="detailModal.loading" class="modal-loading">日记加载中…</div>
           <template v-else-if="detailModal.diary">
             <div class="modal-card__head">
-              <div class="modal-card__icon">{{ detailModal.diary.is_public ? '🍶' : '🌳' }}</div>
+              <div class="modal-card__icon">{{ detailModal.diary.is_public ? '🏺' : '🌳' }}</div>
               <div>
                 <div class="modal-card__date">{{ formatDate(detailModal.diary.created_at) }}</div>
                 <div class="modal-card__tag" :class="detailModal.diary.is_public ? 'modal-card__tag--bottle' : 'modal-card__tag--secret'">

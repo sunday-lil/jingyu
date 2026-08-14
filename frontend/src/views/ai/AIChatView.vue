@@ -224,14 +224,25 @@ const send = async () => {
       conversationId.value = data.conversation_id
     }
 
-    if (!available) {
+    // v2.4.2：更新落叶余额 + 徽章解锁 toast（对话满 20 次 → 树洞倾心）
+    if (typeof data?.leaves_balance === 'number') {
+      userStore.updateResources({ leaves: data.leaves_balance })
+    }
+    let badgeShown = false
+    if (Array.isArray(data?.new_badges) && data.new_badges.length > 0) {
+      const badgeTexts = data.new_badges.map(b => `${b.image} 解锁徽章「${b.name}」· 赠 ${data.new_leaves} 落叶`)
+      showToast(badgeTexts.join('  '), 4000)
+      badgeShown = true
+    }
+
+    if (!available && !badgeShown) {
       // 降级：AI 不在岛上 —— 但后端已把降级 reply 也写入历史，前端直接展示
       showToast('AI 暂时不在岛上')
     }
 
     if (reply) {
       messages.value.push({ role: 'assistant', content: reply })
-    } else if (available) {
+    } else if (available && !badgeShown) {
       showToast('AI 没有回声，再试一次吧')
     }
   } catch (e) {

@@ -46,11 +46,21 @@ const handleSubmit = async () => {
       is_public: isPublic,
       send_to_ai_hole: sendToAi,
     })
-    // 后端返回 { id, created_at, granted_energy, new_total_energy }
+    // 后端返回 { id, created_at, granted_energy, new_total_energy, new_leaves, leaves_balance, new_badges }
     if (typeof res?.new_total_energy === 'number') {
       userStore.updateEnergy(res.new_total_energy)
     }
-    showToast(isPublic ? '日记已放入海中 🌊' : '日记已悄悄收好，并说给树洞听了 🌳')
+    // v2.4.2：更新落叶余额
+    if (typeof res?.leaves_balance === 'number') {
+      userStore.updateResources({ leaves: res.leaves_balance })
+    }
+    // v2.4.2：徽章解锁 toast（写满 30 篇 → 日记达人）
+    if (Array.isArray(res?.new_badges) && res.new_badges.length > 0) {
+      const badgeTexts = res.new_badges.map(b => `${b.image} 解锁徽章「${b.name}」· 赠 ${res.new_leaves} 落叶`)
+      showToast(badgeTexts.join('  '))
+    } else {
+      showToast(isPublic ? '日记已放入海中 🌊' : '日记已悄悄收好，并说给树洞听了 🌳')
+    }
     setTimeout(() => {
       router.push('/diary')
     }, 700)
@@ -127,7 +137,7 @@ onBeforeUnmount(() => {
               value="bottle"
               class="publish-option__radio"
             >
-            <span class="publish-option__icon">🍶</span>
+            <span class="publish-option__icon">🏺</span>
             <span class="publish-option__body">
               <span class="publish-option__title">放入漂流瓶</span>
               <span class="publish-option__desc">公开可见 · 陌生人可拾取并留鼓励</span>

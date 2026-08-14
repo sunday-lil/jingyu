@@ -142,7 +142,17 @@ const sendEncourage = async () => {
     if (typeof res?.new_total_energy === 'number') {
       userStore.updateEnergy(res.new_total_energy)
     }
-    showToast('你的鼓励已被海风带走 💛 +1露水')
+    // v2.4.2：更新落叶余额
+    if (typeof res?.leaves_balance === 'number') {
+      userStore.updateResources({ leaves: res.leaves_balance })
+    }
+    // v2.4.2：徽章解锁 toast（拾满 10 个漂流瓶 → 拾瓶旅人）
+    if (Array.isArray(res?.new_badges) && res.new_badges.length > 0) {
+      const badgeTexts = res.new_badges.map(b => `${b.image} 解锁徽章「${b.name}」· 赠 ${res.new_leaves} 落叶`)
+      showToast(badgeTexts.join('  '))
+    } else {
+      showToast('你的鼓励已被海风带走 💛 +1露水')
+    }
     encourageText.value = ''
     // 鼓励数 +1
     bottle.value = {
@@ -197,7 +207,7 @@ onBeforeUnmount(() => {
 
     <!-- 拾瓶入口 -->
     <section v-if="!bottle" class="pick-hero card">
-      <div class="pick-hero__emoji">🍶</div>
+      <div class="pick-hero__emoji">🏺</div>
       <p class="pick-hero__text">点击下方按钮，从海里拾起一只漂流瓶</p>
       <button class="btn btn--primary pick-hero__btn" :disabled="picking" @click="pickBottle">
         {{ picking ? '正在拾起…' : '🌊 拾一个' }}

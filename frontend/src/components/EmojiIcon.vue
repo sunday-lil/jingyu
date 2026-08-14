@@ -13,7 +13,7 @@
  * - Twemoji CC-BY 4.0 许可（Twitter/X 设计）
  *
  * 用法：
- *   <EmojiIcon emoji="🏝️" />
+ *   <EmojiIcon emoji="🌊" />
  *   <EmojiIcon emoji="🌸" :size="24" />
  *   <EmojiIcon emoji="💧" size="1.2em" />
  *
@@ -37,8 +37,9 @@ const props = defineProps({
 
 // 项目用到的功能性 emoji → Twemoji 图标名映射
 // 完整列表见 https://icon-sets.iconify.design/twemoji/
+// v2.4.2：🏝️ 沙滩已下线（改用 🌊 海浪）；🍶 清酒瓶已下线（改用 🏺 双耳瓶）
 const EMOJI_MAP = {
-  '🏝️': 'twemoji:desert-island',
+  '🌊': 'twemoji:wave',
   '🌿': 'twemoji:herb',
   '🌱': 'twemoji:seedling',
   '🌸': 'twemoji:cherry-blossom',
@@ -53,11 +54,8 @@ const EMOJI_MAP = {
   '🌙': 'twemoji:crescent-moon',
   '💛': 'twemoji:yellow-heart',
   '🎁': 'twemoji:gift',
-  '🌊': 'twemoji:wave',
   '✨': 'twemoji:sparkles',
-  '🎵': 'twemoji:musical-note',
   '🎶': 'twemoji:musical-notes',
-  '🌙': 'twemoji:crescent-moon',
   '🌳': 'twemoji:deciduous-tree',
   '🌲': 'twemoji:evergreen-tree',
   '🐚': 'twemoji:spiral-shell',
@@ -68,7 +66,7 @@ const EMOJI_MAP = {
   '🚪': 'twemoji:door',
   '📝': 'twemoji:memo',
   '⚙': 'twemoji:gear',
-  '🍶': 'twemoji:sake',
+  '🏺': 'twemoji:amphora',
   '👤': 'twemoji:bust-in-silhouette',
 }
 

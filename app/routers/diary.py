@@ -53,7 +53,7 @@ def create_my_diary(
 
     # 写日记发 +2 露水
     grant_energy(db, user, amount=2, source="write_diary", note="写日记")
-    check_achievements(db, user)
+    achievement = check_achievements(db, user)
     db.commit()
     new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
 
@@ -62,6 +62,10 @@ def create_my_diary(
         "created_at": diary.created_at.isoformat() if diary.created_at else None,
         "granted_energy": 2,
         "new_total_energy": new_total,
+        # v2.4.2：附加资源变动信息
+        "new_leaves": achievement.get("new_leaves", 0),
+        "leaves_balance": achievement.get("leaves_balance", 0),
+        "new_badges": achievement.get("new_badges", []),
     }
 
 
@@ -152,6 +156,8 @@ def encourage(
     enc = leave_encouragement(db, user, diary_id, body.content)
     # 留言鼓励发 +1 露水
     grant_energy(db, user, amount=1, source="encourage", note="留言鼓励")
+    # v2.4.2：拾满 10 个漂流瓶 → 拾瓶旅人徽章（encourage 计数即拾瓶计数）
+    achievement = check_achievements(db, user)
     db.commit()
     new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
     return {
@@ -160,5 +166,9 @@ def encourage(
         "created_at": enc.created_at.isoformat(),
         "granted_energy": 1,
         "new_total_energy": new_total,
+        # v2.4.2：附加资源变动信息
+        "new_leaves": achievement.get("new_leaves", 0),
+        "leaves_balance": achievement.get("leaves_balance", 0),
+        "new_badges": achievement.get("new_badges", []),
     }
 

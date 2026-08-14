@@ -296,6 +296,20 @@ const doCheckin = async () => {
     if (typeof res?.new_total_energy === 'number') {
       userStore.updateEnergy(res.new_total_energy)
     }
+    // v2.4.2：更新落叶余额 + 徽章解锁 toast
+    if (typeof res?.leaves_balance === 'number') {
+      userStore.updateResources({ leaves: res.leaves_balance })
+    }
+    if (Array.isArray(res?.new_badges) && res.new_badges.length > 0) {
+      const badgeTexts = res.new_badges.map(b => `${b.image} 解锁徽章「${b.name}」· 赠 ${res.new_leaves} 落叶`)
+      showToast(badgeTexts.join('  '), 4000)
+      // 徽章 toast 优先，跳过治愈语
+      selectedMoods.value = []
+      await fetchCalendar()
+      await fetchTrend()
+      await fetchTodayMoods()
+      return
+    }
     // 刷新数据
     await fetchCalendar()
     await fetchTrend()
@@ -424,12 +438,12 @@ onBeforeUnmount(() => {
           :class="{
             'calendar-cell--empty': cell.empty,
             'calendar-cell--today': cell.isToday,
-            'calendar-cell--has-mood': cell.moodKeys.length > 0,
+            'calendar-cell--has-mood': cell.moodKeys?.length > 0,
           }"
-          :title="cell.moodInfos.length ? `${cell.date} · ${cell.moodInfos.map(m => m.label).join('、')}` : (cell.date || '')"
+          :title="cell.moodInfos?.length ? `${cell.date} · ${cell.moodInfos.map(m => m.label).join('、')}` : (cell.date || '')"
         >
           <template v-if="!cell.empty">
-            <div v-if="cell.moodInfos.length > 0" class="calendar-cell__emojis">
+            <div v-if="cell.moodInfos?.length > 0" class="calendar-cell__emojis">
               <span
                 v-for="(info, idx) in cell.moodInfos.slice(0, 3)"
                 :key="idx"

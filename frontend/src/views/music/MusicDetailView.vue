@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/api'
+import { useUserStore } from '@/stores/user'
 import AudioVisualizer from '@/components/AudioVisualizer.vue'
 
 // 路由通过 props: true 注入 yin 参数
@@ -19,6 +20,7 @@ const YIN_INFO = {
 }
 
 const route = useRoute()
+const userStore = useUserStore()
 
 // 当前音 key（优先取 props，回退到路由参数）
 const yinKey = computed(() => props.yin || route.params.yin)
@@ -179,8 +181,23 @@ const reportListenComplete = async () => {
       music_id: currentMusic.value.id,
       progress: Math.round(progress.value * 100),
     })
-    if (res.data?.granted) {
-      showToast('+1 露水 💧')
+    // v2.4.2：api 拦截器已返回 response.data，直接用 res
+    if (res?.granted) {
+      // 更新露水余额
+      if (typeof res.new_total_energy === 'number') {
+        userStore.updateEnergy(res.new_total_energy)
+      }
+      // 更新落叶余额
+      if (typeof res.leaves_balance === 'number') {
+        userStore.updateResources({ leaves: res.leaves_balance })
+      }
+      // v2.4.2：徽章解锁 toast（听满 10 首 → 琴音知音）
+      if (Array.isArray(res.new_badges) && res.new_badges.length > 0) {
+        const badgeTexts = res.new_badges.map(b => `${b.image} 解锁徽章「${b.name}」· 赠 ${res.new_leaves} 落叶`)
+        showToast(badgeTexts.join('  '))
+      } else {
+        showToast('+1 露水 💧')
+      }
     }
   } catch (e) {
     // 静默失败，不影响聆听体验

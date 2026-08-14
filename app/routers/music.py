@@ -13,7 +13,7 @@ from app.models.energy import EnergyRecord
 from app.models.music import Music
 from app.models.user import User
 from app.schemas.music import MusicOut, ListenCompleteIn
-from app.services.energy_service import grant_energy
+from app.services.energy_service import grant_energy, check_achievements
 
 
 router = APIRouter(prefix="/api/music", tags=["music"])
@@ -100,6 +100,8 @@ def listen_complete(
     )
     if record is None:
         return {"granted": False, "reason": "今日露水已达上限"}
+    # v2.4.2：听满 10 首 → 琴音知音徽章
+    achievement = check_achievements(db, user)
     db.commit()
     # expire_on_commit=False，user.total_energy 仍是旧值，必须重新查 DB
     new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
@@ -107,4 +109,8 @@ def listen_complete(
         "granted": True,
         "amount": 1,
         "new_total_energy": new_total,
+        # v2.4.2：附加资源变动信息
+        "new_leaves": achievement.get("new_leaves", 0),
+        "leaves_balance": achievement.get("leaves_balance", 0),
+        "new_badges": achievement.get("new_badges", []),
     }

@@ -30,6 +30,10 @@ class AIChatOut(BaseModel):
     model: str
     available: bool = True
     conversation_id: Optional[str] = None
+    # v2.4.2：附加资源变动信息（解锁徽章奖励落叶时前端用于 toast）
+    new_leaves: Optional[int] = None
+    leaves_balance: Optional[int] = None
+    new_badges: Optional[List[dict]] = None
 
 
 class AIEncouragementIn(BaseModel):

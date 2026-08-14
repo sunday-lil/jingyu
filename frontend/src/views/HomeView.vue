@@ -14,7 +14,8 @@ const router = useRouter()
 const userStore = useUserStore()
 
 // 六个功能板块入口（v2.3：四字文艺命名 + 岛屿图标）
-// 名字已确认：琴音疗心 / 漂流日记 / 情绪日历 / 心语树洞 / 花坊 / 屿上花田
+// v2.4.2：花坊 → 落叶花坊；漂流日记 🍶 → 🏺
+// 名字已确认：琴音疗心 / 漂流日记 / 情绪日历 / 心语树洞 / 落叶花坊 / 屿上花田
 const modules = [
   {
     label: '琴音疗心',
@@ -26,7 +27,7 @@ const modules = [
   {
     label: '漂流日记',
     desc: '把心事写进瓶子 · 让它漂向远方',
-    icon: '🍶',
+    icon: '🏺',
     to: '/diary',
     color: 'linear-gradient(135deg, #A8C5E8 0%, #C5D5E8 100%)',
   },
@@ -45,7 +46,7 @@ const modules = [
     color: 'linear-gradient(135deg, #B8C5E8 0%, #A8D5BA 100%)',
   },
   {
-    label: '花坊',
+    label: '落叶花坊',
     desc: '落叶归根 · 化作春泥换花种',
     icon: '🍂',
     to: '/shop',
@@ -97,8 +98,8 @@ onMounted(() => {
     <section class="hero">
       <HeroScene class="hero__scene" height="520px" />
       <div class="hero__content">
-        <!-- v2.3：岛屿/山形图标（替代原草本🌿） -->
-        <div class="hero-icon">🏝️</div>
+        <!-- v2.4.2：海浪图标（替代原沙滩🏝️，更贴合"静屿"海意） -->
+        <div class="hero-icon">🌊</div>
         <p class="hero-verse">"潮声不止，心安自屿。"</p>
         <h1 class="hero-title">静屿</h1>
       </div>

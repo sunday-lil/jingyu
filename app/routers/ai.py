@@ -129,11 +129,30 @@ def chat(
         if last_user:
             chat_history_service.append_message(user.id, conv_id, "user", last_user["content"])
         chat_history_service.append_message(user.id, conv_id, "assistant", reply)
+
+        # v2.4.2：记一条 chat EnergyRecord（用于 chat_20 徽章计数）+ 检查成就
+        from app.models.energy import EnergyRecord
+        from app.services.energy_service import check_achievements
+        db.add(EnergyRecord(
+            user_id=user.id,
+            amount=0,  # 对话本身不发露水，仅作为计数痕迹
+            source="chat",
+            note="树洞对话",
+        ))
+        achievement = check_achievements(db, user)
+        db.commit()
+        leaves_balance = achievement.get("leaves_balance", 0)
+        new_leaves = achievement.get("new_leaves", 0)
+        new_badges = achievement.get("new_badges", [])
+
         return AIChatOut(
             reply=reply,
             model=settings.ai_model,
             available=True,
             conversation_id=conv_id,
+            new_leaves=new_leaves,
+            leaves_balance=leaves_balance,
+            new_badges=new_badges,
         )
     except AIServiceUnavailable as e:
         logger.info("AI chat 不可用: %s", e)

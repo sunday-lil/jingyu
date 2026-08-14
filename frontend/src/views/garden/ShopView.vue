@@ -106,17 +106,26 @@ const exchange = async (item) => {
   try {
     const res = await api.post('/energy/exchange', { item_id: item.id })
     if (res?.success) {
-      // 同步本地资源
+      // 同步本地资源（v2.4.2：badge_leaves_balance 含徽章奖励的落叶）
+      const leavesBalance = typeof res.badge_leaves_balance === 'number'
+        ? res.badge_leaves_balance
+        : res.new_leaves
       userStore.updateResources({
         total_energy: res.new_total_energy,
-        leaves: res.new_leaves,
+        leaves: leavesBalance,
       })
-      // 花种直接种到花田
-      const gi = res.garden_item || {}
-      if (gi.is_flower_seed) {
-        showToast(`${item.image} 「${item.name}」已种到屿上花田 🌱`, 2800)
+      // v2.4.2：徽章解锁 toast（种满 10 朵花 → 花间客）
+      if (Array.isArray(res.new_badges) && res.new_badges.length > 0) {
+        const badgeTexts = res.new_badges.map(b => `${b.image} 解锁徽章「${b.name}」· 赠 ${res.badge_new_leaves} 落叶`)
+        showToast(badgeTexts.join('  '), 4000)
       } else {
-        showToast(`${item.image} ${item.name} 已收入囊中 ✨`, 2800)
+        // 花种直接种到花田
+        const gi = res.garden_item || {}
+        if (gi.is_flower_seed) {
+          showToast(`${item.image} 「${item.name}」已种到屿上花田 🌱`, 2800)
+        } else {
+          showToast(`${item.image} ${item.name} 已收入囊中 ✨`, 2800)
+        }
       }
     }
   } catch (e) {
@@ -164,7 +173,7 @@ onBeforeUnmount(() => {
   <div class="shop-view">
     <!-- 顶部标题 -->
     <header class="shop-header">
-      <h1 class="shop-header__title">花坊</h1>
+      <h1 class="shop-header__title">落叶花坊</h1>
       <p class="shop-header__verse">"落叶归根能施肥种花，露水浇花使其盛开"</p>
     </header>
 
@@ -216,8 +225,8 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- 加载中 -->
-    <div v-if="loading && !shopItems.length" class="shop-empty">正在打开画坊的门…</div>
-    <div v-else-if="!shopItems.length" class="shop-empty">画坊还没有上架物品</div>
+    <div v-if="loading && !shopItems.length" class="shop-empty">正在打开落叶花坊的门…</div>
+    <div v-else-if="!shopItems.length" class="shop-empty">落叶花坊还没有上架物品</div>
     <div v-else-if="!groupedShop.length" class="shop-empty">此分类下暂无物品</div>
 
     <!-- 物品分组 -->
