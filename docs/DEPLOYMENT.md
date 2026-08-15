@@ -32,6 +32,8 @@
 
 > 🔧 **2026-08-15 v2.4.3 补丁（首页滚动提示可点击）**：[HomeView.vue](../../frontend/src/views/HomeView.vue) Hero 底部滚动提示改为可点击 `<button>`（原 `pointer-events:none` 点击无反应），文案「向下沉入海面」→「向下，遇见岛上的去处」。纯前端交互修复，**部署需重新 `npm run build`**。
 
+> 🔒 **2026-08-15 v2.4.4 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨（Bug 修复 + 功能增强版本，部署需重新 build + 数据库迁移）**：本次为 Bug 修复 + 功能增强版本，**无新依赖**，但**前端 + 后端均有改动，部署前必须重新 `npm run build`，且数据库迁移在启动时自动执行**（`_migrate_legacy_columns()` + `mood_checkins` 表重建）。① **部署前必须重新 `npm run build`**——前端涉及 [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue)（移除 GSAP `opacity:0` 透明 bug + 情绪日历使用指南改罗素情绪环模型）+ [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（头像上传按钮 + 图片渲染）+ [AIChatView.vue](../../frontend/src/views/ai/AIChatView.vue)（图片头像渲染）+ [GardenView.vue](../../frontend/src/views/garden/GardenView.vue)（岛上物件 emoji 🎁→🧳）+ 通知 emoji 统一 💛；② **数据库自动迁移**（无需手动 ALTER）——`_migrate_legacy_columns()` 启动时自动执行：`mood_checkins` 表重建（`CREATE TABLE AS SELECT` 丢主键 → `id INTEGER PRIMARY KEY AUTOINCREMENT` + FK + 索引，数据完整迁移）+ `User.avatar` 字段长度 `String(16)` → `String(255)`（SQLite 重建表方式 ALTER）+ 旧版加密日记 `content` 空字段自动填入提示文本「（这段日记来自旧版本，内容已无法读取）」；③ **`static/uploads/avatars/` 目录自动创建**——`POST /api/profile/avatar` 上传端点首次调用时 `os.makedirs(exist_ok=True)` 自动创建目录，**部署无需手动 mkdir**；④ **无新依赖**——[requirements.txt](../../requirements.txt) / `frontend/package.json` 均不动；⑤ **服务器部署**：`python start.py build && python start.py --prod`（重新构建 dist + 单进程模式），或 `python start.py`（应用模式，自动 HMR）；首次启动时自动执行数据库迁移（`mood_checkins` 重建 + `avatar` 字段扩展 + 旧版日记填充）。关键词 `v2.4.4` / `情绪日历透明修复` / `旧版日记迁移` / `mood_checkins 主键重建` / `avatar 字段长度` / `头像图片上传` / `花朵介绍` / `徽章落叶分级` / `情绪日历指南` / `岛上物件 emoji` / `通知 emoji 统一` 在 6 份文档中都要出现。
+
 ---
 
 ## 前端构建（v2.0 Vue 3 重构后必做，所有部署方式通用）
