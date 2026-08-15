@@ -76,6 +76,14 @@ const onModuleCardLeave = (e) => {
   card.style.transform = ''
 }
 
+// 点击滚动提示 → 平滑滚到「岛上各处」板块
+const scrollToModules = () => {
+  document.querySelector('.module-section')?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
+}
+
 onMounted(() => {
   // Hero 入场动效
   const tl = gsap.timeline({ delay: 0.2 })
@@ -103,10 +111,15 @@ onMounted(() => {
         <p class="hero-verse">"潮声不止，心安自屿。"</p>
         <h1 class="hero-title">静屿</h1>
       </div>
-      <div class="hero__scroll-hint">
-        <span>向下沉入海面</span>
+      <button
+        type="button"
+        class="hero__scroll-hint"
+        aria-label="向下滚动到岛上各处"
+        @click="scrollToModules"
+      >
+        <span>向下，遇见岛上的去处</span>
         <span class="hero__scroll-arrow">↓</span>
-      </div>
+      </button>
     </section>
 
     <!-- v2.3：六个功能板块入口（四字文艺命名） -->
@@ -200,7 +213,7 @@ onMounted(() => {
   margin: 0;
 }
 
-/* 向下滚动提示 */
+/* 向下滚动提示（可点击） */
 .hero__scroll-hint {
   position: absolute;
   bottom: 18px;
@@ -211,12 +224,20 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
   font-family: var(--font-serif);
   font-size: 12px;
   color: var(--color-text-muted);
   letter-spacing: 0.15em;
-  pointer-events: none;
+  cursor: pointer;
   animation: scrollHint 2.4s ease-in-out infinite;
+  transition: color 0.3s var(--ease-apple), opacity 0.3s var(--ease-apple);
+}
+.hero__scroll-hint:hover {
+  color: var(--color-accent-dark);
+  opacity: 1;
 }
 .hero__scroll-arrow {
   font-size: 14px;
