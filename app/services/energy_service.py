@@ -29,7 +29,8 @@ from app.utils.constants import (
     ENERGY_LABELS,
     DAILY_ENERGY_LIMITS,
     DEFAULT_SHOP_ITEMS,
-    BADGE_LEAF_REWARD,
+    BADGE_LEAF_REWARDS,
+    BADGE_LEAF_REWARD_DEFAULT,
 )
 
 
@@ -331,25 +332,25 @@ def check_achievements(db: Session, user: User) -> dict:
     if newly:
         db.flush()
 
-    # ── v2.4.2：解锁徽章奖励落叶 ──
+    # ── v2.4.4：解锁徽章奖励落叶（按 trigger 分级）──
     new_leaves_total = 0
     new_badges_info: list[dict] = []
     if newly:
-        reward = BADGE_LEAF_REWARD * len(newly)
-        db.query(User).filter(User.id == user.id).update(
-            {User.leaves: User.leaves + reward}
-        )
-        db.flush()
-        new_leaves_total = reward
-        # 组装徽章信息（用于前端 toast）
         for gi in newly:
             item = db.get(ShopItem, gi.item_id)
             if item:
+                reward = BADGE_LEAF_REWARDS.get(item.trigger, BADGE_LEAF_REWARD_DEFAULT)
+                new_leaves_total += reward
                 new_badges_info.append({
                     "name": item.name,
                     "image": item.image,
                     "description": item.description,
                 })
+        if new_leaves_total > 0:
+            db.query(User).filter(User.id == user.id).update(
+                {User.leaves: User.leaves + new_leaves_total}
+            )
+            db.flush()
 
     # 取 DB 最新落叶余额（expire_on_commit=False 场景下 user.leaves 可能是旧值）
     leaves_balance = db.query(User.leaves).filter(User.id == user.id).scalar()

@@ -11,12 +11,14 @@ v2.3 新增。v2.4 增加头像 / 昵称修改。
 
 from __future__ import annotations
 
+import time
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user
 from app.models.user import User
@@ -113,7 +115,7 @@ def update_my_profile(
     """更新我的头像 / 昵称。
 
     - 昵称改了要查重，不能跟别人重名。
-    - 头像只接受 1-16 字符的 emoji / 文字。
+    - 头像支持 emoji 或上传图片后的 URL 路径（最长 255 字符）。
     """
     changed = False
     if body.nickname is not None and body.nickname != user.nickname:
@@ -135,6 +137,43 @@ def update_my_profile(
         db.refresh(user)
 
     return _build_profile(db, user, is_self=True)
+
+
+# 允许的图片类型 → 扩展名
+_AVATAR_EXT = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+}
+_AVATAR_MAX = 2 * 1024 * 1024  # 2MB
+
+
+@router.post("/avatar")
+def upload_avatar(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """上传头像图片（支持拍摄 / 相册选择）。
+
+    - 只接受 JPG / PNG / WebP / GIF，不超过 2MB。
+    - 存储到 static/uploads/avatars/，avatar 字段存 URL 路径。
+    """
+    if file.content_type not in _AVATAR_EXT:
+        raise HTTPException(status_code=400, detail="只支持 JPG/PNG/WebP/GIF 图片")
+    data = file.file.read()
+    if len(data) > _AVATAR_MAX:
+        raise HTTPException(status_code=400, detail="图片不能超过 2MB")
+    ext = _AVATAR_EXT[file.content_type]
+    filename = f"{user.id}_{int(time.time())}{ext}"
+    upload_dir = settings.static_dir / "uploads" / "avatars"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    (upload_dir / filename).write_bytes(data)
+    avatar_url = f"/static/uploads/avatars/{filename}"
+    db.query(User).filter(User.id == user.id).update({"avatar": avatar_url})
+    db.commit()
+    return {"avatar": avatar_url}
 
 
 @router.get("/stats")

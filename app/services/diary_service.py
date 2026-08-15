@@ -148,7 +148,7 @@ def leave_encouragement(
     notif = Notification(
         user_id=diary.user_id,
         type="encouragement",
-        content=f"你的漂流瓶收到了一条匿名鼓励：「{content[:30]}{'…' if len(content) > 30 else ''}」",
+        content=f"💛 你的漂流瓶收到了一条匿名鼓励：「{content[:30]}{'…' if len(content) > 30 else ''}」",
         related_id=diary_id,
     )
     db.add(notif)

@@ -9,6 +9,12 @@ const router = useRouter()
 const userStore = useUserStore()
 const goBack = () => router.back()
 
+// 用户头像是否是图片 URL（vs emoji 文本）
+const isUserAvatarImage = computed(() => {
+  const a = userStore.avatar
+  return !!(a && (a.startsWith('/') || a.startsWith('http')))
+})
+
 // 当前对话 ID（后端文件存储用）
 const conversationId = ref(null)
 
@@ -326,7 +332,8 @@ onBeforeUnmount(() => {
         >
           <!-- 头像 -->
           <div class="msg-avatar">
-            {{ msg.role === 'user' ? userStore.avatar : '🌳' }}
+            <img v-if="msg.role === 'user' && isUserAvatarImage" :src="userStore.avatar" class="msg-avatar-img" alt="" />
+            <template v-else>{{ msg.role === 'user' ? userStore.avatar : '🌳' }}</template>
           </div>
           <!-- 气泡 -->
           <div class="msg-bubble" :class="msg.role === 'user' ? 'msg-bubble--user' : 'msg-bubble--ai'">
@@ -554,6 +561,13 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   box-shadow: var(--shadow-sm, 0 2px 8px rgba(139, 123, 94, 0.06));
   border: 1px solid var(--color-border, rgba(139, 123, 94, 0.15));
+  overflow: hidden;
+}
+.msg-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 .msg-bubble {
   max-width: 75%;

@@ -49,6 +49,39 @@ const daysOnIsland = computed(() => {
 // 当前头像（优先 profile 数据，兜底 store）
 const currentAvatar = computed(() => profile.value?.avatar || userStore.avatar || '🙂')
 
+// 头像是否是图片 URL（vs emoji 文本）
+const isAvatarImage = computed(() => {
+  const a = currentAvatar.value
+  return !!(a && (a.startsWith('/') || a.startsWith('http')))
+})
+const isEditAvatarImage = computed(() => {
+  const a = editAvatar.value
+  return !!(a && (a.startsWith('/') || a.startsWith('http')))
+})
+
+// 上传头像图片（拍摄 / 相册）
+const onAvatarUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('图片不能超过 2MB')
+    e.target.value = ''
+    return
+  }
+  const formData = new FormData()
+  formData.append('file', file)
+  try {
+    const res = await api.post('/profile/avatar', formData)
+    if (res?.avatar) {
+      editAvatar.value = res.avatar
+      showToast('图片已上传，点保存生效')
+    }
+  } catch (err) {
+    showToast(err.message || '上传失败')
+  }
+  e.target.value = ''
+}
+
 // ─── 编辑头像 / 昵称 ───
 const editModalVisible = ref(false)
 const editNickname = ref('')
@@ -84,10 +117,12 @@ const saveProfile = async () => {
   }
   editSaving.value = true
   try {
-    const updated = await userStore.updateProfile({
-      nickname: nick,
-      avatar: editAvatar.value,
-    })
+    const payload = { nickname: nick }
+    // 头像是图片 URL 时已由上传端点更新数据库，PATCH 只接受 emoji（≤16字符），不重复发送
+    if (!isEditAvatarImage.value) {
+      payload.avatar = editAvatar.value
+    }
+    const updated = await userStore.updateProfile(payload)
     profile.value = { ...profile.value, ...updated }
     showToast('已更新 ✨')
     editModalVisible.value = false
@@ -223,8 +258,8 @@ const GUIDE_SECTIONS = [
     details: [
       '今日打卡：选择一个或多个此刻的心情（支持一天多次打卡，情绪是多变的）。',
       '日历网格：每天显示当日记录的心情 emoji，点击可回看。',
-      '30 天趋势：每条柱子的高度代表当天心情的平均分数（极度开心=5，开心=4，平静=3，疲惫/焦虑=2，生气/悲伤=1），一天多条记录取平均分。',
-      '连续打卡 7 天自动获得「七日静心」徽章。',
+      '情绪环状图：基于「罗素情绪环模型」，横轴为效价（消极→积极），纵轴为唤醒度（平静→激烈），把记录的情绪定位到四象限里，直观看到情绪分布。',
+      '连续打卡 7 天自动获得「七日静心」徽章（赠 7 落叶）。',
     ],
   },
   {
@@ -242,7 +277,7 @@ const GUIDE_SECTIONS = [
     desc: '落叶归根，化作春泥换花种。',
     details: [
       '用落叶兑换花种（向日葵、竹子、樱花、薰衣草、郁金香等 11 种植物，介绍均为花语）。',
-      '落叶来源：花田里枯萎的花朵拾取后转化得到；解锁徽章也会赠 10 落叶。',
+      '落叶来源：花田里枯萎的花朵拾取后转化得到；解锁徽章也会赠落叶（按难度 7~20 片不等）。',
       '用露水兑换装扮（竹编帽、油纸伞、斗篷、乌篷船、鱼竿、橘猫、小鸟、小鸭、小狗、火烈鸟等）。',
       '装扮和徽章会显示在「屿上花田」和「我的」页面。',
     ],
@@ -283,7 +318,8 @@ onBeforeUnmount(() => {
     <!-- 顶部个人卡 -->
     <header class="profile-hero card">
       <div class="profile-hero__avatar" @click="openEditModal" title="点击修改头像和昵称">
-        <EmojiIcon :emoji="currentAvatar" />
+        <img v-if="isAvatarImage" :src="currentAvatar" class="avatar-img" alt="头像" />
+        <EmojiIcon v-else :emoji="currentAvatar" />
         <span class="profile-hero__avatar-edit">✎</span>
       </div>
       <div class="profile-hero__body">
@@ -365,7 +401,7 @@ onBeforeUnmount(() => {
                   <div class="stat-card__sub">来自漂流瓶</div>
                 </div>
                 <div class="stat-card card" @click="goGarden">
-                  <div class="stat-card__emoji"><EmojiIcon emoji="🎁" /></div>
+                  <div class="stat-card__emoji"><EmojiIcon emoji="🧳" /></div>
                   <div class="stat-card__num">{{ profile.stats.garden_item_count }}</div>
                   <div class="stat-card__label">岛上物件</div>
                   <div class="stat-card__sub">装扮/徽章</div>
@@ -474,7 +510,16 @@ onBeforeUnmount(() => {
             <!-- 头像选择 -->
             <div class="edit-field">
               <label class="edit-field__label">头像（与树洞一致）</label>
-              <div class="avatar-preview">{{ editAvatar }}</div>
+              <div class="avatar-preview">
+                <img v-if="isEditAvatarImage" :src="editAvatar" class="avatar-preview-img" alt="" />
+                <span v-else>{{ editAvatar }}</span>
+              </div>
+              <div class="avatar-upload">
+                <label class="avatar-upload__btn">
+                  📷 拍摄 / 选择图片
+                  <input type="file" accept="image/*" capture="environment" @change="onAvatarUpload" hidden />
+                </label>
+              </div>
               <div class="avatar-grid">
                 <button
                   v-for="a in AVATAR_CHOICES"
@@ -915,6 +960,39 @@ onBeforeUnmount(() => {
   font-size: 48px;
   margin-bottom: 14px;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar-preview-img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.avatar-upload {
+  text-align: center;
+  margin-bottom: 14px;
+}
+.avatar-upload__btn {
+  display: inline-block;
+  padding: 8px 18px;
+  border-radius: var(--radius-md, 14px);
+  background: rgba(184, 165, 144, 0.12);
+  color: var(--color-text-secondary, #5C4F3E);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+.avatar-upload__btn:hover {
+  background: rgba(184, 165, 144, 0.22);
 }
 .avatar-grid {
   display: grid;

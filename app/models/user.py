@@ -29,7 +29,7 @@ class User(Base):
     total_energy: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     leaves: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    avatar: Mapped[str] = mapped_column(String(16), default="🙂", nullable=False)
+    avatar: Mapped[str] = mapped_column(String(255), default="🙂", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.current_timestamp(), nullable=False
     )

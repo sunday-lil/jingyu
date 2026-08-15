@@ -107,6 +107,13 @@ def _migrate_legacy_columns() -> None:
             if "content_encrypted" in d_cols:
                 # SQLite 不支持 ALTER COLUMN，只能靠新表；这里仅记录，新代码不再写该列
                 pass
+            # v2.4.4：旧版加密日记 content 为空（content_encrypted 是假占位符），
+            # 填入提示文本让用户知道内容已无法读取（幂等：content 填充后不再触发）
+            conn.execute(text(
+                "UPDATE diaries SET content = '（这段日记来自旧版本，内容已无法读取）' "
+                "WHERE (content IS NULL OR content = '') "
+                "AND content_encrypted IS NOT NULL AND content_encrypted != ''"
+            ))
 
     # shop_items 表（v2.3：加 cost_currency 区分露水/落叶）
     if insp.has_table("shop_items"):
@@ -128,31 +135,41 @@ def _migrate_legacy_columns() -> None:
                 ))
                 logger.info("[MIGRATE] musics.category 已添加（v2.3）")
 
-    # mood_checkins 表（v2.4：移除 user_id+check_date 唯一约束，支持一天多条心情记录）
+    # mood_checkins 表
+    # v2.4：移除 user_id+check_date 唯一约束（支持一天多条心情）
+    # v2.4.4：修复 v2.4 迁移用 CREATE TABLE AS SELECT 导致丢失 PRIMARY KEY 的问题
+    #         （SQLite 不会自动加 INTEGER PRIMARY KEY，导致 db.flush() 报 NULL identity key）
     if insp.has_table("mood_checkins"):
+        pk = insp.get_pk_constraint("mood_checkins")
+        pk_cols = pk.get("constrained_columns") if pk else None
         existing_uqs = {
             tuple(c["column_names"])
             for c in insp.get_unique_constraints("mood_checkins")
         }
-        if ("user_id", "check_date") in existing_uqs:
+        need_rebuild = (
+            not pk_cols                      # 没有主键（v2.4 迁移遗留 bug）
+            or ("user_id", "check_date") in existing_uqs  # 还有旧唯一约束
+        )
+        if need_rebuild:
             with engine.begin() as conn:
-                # SQLite 重建表方式删除唯一约束
+                # 1. 备份旧表
+                conn.execute(text("DROP TABLE IF EXISTS mood_checkins_broken"))
+                conn.execute(text("ALTER TABLE mood_checkins RENAME TO mood_checkins_broken"))
+                # 2. 删除跟随旧表的索引（CREATE TABLE 时不带主键，但旧迁移可能手动建过索引）
+                conn.execute(text("DROP INDEX IF EXISTS ix_mood_checkins_user_id"))
+                conn.execute(text("DROP INDEX IF EXISTS ix_mood_checkins_check_date"))
+            # 3. 用 ORM 模型创建正确的新表（id INTEGER PRIMARY KEY AUTOINCREMENT + FK + 索引）
+            from app.models.mood import MoodCheckin
+            MoodCheckin.__table__.create(engine, checkfirst=True)
+            # 4. 复制数据（不复制旧 id，让新表自增）
+            with engine.begin() as conn:
                 conn.execute(text(
-                    "CREATE TABLE mood_checkins_new AS SELECT * FROM mood_checkins"
+                    "INSERT INTO mood_checkins (user_id, check_date, mood_emoji, note, created_at) "
+                    "SELECT user_id, check_date, mood_emoji, note, created_at "
+                    "FROM mood_checkins_broken"
                 ))
-                conn.execute(text("DROP TABLE mood_checkins"))
-                conn.execute(text(
-                    "ALTER TABLE mood_checkins_new RENAME TO mood_checkins"
-                ))
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS ix_mood_checkins_user_id "
-                    "ON mood_checkins (user_id)"
-                ))
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS ix_mood_checkins_check_date "
-                    "ON mood_checkins (check_date)"
-                ))
-            logger.info("[MIGRATE] mood_checkins 唯一约束已移除（v2.4，支持一天多条心情）")
+                conn.execute(text("DROP TABLE mood_checkins_broken"))
+            logger.info("[MIGRATE] mood_checkins 表已重建（修复缺失主键 / 旧唯一约束，v2.4.4）")
 
 
 def init_db() -> None:

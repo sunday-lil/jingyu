@@ -350,7 +350,7 @@ onMounted(() => {
   nextTick(() => {
     gsap.from('.mood-header', { y: -20, opacity: 0, duration: 0.6, ease: 'power2.out' })
     gsap.from('.mood-picker__btn', {
-      y: 20, opacity: 0, duration: 0.5, stagger: 0.06, ease: 'power3.out', delay: 0.1,
+      y: 20, duration: 0.5, stagger: 0.06, ease: 'power3.out', delay: 0.1,
     })
     gsap.from('.calendar-nav', { y: 16, opacity: 0, duration: 0.5, ease: 'power2.out', delay: 0.2 })
     gsap.from('.calendar-cell:not(.calendar-cell--empty)', {
