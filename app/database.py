@@ -145,6 +145,20 @@ def _migrate_legacy_columns() -> None:
                     "[MIGRATE] musics.audio_url 已切回 .mp3（%d 行，v2.4.7 音频方案回退）",
                     result.rowcount,
                 )
+            # v2.4.8：每首曲目独立音频文件 static/audio/tracks/{曲名}.mp3
+            # （此前 22 首曲目按五音共享 5 个文件，无法按曲目放置真实音频）
+            # 幂等：已在 tracks/ 下的行不受影响；按 title 拼接新路径
+            result = conn.execute(text(
+                "UPDATE musics SET audio_url = '/static/audio/tracks/' || title || '.mp3' "
+                "WHERE audio_url LIKE '/static/audio/%.mp3' "
+                "AND audio_url NOT LIKE '/static/audio/tracks/%'"
+            ))
+            if result.rowcount:
+                logger.info(
+                    "[MIGRATE] musics.audio_url 已切换为每曲独立文件 tracks/{曲名}.mp3"
+                    "（%d 行，v2.4.8）",
+                    result.rowcount,
+                )
 
     # mood_checkins 表
     # v2.4：移除 user_id+check_date 唯一约束（支持一天多条心情）

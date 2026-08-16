@@ -66,28 +66,29 @@ SEED_MUSIC: list[dict] = [
 
 
 def _ensure_placeholder_audio():
-    """确保每个音有一个占位 mp3 文件（静音）。
+    """确保每首曲目有独立占位 mp3（静音），路径 static/audio/tracks/{曲名}.mp3。
 
-    v2.4.7：音频方案回退——v2.4.6 的 Karplus-Strong 合成 wav 已移除
-    （合成的是随机拨弦声而非成曲，用户将自行放置真实音频文件）。
-    真实音频直接替换 static/audio/{yin}.mp3 即可（同名覆盖，无需改代码）。
+    v2.4.8：架构升级——22 首曲目从「按五音共享 5 个文件」改为
+    「每首曲目独立音频文件」。用户接入真实音频：下载对应曲目的 mp3，
+    命名为曲名（如 `流水.mp3`）放入 static/audio/tracks/ 同名覆盖即可，
+    无需改代码。占位仅在文件缺失时写入（静音假 MP3，播放器可识别）。
     """
-    settings.audio_dir.mkdir(parents=True, exist_ok=True)
-    for yin in YinType:
-        path = settings.audio_dir / f"{yin.value}.mp3"
+    tracks_dir = settings.audio_dir / "tracks"
+    tracks_dir.mkdir(parents=True, exist_ok=True)
+    # 最小合法静音 MP3（ID3v2 头 + 50 静音帧 + ID3v1 尾）
+    silence_frame = bytes([
+        0xFF, 0xFB, 0x10, 0x64,  # MPEG1 Layer3 32kbps 44.1kHz
+        *([0x00] * 100),
+    ])
+    placeholder = (
+        b"ID3\x03\x00\x00\x00\x00\x00\x00"
+        + (silence_frame * 50)
+        + (b"TAG" + b"\x00" * 125)
+    )
+    for m in SEED_MUSIC:
+        path = tracks_dir / f"{m['title']}.mp3"
         if not path.exists():
-            # 写一个最小的 MP3 文件头（ID3v2 + MPEG sync），浏览器可识别为音频但很短
-            # 1 帧静音 MPEG-1 Layer III 32kbps 44.1kHz = 104 字节
-            # 加上 ID3v1 尾部 128 字节
-            silence_frame = bytes([
-                0xFF, 0xFB, 0x10, 0x64,  # MPEG1 Layer3 32kbps 44.1kHz
-                *([0x00] * 100),
-            ])
-            # 写一个 ID3v2 最小头 + 多个静音帧 + ID3v1
-            id3v2_header = b"ID3\x03\x00\x00\x00\x00\x00\x00"
-            id3v1_tag = b"TAG" + b"\x00" * 125
-            data = id3v2_header + (silence_frame * 50) + id3v1_tag
-            path.write_bytes(data)
+            path.write_bytes(placeholder)
 
 
 def seed_music(db: Session) -> int:
@@ -105,7 +106,7 @@ def seed_music(db: Session) -> int:
             continue
         new_rows.append(Music(
             title=m["title"],
-            audio_url=f"/static/audio/{m['yin_type']}.mp3",
+            audio_url=f"/static/audio/tracks/{m['title']}.mp3",
             cover_image=f"/static/images/cover_{m['yin_type']}.svg",
             yin_type=m["yin_type"],
             category=m.get("category", "classic"),
