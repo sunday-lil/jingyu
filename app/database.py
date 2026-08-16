@@ -134,6 +134,17 @@ def _migrate_legacy_columns() -> None:
                     "ALTER TABLE musics ADD COLUMN category VARCHAR(20) DEFAULT 'classic' NOT NULL"
                 ))
                 logger.info("[MIGRATE] musics.category 已添加（v2.3）")
+            # v2.4.6：音频占位 mp3 换成 Karplus-Strong 合成的真实 wav
+            # （幂等：audio_url 已是 .wav 的行不受影响）
+            result = conn.execute(text(
+                "UPDATE musics SET audio_url = REPLACE(audio_url, '.mp3', '.wav') "
+                "WHERE audio_url LIKE '%.mp3'"
+            ))
+            if result.rowcount:
+                logger.info(
+                    "[MIGRATE] musics.audio_url 已切换 .mp3 → .wav（%d 行，v2.4.6 真实音频）",
+                    result.rowcount,
+                )
 
     # mood_checkins 表
     # v2.4：移除 user_id+check_date 唯一约束（支持一天多条心情）
