@@ -25,13 +25,17 @@
 
 ---
 
+> 🔊 **2026-08-16 v2.4.6 五音音频真实化（静音占位 → Karplus-Strong 合成古琴拨弦）**：本次解决「音频全是占位文件、播放无声」的历史遗留问题。原 `static/audio/{gong|shang|jue|zhi|yu}.mp3` 是 [seed.py](../../app/seed.py) 生成的 5338 字节静音假 MP3（仅 0.2 秒静音帧）。① **[FEATURE] 五音真实音频**（`五音音频合成`）：新增 [scripts/generate_audio.py](../../scripts/generate_audio.py)，用 **Karplus-Strong 拨弦物理建模**（噪声激励 + 延迟线反馈，本身就是为模拟弦振动设计的算法）纯 Python 合成古琴风格音频——五音各用对应的中国五声调式（宫 C 系统中正平和 / 商 D 系统清肃 / 角 E 系统舒展 / 徵 G 系统明快 / 羽 A 系统柔润安宁），低音区 + 慢速稀疏音符 + 长延音 + 偶发低八度散音，贴近古琴气质；每段 78 秒 / 22.05kHz / 16bit / mono WAV（3.4MB），固定随机种子可复现。② **[MIGRATION] audio_url 切 .wav**（`audio_url切wav`）：[database.py](../../app/database.py) 新增幂等数据迁移 `UPDATE musics SET audio_url = REPLACE(audio_url, '.mp3', '.wav')`（老库自动切换，重启即生效）；[seed.py](../../app/seed.py) 新曲目直接写 `.wav`，占位兜底改为写最小合法 RIFF 静音 WAV。③ **[CHORE] 删除 5 个假 MP3 占位文件**。说明：沙箱环境网络下载（curl/git/pip）全被拦截且 GitHub 无古琴音频仓库，故选择本地合成方案——零版权风险 + 完全离线可复现；恢复/重新生成音频运行 `python scripts/generate_audio.py`。详见 §4 Phase 14。关键词 `v2.4.6` / `五音音频合成` / `Karplus-Strong` / `audio_url切wav` 在 6 份文档中都要出现。
+
+---
+
 ## 0. 你正在接手什么
 
 **项目名**：静屿（代号，可改）
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 强隐私 / 轻运营
 **代码体量**：约 2 500 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.4.5 — 2026-08-16 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一（Bug 修复版本：恢复 30 天趋势柱状图并与罗素情绪环并存 / GSAP 动画只保留位移修复罗素环不显示 / 移除 capture 属性支持相册选头像 / 通知空状态 emoji 🌙→💛，纯前端 3 文件改动）。前一阶段 v2.4.4（2026-08-15 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨，详见 §4 Phase 12）+ v2.4.3（2026-08-14 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复，详见 §4 Phase 11）+ v2.4.2（2026-08-13 整体架构优化与冗余清理，维护性清理版本，详见 §4 Phase 10 后段）+ v2.4.1（2026-08-10 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图，详见 §4 Phase 10）+ v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊改名 + 露水累加修复，详见 §4 Phase 9）+ v2.3.3（2026-07-30 Safari 兼容性修复：3D 上下文恢复 + emoji 跨浏览器一致，详见 §4 Phase 8）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱，详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
+**当前阶段**：v2.4.6 — 2026-08-16 五音音频真实化（静音占位 → Karplus-Strong 合成古琴拨弦，`scripts/generate_audio.py` 五声调式各 78 秒 WAV + musics.audio_url 幂等迁移 .mp3→.wav）。前一阶段 v2.4.5（2026-08-16 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一，详见 §4 Phase 13）+ v2.4.4（2026-08-15 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨，详见 §4 Phase 12）+ v2.4.3（2026-08-14 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复，详见 §4 Phase 11）+ v2.4.2（2026-08-13 整体架构优化与冗余清理，维护性清理版本，详见 §4 Phase 10 后段）+ v2.4.1（2026-08-10 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图，详见 §4 Phase 10）+ v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊改名 + 露水累加修复，详见 §4 Phase 9）+ v2.3.3（2026-07-30 Safari 兼容性修复：3D 上下文恢复 + emoji 跨浏览器一致，详见 §4 Phase 8）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱，详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
 
 ---
 
@@ -600,6 +604,24 @@ webwrold/
 **Smoke test 结果**（2026-08-16 实测，dist 重构建后浏览器端到端验证）：打卡后 30 天趋势柱状图显示 ✅ / 罗素情绪环四象限正常渲染 ✅ / 头像上传弹「拍照 / 从相册选择」选择框 ✅ / 通知空状态显示 💛 ✅
 
 **6 份文档同步**（Iron Rule）：README 状态徽章 v2.4.4→v2.4.5 + 顶部 v2.4.5 提示块 / HANDOFF §0 当前阶段 v2.4.4→v2.4.5 + 顶部 v2.4.5 提示块 + §4 Phase 13（本节）/ PROJECT_STATE §1（新增 v2.4.5 行）+ §2（新增 2026-08-16 v2.4.5 节）+ 顶部 v2.4.5 提示块 + 「最后更新」v2.4.5 / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
+
+### Phase 14 — v2.4.6 五音音频真实化（静音占位 → Karplus-Strong 合成古琴拨弦）（2026-08-16 加）
+
+> 设计原则：**「能出声 · 有琴韵 · 零版权 · 可复现」** —— 用户反馈所有音频都是占位文件播不出声。原方案想从网上下载真实古琴录音，但沙箱把 curl/git/pip 网络全拦了（GitHub 上也没有古琴音频仓库，只有谱本数据集），遂改为**本地物理建模合成**：Karplus-Strong 算法本来就是为模拟琴弦振动设计的（1978 年 Stanford 提出，噪声激励 + 延迟线反馈滤波），纯 Python 标准库即可运行，零第三方依赖、零版权风险、固定种子完全可复现。
+
+**改动清单**（3 项，详见 [README 顶部 v2.4.6 提示块](../../README.md)）：
+
+1. **[FEATURE] 五音真实音频**（`五音音频合成`）：新增 [scripts/generate_audio.py](../../scripts/generate_audio.py)——五音各用对应的中国五声调式：宫 C 系统（中正平和，健脾）/ 商 D 系统（清肃，润肺）/ 角 E 系统（舒展生发，疏肝）/ 徵 G 系统（明快温暖，养心）/ 羽 A 系统（柔润安宁，助眠）；低音区（C3-A3 基频）+ 慢速稀疏音符（1.9-2.9 秒/音）+ 3.5-6.5 秒长延音 + 18% 概率低八度散音（古琴标志性空弦音）+ 句间气口；每段 78 秒 / 22050Hz / 16bit / mono PCM WAV（3.4MB），`random.seed` 按音固定保证可复现，2.5 秒淡入淡出
+2. **[MIGRATION] audio_url 切 .wav**（`audio_url切wav`）：[database.py](../../app/database.py) `_migrate_legacy_columns()` musics 表块新增幂等数据迁移 `UPDATE musics SET audio_url = REPLACE(audio_url, '.mp3', '.wav') WHERE audio_url LIKE '%.mp3'`（老库重启即自动切换，带 rowcount 日志）；[seed.py](../../app/seed.py) 新种曲目 `audio_url` 直接写 `.wav`，`_ensure_placeholder_audio()` 占位兜底改为写最小合法 RIFF 静音 WAV（44 字节头 + 1 秒 8kHz 静音，真实音频被误删时兜底，恢复运行 `python scripts/generate_audio.py`）
+3. **[CHORE] 删除 5 个假 MP3 占位文件**（`static/audio/*.mp3`，各 5338 字节的静音假 MP3）
+
+**音频设计决策**：为什么选合成而不是下载？① 沙箱网络拦截（curl/git/pip 全被杀，gh api 只能读 GitHub 而无古琴音频仓库）；② 版权——网上古琴录音版权状态混乱，合成的零风险；③ 可复现——固定种子，任何人 `python scripts/generate_audio.py` 一键重生成；④ 体积可控——22.05kHz mono（古琴以中低频为主，音质足够）每段 3.4MB。**已知取舍**：合成音频是「古琴风格拨弦氛围」而非名家演奏录音，同一音的 22 首曲目共享同一段音频（沿用原架构：按 yin_type 映射 5 个文件）；DB 里 `duration` 字段仍是曲目元数据（如流水 420 秒），与实际音频 78 秒不一致——播放器以真实音频为准，播完自动下一首（@ended）。
+
+**改动文件**：`scripts/generate_audio.py`（新增）/ `app/database.py`（迁移）/ `app/seed.py`（.wav）/ `static/audio/*.wav`（新增 5 个）/ 删 `static/audio/*.mp3`（5 个）/ [app/main.py](../../app/main.py) 版本号 2.4.5 → 2.4.6（`版本号对齐`）。**无新依赖**（纯 Python 标准库 random/struct/wave）。
+
+**Smoke test 结果**（2026-08-16 实测）：5 个 WAV 生成成功，`wave.getparams()` 校验 nchannels=1 / sampwidth=2 / framerate=22050 / nframes=1719900（78.0 秒）全部通过 ✅；浏览器端播放验证待用户实际启动后确认（沙箱内无法运行后端）
+
+**6 份文档同步**（Iron Rule）：README 状态徽章 v2.4.5→v2.4.6 + 顶部 v2.4.6 提示块 / HANDOFF §0 当前阶段 + 顶部提示块 + §4 Phase 14（本节）/ PROJECT_STATE §1（新增 v2.4.6 行）+ §2（新增 2026-08-16 v2.4.6 节）+ 顶部提示块 + 「最后更新」v2.4.6 / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
 
 ---
 

@@ -36,6 +36,10 @@
 
 ---
 
+> 🔊 **2026-08-16 v2.4.6 五音音频真实化（静音占位 → Karplus-Strong 合成古琴拨弦，架构无变化）**：本次为历史遗留清理版本，**后端架构 / 前端架构均无变化**，只动了静态资源与数据层。① **静态资源层**：`static/audio/` 由 5 个假 MP3 占位（各 5338 字节静音帧）换成 5 个真实 WAV（Karplus-Strong 拨弦物理建模合成，五声调式各 78 秒 / 22050Hz / 16bit / mono，3.4MB/个）——FastAPI StaticFiles 按扩展名自动发 `audio/wav` MIME，浏览器 `<audio>` 原生支持，**前端零改动**（audio_url 全来自 DB）；② **数据层**：[database.py](../../app/database.py) `_migrate_legacy_columns()` 延续「无 Alembic 轻量迁移」模式（见 HANDOFF §2），musics 表新增幂等数据迁移 `audio_url .mp3→.wav`（`REPLACE()` + `LIKE '%.mp3'` 条件，重启即生效）；[seed.py](../../app/seed.py) 种子直写 `.wav` + 静音 RIFF 兜底；③ **音频生成独立成脚本**：[scripts/generate_audio.py](../../scripts/generate_audio.py) 纯标准库（random/struct/wave）零依赖、固定随机种子可复现——**架构要点：音频是「生成产物」而非「二进制资产」，进仓库的是生成结果，源是脚本，任何时候 `python scripts/generate_audio.py` 一键重生成**。关键词 `v2.4.6` / `五音音频合成` / `Karplus-Strong` / `audio_url切wav` 在 6 份文档中都要出现。
+
+---
+
 ## 1. 总体架构
 
 > **2026-07-19 v2.0 全站 Vue 3 重构**：前端从 Jinja2 SSR + 原生 JS 迁移到 Vue 3 SPA + Vite 工程化，后端 FastAPI 简化为纯 API + SPA fallback。

@@ -5,7 +5,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Status](https://img.shields.io/badge/status-v2.4.5-success)]()
+[![Status](https://img.shields.io/badge/status-v2.4.6-success)]()
 
 一个旨在缓解现代人焦虑情绪、关注心理健康的 Web 应用。通过「古琴五音疗愈」与「私密情绪记录」相结合，提供一个安全、安静、无压力的精神角落。
 
@@ -34,6 +34,10 @@
 ---
 
 > 🔒 **2026-08-16 v2.4.5 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一**：本次为 Bug 修复版本，修复用户反馈的 4 个问题，**纯前端改动（3 个文件），无后端改动 / 无数据库迁移 / 无新依赖**。① **[BUG FIX] 情绪日历打卡后柱状图不显示**（`30天趋势柱状图恢复`）：v2.4.1 将「30 天趋势柱状图」替换为罗素情绪环时整体删除了柱状图板块，用户习惯打卡后看柱状趋势。本次恢复该板块并与罗素情绪环**并存**——柱高 = 当日心情**平均分**（1-5 评分，一天多条取平均），柱色取当日主心情颜色渐变，柱顶悬浮当日主心情 emoji（悬浮提示含一天多条 ×N 角标），未记录日显示 3px 浅色占位柱，底部首尾日期轴。② **[BUG FIX] 罗素情绪环模型不显示**（`罗素情绪环显示修复`）：GSAP `from()` 动画残留 `opacity:0` / `scale:0` 初始态，动画被中断（切后台 / 路由切换）时元素**永久卡在不可见状态**（与 v2.4.4「透明 bug」同类根因）。修复：入场动画只保留位移动画（`y`），**不设置 `opacity` / `scale` 初始态**。③ **[BUG FIX] 头像只能拍照不能从相册选择**（`头像相册选择`）：[ProfileView.vue](frontend/src/views/profile/ProfileView.vue) 头像上传 `<input type="file">` 带 `capture="environment"` 属性，移动端强制调起相机。移除 `capture` 属性后弹出系统「拍照 / 从相册选择」选择框，按钮文案同步为「📷 拍照 / 从相册选择」。④ **[BUG FIX] 通知空状态 emoji 错误**（`通知空状态emoji`）：[NotificationsView.vue](frontend/src/views/notification/NotificationsView.vue) 空状态 emoji 🌙 → 💛，与 v2.4.4「通知 emoji 统一 💛」对齐。详见 [HANDOFF §4 Phase 13](file:///c:/Users/dog51/Desktop/webwrold/HANDOFF.md)。关键词 `v2.4.5` / `30天趋势柱状图恢复` / `罗素情绪环显示修复` / `头像相册选择` / `通知空状态emoji` 在 6 份文档中都要出现。
+
+---
+
+> 🔊 **2026-08-16 v2.4.6 五音音频真实化（静音占位 → Karplus-Strong 合成古琴拨弦）**：本次解决「音频全是占位文件、播放无声」的历史遗留问题。原 `static/audio/{gong|shang|jue|zhi|yu}.mp3` 是 [seed.py](app/seed.py) 生成的 5338 字节静音假 MP3（仅 0.2 秒静音帧）。① **[FEATURE] 五音真实音频**（`五音音频合成`）：新增 [scripts/generate_audio.py](scripts/generate_audio.py)，用 **Karplus-Strong 拨弦物理建模**（噪声激励 + 延迟线反馈，本身就是为模拟弦振动设计的算法）纯 Python 合成古琴风格音频——五音各用对应的中国五声调式（宫 C 系统中正平和 / 商 D 系统清肃 / 角 E 系统舒展 / 徵 G 系统明快 / 羽 A 系统柔润安宁），低音区 + 慢速稀疏音符 + 长延音 + 偶发低八度散音，贴近古琴气质；每段 78 秒 / 22.05kHz / 16bit / mono WAV（3.4MB），固定随机种子可复现。② **[MIGRATION] audio_url 切 .wav**（`audio_url切wav`）：[database.py](app/database.py) 新增幂等数据迁移 `UPDATE musics SET audio_url = REPLACE(audio_url, '.mp3', '.wav')`（老库自动切换，重启即生效）；[seed.py](app/seed.py) 新曲目直接写 `.wav`，占位兜底改为写最小合法 RIFF 静音 WAV。③ **[CHORE] 删除 5 个假 MP3 占位文件**。说明：沙箱环境网络下载（curl/git/pip）全被拦截且 GitHub 无古琴音频仓库，故选择本地合成方案——零版权风险 + 完全离线可复现；恢复/重新生成音频运行 `python scripts/generate_audio.py`。详见 [HANDOFF §4 Phase 14](file:///c:/Users/dog51/Desktop/webwrold/HANDOFF.md)。关键词 `v2.4.6` / `五音音频合成` / `Karplus-Strong` / `audio_url切wav` 在 6 份文档中都要出现。
 
 ---
 

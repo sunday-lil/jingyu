@@ -40,6 +40,10 @@
 
 ---
 
+> 🔊 **2026-08-16 v2.4.6 五音音频真实化（部署须知：音频文件更新 + 数据迁移自动执行）**：本次为历史遗留清理版本，**无新依赖、无需重新 npm run build（前端零改动）**，但有以下部署要点：① **静态音频文件更新**——`static/audio/` 下 5 个假 MP3 占位删除，新增 5 个真实 WAV（Karplus-Strong 合成古琴五音，各 78 秒 / 3.4MB，共约 17MB，git 拉取后自动就位）；② **数据迁移自动执行**——重启后端时 `_migrate_legacy_columns()` 自动把 `musics.audio_url` 从 `.mp3` 切到 `.wav`（幂等，日志可见 `[MIGRATE] musics.audio_url 已切换`），**无需手动操作**；③ **音频误删恢复**——运行 `python scripts/generate_audio.py` 一键重新生成 5 个 WAV（纯标准库零依赖，固定种子输出一致）；④ **版本号**：[app/main.py](../../app/main.py) 2.4.5 → 2.4.6（`版本号对齐`）；⑤ **服务器部署**：`python start.py`（静态文件 + 迁移全自动，无需 build）。关键词 `v2.4.6` / `五音音频合成` / `Karplus-Strong` / `audio_url切wav` 在 6 份文档中都要出现。
+
+---
+
 ## 前端构建（v2.0 Vue 3 重构后必做，所有部署方式通用）
 
 > 2026-07-19 v2.0 全站 Vue 3 重构后，前台从 Jinja2 SSR 迁移到 Vue 3 SPA。**部署前必须先构建前端**，否则访问 :5000 只看到「dist 未构建」提示页。

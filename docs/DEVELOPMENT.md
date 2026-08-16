@@ -32,6 +32,10 @@
 
 ---
 
+> 🔊 **2026-08-16 v2.4.6 开发规则（五音音频真实化）**：本次为历史遗留清理版本，开发时遵守以下要点（在 v2.4.5 规则之上）：① **音频是生成产物，不是手放资产**（`五音音频合成`）——`static/audio/*.wav` 的源是 [scripts/generate_audio.py](../../scripts/generate_audio.py)（Karplus-Strong 拨弦物理建模，五声调式），改音频先改脚本再重新生成（固定随机种子保证可复现），**不要手动替换/编辑 WAV 文件**；② **占位兜底只写合法容器**（`audio_url切wav`）——[seed.py](../../app/seed.py) `_ensure_placeholder_audio()` 现写最小合法 RIFF 静音 WAV（44 字节头 + 1 秒 8kHz 静音）而非假 MP3 帧——**启示：占位文件也必须是「能被播放器正常打开的合法文件」，假头骗 mime 检测只会造成「看似有文件实则播不出」的隐性 bug**；③ **音频格式切换要带数据迁移**——`audio_url` 存 DB 里，静态文件改名必须同步 `UPDATE`（[database.py](../../app/database.py) musics 表幂等迁移），否则老库仍指向已删除的 `.mp3` → 404；④ **沙箱环境下网络下载不可用时，本地合成是合法 fallback**——Karplus-Strong 纯标准库实现（random/struct/wave），零依赖零版权，比「下载失败就搁置」好。关键词 `v2.4.6` / `五音音频合成` / `Karplus-Strong` / `audio_url切wav` 在 6 份文档中都要出现。
+
+---
+
 ## 1. 开发铁律
 
 ### 1.1 分层不许乱
