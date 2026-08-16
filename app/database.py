@@ -134,15 +134,15 @@ def _migrate_legacy_columns() -> None:
                     "ALTER TABLE musics ADD COLUMN category VARCHAR(20) DEFAULT 'classic' NOT NULL"
                 ))
                 logger.info("[MIGRATE] musics.category 已添加（v2.3）")
-            # v2.4.6：音频占位 mp3 换成 Karplus-Strong 合成的真实 wav
-            # （幂等：audio_url 已是 .wav 的行不受影响）
+            # v2.4.7：回退 v2.4.6 的 wav 方案，恢复 mp3（占位/用户自备音频）
+            # 幂等：已是 .mp3 的行不受影响；跑过 v2.4.6 的老库自动切回
             result = conn.execute(text(
-                "UPDATE musics SET audio_url = REPLACE(audio_url, '.mp3', '.wav') "
-                "WHERE audio_url LIKE '%.mp3'"
+                "UPDATE musics SET audio_url = REPLACE(audio_url, '.wav', '.mp3') "
+                "WHERE audio_url LIKE '%.wav'"
             ))
             if result.rowcount:
                 logger.info(
-                    "[MIGRATE] musics.audio_url 已切换 .mp3 → .wav（%d 行，v2.4.6 真实音频）",
+                    "[MIGRATE] musics.audio_url 已切回 .mp3（%d 行，v2.4.7 音频方案回退）",
                     result.rowcount,
                 )
 

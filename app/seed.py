@@ -66,26 +66,28 @@ SEED_MUSIC: list[dict] = [
 
 
 def _ensure_placeholder_audio():
-    """确保每个音有一个占位 wav 文件（静音）。
+    """确保每个音有一个占位 mp3 文件（静音）。
 
-    v2.4.6：音频从假 mp3 占位换成真实 wav 文件（scripts/generate_audio.py
-    用 Karplus-Strong 拨弦物理建模合成的古琴五音音频，每个 78 秒）。
-    此函数只做兜底：若 wav 被误删，写一个静音 RIFF 文件占位，
-    恢复真实音频请运行 ``python scripts/generate_audio.py``。
+    v2.4.7：音频方案回退——v2.4.6 的 Karplus-Strong 合成 wav 已移除
+    （合成的是随机拨弦声而非成曲，用户将自行放置真实音频文件）。
+    真实音频直接替换 static/audio/{yin}.mp3 即可（同名覆盖，无需改代码）。
     """
     settings.audio_dir.mkdir(parents=True, exist_ok=True)
     for yin in YinType:
-        path = settings.audio_dir / f"{yin.value}.wav"
+        path = settings.audio_dir / f"{yin.value}.mp3"
         if not path.exists():
-            # 最小合法 RIFF WAVE：44 字节头 + 1 秒 8kHz 静音
-            data_len = 8000
-            header = b"RIFF" + (36 + data_len).to_bytes(4, "little") + b"WAVE"
-            header += b"fmt " + (16).to_bytes(4, "little")
-            header += (1).to_bytes(2, "little") + (1).to_bytes(2, "little")   # PCM mono
-            header += (8000).to_bytes(4, "little") + (8000).to_bytes(4, "little")
-            header += (1).to_bytes(2, "little") + (8).to_bytes(2, "little")
-            header += b"data" + data_len.to_bytes(4, "little")
-            path.write_bytes(header + b"\x80" * data_len)
+            # 写一个最小的 MP3 文件头（ID3v2 + MPEG sync），浏览器可识别为音频但很短
+            # 1 帧静音 MPEG-1 Layer III 32kbps 44.1kHz = 104 字节
+            # 加上 ID3v1 尾部 128 字节
+            silence_frame = bytes([
+                0xFF, 0xFB, 0x10, 0x64,  # MPEG1 Layer3 32kbps 44.1kHz
+                *([0x00] * 100),
+            ])
+            # 写一个 ID3v2 最小头 + 多个静音帧 + ID3v1
+            id3v2_header = b"ID3\x03\x00\x00\x00\x00\x00\x00"
+            id3v1_tag = b"TAG" + b"\x00" * 125
+            data = id3v2_header + (silence_frame * 50) + id3v1_tag
+            path.write_bytes(data)
 
 
 def seed_music(db: Session) -> int:
@@ -103,7 +105,7 @@ def seed_music(db: Session) -> int:
             continue
         new_rows.append(Music(
             title=m["title"],
-            audio_url=f"/static/audio/{m['yin_type']}.wav",
+            audio_url=f"/static/audio/{m['yin_type']}.mp3",
             cover_image=f"/static/images/cover_{m['yin_type']}.svg",
             yin_type=m["yin_type"],
             category=m.get("category", "classic"),
