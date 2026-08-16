@@ -516,8 +516,8 @@ onBeforeUnmount(() => {
               </div>
               <div class="avatar-upload">
                 <label class="avatar-upload__btn">
-                  📷 拍摄 / 选择图片
-                  <input type="file" accept="image/*" capture="environment" @change="onAvatarUpload" hidden />
+                  📷 拍照 / 从相册选择
+                  <input type="file" accept="image/*" @change="onAvatarUpload" hidden />
                 </label>
               </div>
               <div class="avatar-grid">

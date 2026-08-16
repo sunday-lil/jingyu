@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
     </div>
     <div v-else-if="errorMsg" class="empty-state card">{{ errorMsg }}</div>
     <div v-else-if="!notifications.length" class="empty-state card">
-      <div class="empty-emoji">🌙</div>
+      <div class="empty-emoji">💛</div>
       <p>这里很安静，还没有通知</p>
       <p class="empty-hint">当你的漂流瓶收到鼓励时，会在这里提醒你</p>
     </div>

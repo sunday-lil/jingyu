@@ -348,19 +348,21 @@ onMounted(() => {
   fetchCalendar()
   fetchTrend()
   nextTick(() => {
-    gsap.from('.mood-header', { y: -20, opacity: 0, duration: 0.6, ease: 'power2.out' })
+    // 注意：不要在 from 里写 opacity:0 / scale:0 —— 动画被中断（如切后台、路由切换）
+    // 时元素会永久卡在不可见状态（v2.4.4 的「透明 bug」同类根因），只保留位移动画
+    gsap.from('.mood-header', { y: -20, duration: 0.6, ease: 'power2.out' })
     gsap.from('.mood-picker__btn', {
       y: 20, duration: 0.5, stagger: 0.06, ease: 'power3.out', delay: 0.1,
     })
-    gsap.from('.calendar-nav', { y: 16, opacity: 0, duration: 0.5, ease: 'power2.out', delay: 0.2 })
+    gsap.from('.calendar-nav', { y: 16, duration: 0.5, ease: 'power2.out', delay: 0.2 })
     gsap.from('.calendar-cell:not(.calendar-cell--empty)', {
-      y: 16, opacity: 0, duration: 0.45, stagger: 0.012, ease: 'power2.out', delay: 0.25,
+      y: 16, duration: 0.45, stagger: 0.012, ease: 'power2.out', delay: 0.25,
     })
     gsap.from('.circumplex-section', {
-      y: 20, opacity: 0, duration: 0.6, ease: 'power2.out', delay: 0.4,
+      y: 20, duration: 0.6, ease: 'power2.out', delay: 0.4,
     })
     gsap.from('.circumplex-emotion', {
-      scale: 0, opacity: 0, duration: 0.4, stagger: 0.04, ease: 'back.out(1.7)', delay: 0.6,
+      y: 10, duration: 0.4, stagger: 0.04, ease: 'back.out(1.7)', delay: 0.6,
     })
   })
 })
@@ -466,6 +468,40 @@ onBeforeUnmount(() => {
           <span class="calendar__legend-emoji">{{ m.emoji }}</span>
           <span class="calendar__legend-label">{{ m.label }}</span>
         </span>
+      </div>
+    </section>
+
+    <!-- 近 30 天心情趋势柱状图 -->
+    <section class="trend-section card" v-if="trend.length">
+      <h2 class="trend-section__title">近 30 天心情趋势</h2>
+      <p class="trend-section__subtitle">
+        柱子越高，代表那天整体心情越好 · 一天多条记录取平均分
+      </p>
+      <div class="trend-chart">
+        <div
+          v-for="t in trend"
+          :key="t.date"
+          class="trend-bar-col"
+          :title="t.label ? `${t.date} · ${t.label}${t.mood_count > 1 ? ` ×${t.mood_count}` : ''}` : `${t.date} · 未记录`"
+        >
+          <!-- 当日主心情 emoji 悬浮柱顶 -->
+          <div
+            v-if="t.mood_emoji && MOOD_INFO[t.mood_emoji]"
+            class="trend-bar__emoji"
+          >{{ MOOD_INFO[t.mood_emoji].emoji }}</div>
+          <div
+            class="trend-bar"
+            :class="{ 'trend-bar--empty': !t.avg_score }"
+            :style="t.avg_score ? {
+              height: `${(t.avg_score / 5) * 100}%`,
+              background: `linear-gradient(180deg, ${t.color || '#B8A590'} 0%, ${(t.color || '#B8A590')}CC 100%)`,
+            } : {}"
+          ></div>
+        </div>
+      </div>
+      <div class="trend-axis">
+        <span>{{ trend[0]?.date?.slice(5) }}</span>
+        <span>今天</span>
       </div>
     </section>
 
@@ -818,6 +854,67 @@ onBeforeUnmount(() => {
   font-family: var(--font-serif, serif);
 }
 
+/* 近 30 天趋势柱状图 */
+.trend-section {
+  padding: 24px;
+  margin-bottom: 40px;
+}
+.trend-section__title {
+  font-family: var(--font-serif, serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--color-text-primary, #3D3327);
+  margin: 0 0 6px;
+  letter-spacing: 0.05em;
+}
+.trend-section__subtitle {
+  font-size: 13px;
+  color: var(--color-text-muted, #8B7B5E);
+  margin: 0 0 18px;
+  letter-spacing: 0.03em;
+}
+.trend-chart {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  height: 150px;
+  padding: 20px 2px 0; /* 顶部留出 emoji 空间 */
+}
+.trend-bar-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 3px;
+}
+.trend-bar {
+  width: 100%;
+  max-width: 18px;
+  min-height: 4px;
+  border-radius: 4px 4px 2px 2px;
+  transition: height 0.4s var(--ease-soft, ease);
+}
+.trend-bar--empty {
+  height: 3px !important;
+  min-height: 3px;
+  background: rgba(139, 123, 94, 0.15);
+}
+.trend-bar__emoji {
+  font-size: 11px;
+  line-height: 1;
+  filter: saturate(0.9);
+}
+.trend-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--color-text-muted, #8B7B5E);
+  letter-spacing: 0.05em;
+}
+
 /* 情绪环状图（Russell's Circumplex Model） */
 .circumplex-section {
   padding: 24px;
@@ -1144,6 +1241,22 @@ onBeforeUnmount(() => {
   }
   .calendar__legend-emoji {
     font-size: 16px;
+  }
+  .trend-section {
+    padding: 18px 14px;
+    margin-bottom: 28px;
+  }
+  .trend-chart {
+    gap: 2px;
+    height: 110px;
+    padding-top: 16px;
+  }
+  .trend-bar {
+    max-width: 12px;
+    border-radius: 3px 3px 2px 2px;
+  }
+  .trend-bar__emoji {
+    font-size: 9px;
   }
   .calendar-nav__title {
     font-size: 17px;
