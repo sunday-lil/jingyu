@@ -21,13 +21,17 @@
 
 ---
 
+> 🔒 **2026-08-16 v2.4.5 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一**：本次为 Bug 修复版本，修复用户反馈的 4 个问题，**纯前端改动（3 个文件），无后端改动 / 无数据库迁移 / 无新依赖**。① **[BUG FIX] 情绪日历打卡后柱状图不显示**（`30天趋势柱状图恢复`）：v2.4.1 将「30 天趋势柱状图」替换为罗素情绪环时整体删除了柱状图板块，用户习惯打卡后看柱状趋势。本次恢复该板块并与罗素情绪环**并存**——柱高 = 当日心情**平均分**（1-5 评分，一天多条取平均），柱色取当日主心情颜色渐变，柱顶悬浮当日主心情 emoji（悬浮提示含一天多条 ×N 角标），未记录日显示 3px 浅色占位柱，底部首尾日期轴。② **[BUG FIX] 罗素情绪环模型不显示**（`罗素情绪环显示修复`）：GSAP `from()` 动画残留 `opacity:0` / `scale:0` 初始态，动画被中断（切后台 / 路由切换）时元素**永久卡在不可见状态**（与 v2.4.4「透明 bug」同类根因）。修复：入场动画只保留位移动画（`y`），**不设置 `opacity` / `scale` 初始态**。③ **[BUG FIX] 头像只能拍照不能从相册选择**（`头像相册选择`）：[ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue) 头像上传 `<input type="file">` 带 `capture="environment"` 属性，移动端强制调起相机。移除 `capture` 属性后弹出系统「拍照 / 从相册选择」选择框，按钮文案同步为「📷 拍照 / 从相册选择」。④ **[BUG FIX] 通知空状态 emoji 错误**（`通知空状态emoji`）：[NotificationsView.vue](../../frontend/src/views/notification/NotificationsView.vue) 空状态 emoji 🌙 → 💛，与 v2.4.4「通知 emoji 统一 💛」对齐。详见 §4 Phase 13。关键词 `v2.4.5` / `30天趋势柱状图恢复` / `罗素情绪环显示修复` / `头像相册选择` / `通知空状态emoji` 在 6 份文档中都要出现。
+
+---
+
 ## 0. 你正在接手什么
 
 **项目名**：静屿（代号，可改）
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 强隐私 / 轻运营
 **代码体量**：约 2 500 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.4.4 — 2026-08-15 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨（Bug 修复 + 功能增强版本：情绪日历 emoji 透明修复 / 旧版日记迁移自动填提示文本 / mood_checkins 表主键重建 / avatar 字段长度 String(16)→String(255) / 头像支持图片上传 POST /api/profile/avatar / 落叶花坊花朵介绍移除花语前缀 / 徽章落叶奖励分级 / 情绪日历指南改罗素情绪环模型 / 岛上物件 emoji 🎁→🧳 / 通知 emoji 统一 💛）。前一阶段 v2.4.3（2026-08-14 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复，详见 §4 Phase 11）+ v2.4.2（2026-08-13 整体架构优化与冗余清理，维护性清理版本，详见 §4 Phase 10 后段）+ v2.4.1（2026-08-10 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图，详见 §4 Phase 10）+ v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊改名 + 露水累加修复，详见 §4 Phase 9）+ v2.3.3（2026-07-30 Safari 兼容性修复：3D 上下文恢复 + emoji 跨浏览器一致，详见 §4 Phase 8）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱，详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
+**当前阶段**：v2.4.5 — 2026-08-16 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一（Bug 修复版本：恢复 30 天趋势柱状图并与罗素情绪环并存 / GSAP 动画只保留位移修复罗素环不显示 / 移除 capture 属性支持相册选头像 / 通知空状态 emoji 🌙→💛，纯前端 3 文件改动）。前一阶段 v2.4.4（2026-08-15 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨，详见 §4 Phase 12）+ v2.4.3（2026-08-14 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复，详见 §4 Phase 11）+ v2.4.2（2026-08-13 整体架构优化与冗余清理，维护性清理版本，详见 §4 Phase 10 后段）+ v2.4.1（2026-08-10 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图，详见 §4 Phase 10）+ v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊改名 + 露水累加修复，详见 §4 Phase 9）+ v2.3.3（2026-07-30 Safari 兼容性修复：3D 上下文恢复 + emoji 跨浏览器一致，详见 §4 Phase 8）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱，详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
 
 ---
 
@@ -577,6 +581,25 @@ webwrold/
 **Smoke test 结果**：`python start.py restart` ✅ / 情绪日历心情按钮可见 ✅ / 旧版日记显示提示文本 ✅ / 批量打卡不再 500 ✅ / 头像上传 200 ✅
 
 **6 份文档同步**（Iron Rule）：README 状态徽章 v2.4.3→v2.4.4 + 顶部 v2.4.4 提示块 / HANDOFF §0 当前阶段 v2.4.3→v2.4.4 + 顶部 v2.4.4 提示块 + §4 Phase 12（本节）/ PROJECT_STATE §1（新增 v2.4.4 行）+ §2（新增 2026-08-15 v2.4.4 节）+ 顶部 v2.4.4 提示块 + 「最后更新」v2.4.4 / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
+
+### Phase 13 — v2.4.5 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一（2026-08-16 加）
+
+> 设计原则：**「柱状图回归 · 环模型常显 · 相册能选 · 空态对齐」** —— 用户反馈 4 个问题：① 情绪日历打卡后下方不显示柱状图（v2.4.1 把柱状图换成了罗素情绪环，但用户习惯看柱状趋势）；② 罗素情绪环模型不显示（GSAP 动画初始态残留）；③ 头像只能拍照不能从相册选择（`capture` 属性强制调起相机）；④ 「我的」>「通知」空状态显示黄色月亮 🌙 而非黄色爱心 💛。本次逐一修复，纯前端 3 文件改动，无后端 / 无迁移 / 无新依赖。
+
+**改动清单**（4 项，详见 [README 顶部 v2.4.5 提示块](../../README.md)）：
+
+1. **[BUG FIX] 情绪日历打卡后柱状图不显示**（`30天趋势柱状图恢复`）：[MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue) 恢复「近 30 天心情趋势」柱状图板块（`.trend-section` 模板 + 样式 + `trend` computed 数据流），与罗素情绪环四象限图表**并存**——柱高 = 当日心情平均分（1-5 评分，一天多条取平均），柱色取当日主心情颜色渐变（`linear-gradient`），柱顶悬浮当日主心情 emoji，悬浮 title 显示「日期 ·心情名 ×N」（一天多条），未记录日显示 3px 浅色占位柱，底部首尾日期轴（起始日 → 今天）
+2. **[BUG FIX] 罗素情绪环模型不显示**（`罗素情绪环显示修复`）：GSAP `from()` 动画残留 `opacity:0` / `scale:0` 初始态，动画被中断（切后台 / 路由切换）时元素**永久卡在不可见状态**（与 v2.4.4「透明 bug」同类根因——v2.4.4 只修了心情选择按钮那一处，环模型区域的动画初始态漏修）。修复：入场动画（`.mood-header` / `.mood-picker__btn` / `.calendar-nav` / `.calendar-cell` / `.circumplex-section` / `.circumplex-emotion`）**只保留位移动画（`y`），不设置 `opacity` / `scale` 初始态**
+3. **[BUG FIX] 头像只能拍照不能从相册选择**（`头像相册选择`）：[ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue) 头像上传 `<input type="file">` 带 `capture="environment"` 属性，移动端浏览器会**强制调起相机**跳过相册。移除 `capture` 属性后（保留 `accept="image/*"`），点击弹出系统「拍照 / 从相册选择」选择框；按钮文案同步为「📷 拍照 / 从相册选择」
+4. **[BUG FIX] 通知空状态 emoji 错误**（`通知空状态emoji`）：[NotificationsView.vue](../../frontend/src/views/notification/NotificationsView.vue) 空状态 emoji 🌙 → 💛，与 v2.4.4「通知 emoji 统一 💛」决策对齐（v2.4.4 只统一了通知列表项，空状态漏改）
+
+**改动文件**：仅 3 个前端文件——`frontend/src/views/mood/MoodCalendarView.vue` / `frontend/src/views/profile/ProfileView.vue` / `frontend/src/views/notification/NotificationsView.vue` + [app/main.py](../../app/main.py) 版本号 2.4.4 → 2.4.5（`版本号对齐`）
+
+**无数据库迁移 / 无新依赖 / 无后端逻辑改动**
+
+**Smoke test 结果**（2026-08-16 实测，dist 重构建后浏览器端到端验证）：打卡后 30 天趋势柱状图显示 ✅ / 罗素情绪环四象限正常渲染 ✅ / 头像上传弹「拍照 / 从相册选择」选择框 ✅ / 通知空状态显示 💛 ✅
+
+**6 份文档同步**（Iron Rule）：README 状态徽章 v2.4.4→v2.4.5 + 顶部 v2.4.5 提示块 / HANDOFF §0 当前阶段 v2.4.4→v2.4.5 + 顶部 v2.4.5 提示块 + §4 Phase 13（本节）/ PROJECT_STATE §1（新增 v2.4.5 行）+ §2（新增 2026-08-16 v2.4.5 节）+ 顶部 v2.4.5 提示块 + 「最后更新」v2.4.5 / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
 
 ---
 

@@ -36,6 +36,10 @@
 
 ---
 
+> 🔒 **2026-08-16 v2.4.5 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一（Bug 修复版本，部署需重新 build）**：本次为 Bug 修复版本，**纯前端改动（3 个文件），无后端改动 / 无数据库迁移 / 无新依赖**，但**前端有改动，部署前必须重新 `npm run build`**。① **部署前必须重新 `npm run build`**——前端涉及 [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue)（恢复 30 天趋势柱状图 + GSAP 动画只保留位移）+ [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（移除 `capture="environment"`，头像支持相册选择）+ [NotificationsView.vue](../../frontend/src/views/notification/NotificationsView.vue)（空状态 emoji 🌙→💛）；② **无数据库迁移**——不涉及 `_migrate_legacy_columns()` / 不改表结构 / 不改 API；③ **无新依赖**——[requirements.txt](../../requirements.txt) / `frontend/package.json` 均不动；④ **版本号**：[app/main.py](../../app/main.py) 2.4.4 → 2.4.5（`版本号对齐`）；⑤ **服务器部署**：`python start.py build && python start.py --prod`（重新构建 dist + 单进程模式），或 `python start.py`（首次检测 dist 已存在则直接启动）。关键词 `v2.4.5` / `30天趋势柱状图恢复` / `罗素情绪环显示修复` / `头像相册选择` / `通知空状态emoji` 在 6 份文档中都要出现。
+
+---
+
 ## 前端构建（v2.0 Vue 3 重构后必做，所有部署方式通用）
 
 > 2026-07-19 v2.0 全站 Vue 3 重构后，前台从 Jinja2 SSR 迁移到 Vue 3 SPA。**部署前必须先构建前端**，否则访问 :5000 只看到「dist 未构建」提示页。
