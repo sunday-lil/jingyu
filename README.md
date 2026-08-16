@@ -5,7 +5,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Status](https://img.shields.io/badge/status-v2.4.7-success)]()
+[![Status](https://img.shields.io/badge/status-v2.4.8-success)]()
 
 一个旨在缓解现代人焦虑情绪、关注心理健康的 Web 应用。通过「古琴五音疗愈」与「私密情绪记录」相结合，提供一个安全、安静、无压力的精神角落。
 
@@ -42,6 +42,10 @@
 ---
 
 > 🔁 **2026-08-16 v2.4.7 音频方案回退（合成 wav 移除，恢复 mp3 占位，待接入真实曲库）**：v2.4.6 的 Karplus-Strong 合成方案上线后用户试听反馈「不是音乐，只是随机拨弦声」——合成音频无旋律结构、无乐句呼应，起不到乐曲的疗愈作用，方案否决。① **[REVERT] 移除合成音频**：删除 `scripts/generate_audio.py` 与 5 个合成 wav（`static/audio/*.wav`），恢复 5 个 mp3 静音占位（`恢复mp3占位`，各 5338 字节，与 v2.4.5 完全一致）；② **[MIGRATION] audio_url 切回 .mp3**（`音频方案回退`）：[database.py](app/database.py) 幂等反向迁移 `.wav→.mp3`（跑过 v2.4.6 的老库重启自动切回）；[seed.py](app/seed.py) 恢复 mp3 占位逻辑；③ **[PLAN] 待接入真实曲库**（`待接入真实曲库`）：用户将自行寻找真实古琴音频，**放置方式：下载音频命名为 `gong/shang/jue/zhi/yu.mp3` 覆盖 `static/audio/` 同名文件即可，无需改代码**（同一音的 22 首曲目按 yin_type 共享 5 个音频文件，沿用原架构）。教训：音频疗愈的核心是「成曲」而非「乐器音色模拟」，算法生成的随机音符序列再逼真也不构成音乐，此类需求应直接采用真实录音。详见 [HANDOFF §4 Phase 15](file:///c:/Users/dog51/Desktop/webwrold/HANDOFF.md)。关键词 `v2.4.7` / `音频方案回退` / `恢复mp3占位` / `待接入真实曲库` 在 6 份文档中都要出现。
+
+---
+
+> 🎵 **2026-08-16 v2.4.8 曲目独立音频架构（22 首曲目一曲一文件，替换五音共享 5 文件）**：用户指出核心架构问题——网页里有 22 首真实曲目（梅花三弄 / 流水 / 广陵散 / 卡农等），却按五音共享 5 个音频文件，「这么多曲目对应 5 个文件」根本没法按曲放置真实音频。① **[ARCH] 每曲独立文件**（`曲目独立音频`）：`audio_url` 从 `/static/audio/{五音}.mp3` 改为 `/static/audio/tracks/{曲名}.mp3`（22 个文件，中文曲名直接命名）——[seed.py](app/seed.py) 新曲目直写 tracks 路径，`_ensure_placeholder_audio()` 改为按 SEED_MUSIC 逐曲生成静音占位（缺失才写）；② **[MIGRATION] 22 行 audio_url 重定向**（`audio_url迁移tracks`）：[database.py](app/database.py) 幂等迁移 `UPDATE musics SET audio_url = '/static/audio/tracks/' || title || '.mp3'`（按曲名拼接，老库重启自动切换，已在 tracks/ 的行不受影响）；③ **[CHORE] 删除 5 个五音共享占位**。**用户接入真实音频（零代码）**：下载对应曲目音频命名为曲名（如 `流水.mp3`）放入 `static/audio/tracks/` 同名覆盖即可，每首曲目独立对应、互不影响；前端播放器直接用 DB `audio_url`，零改动。详见 [HANDOFF §4 Phase 16](file:///c:/Users/dog51/Desktop/webwrold/HANDOFF.md)。关键词 `v2.4.8` / `曲目独立音频` / `audio_url迁移tracks` / `五音共享废弃` 在 6 份文档中都要出现。
 
 ---
 

@@ -44,6 +44,10 @@
 
 ---
 
+> 🎵 **2026-08-16 v2.4.8 曲目独立音频架构（audio_url 粒度从五音提升到曲目）**：本次为架构修正——**`audio_url` 的粒度（五音，5 个共享文件）与前端展示粒度（曲目，22 首）不一致**，导致用户无法按曲放置真实音频。① **URL 结构**：`audio_url` 从 `/static/audio/{五音}.mp3` 改为 `/static/audio/tracks/{曲名}.mp3`（22 个文件，中文曲名直接命名——浏览器自动 percent-encode，Starlette StaticFiles 解码按 UTF-8 匹配，git 原生支持 UTF-8 文件名，全链路无障碍）；② **数据层**：[database.py](../../app/database.py) musics 表幂等迁移**按 title 拼接**新路径（`'/static/audio/tracks/' || title || '.mp3'`，一条 SQL 重定向 22 行，已在 tracks/ 的行不受影响）；[seed.py](../../app/seed.py) `SEED_MUSIC` 驱动 audio_url 与逐曲占位；③ **前端零改动**：播放器本就 DB 驱动（`<audio :src="currentMusic.audio_url">`），粒度变更对前端透明。**架构教训**：静态资源 URL 的粒度必须对齐展示实体（曲目），不能按分类（五音）偷懒共享——否则内容接入（每曲放真实音频）直接被卡死。关键词 `v2.4.8` / `曲目独立音频` / `audio_url迁移tracks` / `五音共享废弃` 在 6 份文档中都要出现。
+
+---
+
 ## 1. 总体架构
 
 > **2026-07-19 v2.0 全站 Vue 3 重构**：前端从 Jinja2 SSR + 原生 JS 迁移到 Vue 3 SPA + Vite 工程化，后端 FastAPI 简化为纯 API + SPA fallback。

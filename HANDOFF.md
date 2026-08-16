@@ -33,13 +33,17 @@
 
 ---
 
+> 🎵 **2026-08-16 v2.4.8 曲目独立音频架构（22 首曲目一曲一文件，替换五音共享 5 文件）**：用户指出核心架构问题——网页里有 22 首真实曲目（梅花三弄 / 流水 / 广陵散 / 卡农等），却按五音共享 5 个音频文件，「这么多曲目对应 5 个文件」根本没法按曲放置真实音频。① **[ARCH] 每曲独立文件**（`曲目独立音频`）：`audio_url` 从 `/static/audio/{五音}.mp3` 改为 `/static/audio/tracks/{曲名}.mp3`（22 个文件，中文曲名直接命名）——[seed.py](../../app/seed.py) 新曲目直写 tracks 路径，`_ensure_placeholder_audio()` 改为按 SEED_MUSIC 逐曲生成静音占位（缺失才写）；② **[MIGRATION] 22 行 audio_url 重定向**（`audio_url迁移tracks`）：[database.py](../../app/database.py) 幂等迁移 `UPDATE musics SET audio_url = '/static/audio/tracks/' || title || '.mp3'`（按曲名拼接，老库重启自动切换，已在 tracks/ 的行不受影响）；③ **[CHORE] 删除 5 个五音共享占位**。**用户接入真实音频（零代码）**：下载对应曲目音频命名为曲名（如 `流水.mp3`）放入 `static/audio/tracks/` 同名覆盖即可，每首曲目独立对应、互不影响；前端播放器直接用 DB `audio_url`，零改动。详见 §4 Phase 16。关键词 `v2.4.8` / `曲目独立音频` / `audio_url迁移tracks` / `五音共享废弃` 在 6 份文档中都要出现。
+
+---
+
 ## 0. 你正在接手什么
 
 **项目名**：静屿（代号，可改）
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 强隐私 / 轻运营
 **代码体量**：约 2 500 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.4.7 — 2026-08-16 音频方案回退（v2.4.6 合成方案试听否决：随机拨弦≠成曲；删除 generate_audio.py + 5 个 wav，恢复 5 个 mp3 静音占位，musics.audio_url 幂等反向迁移 .wav→.mp3，**待接入真实曲库**：用户自备音频命名为 `gong/shang/jue/zhi/yu.mp3` 覆盖 `static/audio/` 同名文件即可）。前一阶段 v2.4.6（2026-08-16 五音音频真实化尝试，Karplus-Strong 合成古琴拨弦，**已被 v2.4.7 回退**，详见 §4 Phase 14）+ v2.4.5（2026-08-16 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一，详见 §4 Phase 13）+ v2.4.4（2026-08-15 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨，详见 §4 Phase 12）+ v2.4.3（2026-08-14 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复，详见 §4 Phase 11）+ v2.4.2（2026-08-13 整体架构优化与冗余清理，维护性清理版本，详见 §4 Phase 10 后段）+ v2.4.1（2026-08-10 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图，详见 §4 Phase 10）+ v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊改名 + 露水累加修复，详见 §4 Phase 9）+ v2.3.3（2026-07-30 Safari 兼容性修复：3D 上下文恢复 + emoji 跨浏览器一致，详见 §4 Phase 8）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱，详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
+**当前阶段**：v2.4.8 — 2026-08-16 曲目独立音频架构（22 首曲目从「按五音共享 5 个文件」改为「一曲一文件」`static/audio/tracks/{曲名}.mp3`，musics.audio_url 幂等迁移按 title 拼接重定向，**待接入真实曲库**：用户下载对应曲目音频命名为曲名放入 tracks/ 同名覆盖即可，零代码）。前一阶段 v2.4.7（2026-08-16 音频方案回退：v2.4.6 Karplus-Strong 合成试听否决，删脚本恢复 mp3 占位，详见 §4 Phase 15）+ v2.4.6（2026-08-16 五音音频真实化尝试，**已被 v2.4.7 回退**，详见 §4 Phase 14）+ v2.4.5（2026-08-16 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一，详见 §4 Phase 13）+ v2.4.4（2026-08-15 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨，详见 §4 Phase 12）+ v2.4.3（2026-08-14 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复，详见 §4 Phase 11）+ v2.4.2（2026-08-13 整体架构优化与冗余清理，维护性清理版本，详见 §4 Phase 10 后段）+ v2.4.1（2026-08-10 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图，详见 §4 Phase 10）+ v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊改名 + 露水累加修复，详见 §4 Phase 9）+ v2.3.3（2026-07-30 Safari 兼容性修复：3D 上下文恢复 + emoji 跨浏览器一致，详见 §4 Phase 8）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱，详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
 
 ---
 
@@ -644,6 +648,26 @@ webwrold/
 **Smoke test 结果**（2026-08-16 实测）：5 个 mp3 占位恢复，字节数 5338 × 5 与 v2.4.5 完全一致 ✅；`git status` 确认 static/audio 下仅 5 个 mp3、无 wav 残留 ✅
 
 **6 份文档同步**（Iron Rule）：README 状态徽章 v2.4.6→v2.4.7 + 顶部 v2.4.7 提示块 / HANDOFF §0 当前阶段 + 顶部提示块 + §4 Phase 15（本节）/ PROJECT_STATE §1（v2.4.6 行标注已回退 + 新增 v2.4.7 行）+ §2（新增 2026-08-16 v2.4.7 节）+ 顶部提示块 + 「最后更新」v2.4.7 / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
+
+### Phase 16 — v2.4.8 曲目独立音频架构（22 首曲目一曲一文件）（2026-08-16 加）
+
+> 设计原则：**「一曲一文件 · 曲名即路径 · 用户零成本接入」** —— 用户指出核心架构问题：网页有 22 首真实曲目，却按五音共享 5 个音频文件，根本没法按曲放置真实音频。这是架构债：`audio_url` 的粒度（五音）与展示粒度（曲目）不一致。
+
+**改动清单**（3 项，详见 [README 顶部 v2.4.8 提示块](../../README.md)）：
+
+1. **[ARCH] 每曲独立文件**（`曲目独立音频`）：`audio_url` 从 `/static/audio/{五音}.mp3` 改为 `/static/audio/tracks/{曲名}.mp3`——22 个文件用**中文曲名直接命名**（梅花三弄.mp3 / 流水.mp3 / 广陵散.mp3 / 卡农.mp3 …），用户下载对应曲目音频后**不用改名**直接放入 tracks/（已是曲名的）或同名覆盖；[seed.py](../../app/seed.py) `SEED_MUSIC` 循环生成 `audio_url` + `_ensure_placeholder_audio()` 按 SEED_MUSIC 逐曲写静音占位（缺失才写，5338 字节假 MP3）
+2. **[MIGRATION] 22 行 audio_url 重定向**（`audio_url迁移tracks`）：[database.py](../../app/database.py) musics 表块新增幂等迁移 `UPDATE musics SET audio_url = '/static/audio/tracks/' || title || '.mp3' WHERE audio_url LIKE '/static/audio/%.mp3' AND audio_url NOT LIKE '/static/audio/tracks/%'`——**按 title 拼接，一条 SQL 搞定 22 行**，老库重启自动切换（日志 `[MIGRATE] musics.audio_url 已切换为每曲独立文件`）
+3. **[CHORE] 删除 5 个五音共享占位**（`五音共享废弃`：static/audio/{gong|shang|jue|zhi|yu}.mp3 移除，audio 根目录只剩 tracks/ 子目录）
+
+**关键决策：为什么用中文曲名直接做文件名？** 用户是中文用户，自己下载音频放文件——「下载什么名就放什么名」体验最好。浏览器请求中文 URL 自动 percent-encode，Starlette StaticFiles 解码后按 UTF-8 匹配文件，全链路无障碍；git 对 UTF-8 文件名原生支持。若未来出现跨平台编码问题，再考虑拼音 slug + 对照表。
+
+**前端零改动**：两个播放页（[MusicDetailView.vue](../../frontend/src/views/music/MusicDetailView.vue) / [MusicWesternView.vue](../../frontend/src/views/music/MusicWesternView.vue)）都用 `<audio :src="currentMusic.audio_url">` + `@ended` 下一首——audio_url 指哪播哪，DB 驱动。
+
+**改动文件**：`app/seed.py`（tracks 路径 + 逐曲占位）/ `app/database.py`（迁移）/ `static/audio/tracks/*.mp3`（22 个占位新增）/ 删 `static/audio/*.mp3`（5 个）/ `app/main.py` 版本号 2.4.7 → 2.4.8（`版本号对齐`）。**无新依赖**。
+
+**Smoke test 结果**（2026-08-16 实测）：22 个占位文件生成，`Glob` 校验中文文件名全部正确（梅花三弄/阳关三叠/…/昨日重现，各 5338 字节）✅；audio 根目录仅 tracks/ 子目录、无五音残留 ✅；迁移 SQL 为纯字符串拼接幂等逻辑，老库重启生效（沙箱内无 sqlalchemy 无法起后端实测，风险低）
+
+**6 份文档同步**（Iron Rule）：README 状态徽章 v2.4.7→v2.4.8 + 顶部 v2.4.8 提示块 / HANDOFF §0 当前阶段 + 顶部提示块 + §4 Phase 16（本节）/ PROJECT_STATE §1（新增 v2.4.8 行）+ §2（新增 2026-08-16 v2.4.8 节）+ 顶部提示块 + 「最后更新」v2.4.8 / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
 
 ---
 
