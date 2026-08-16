@@ -5,7 +5,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Status](https://img.shields.io/badge/status-v2.4.6-success)]()
+[![Status](https://img.shields.io/badge/status-v2.4.7-success)]()
 
 一个旨在缓解现代人焦虑情绪、关注心理健康的 Web 应用。通过「古琴五音疗愈」与「私密情绪记录」相结合，提供一个安全、安静、无压力的精神角落。
 
@@ -38,6 +38,10 @@
 ---
 
 > 🔊 **2026-08-16 v2.4.6 五音音频真实化（静音占位 → Karplus-Strong 合成古琴拨弦）**：本次解决「音频全是占位文件、播放无声」的历史遗留问题。原 `static/audio/{gong|shang|jue|zhi|yu}.mp3` 是 [seed.py](app/seed.py) 生成的 5338 字节静音假 MP3（仅 0.2 秒静音帧）。① **[FEATURE] 五音真实音频**（`五音音频合成`）：新增 [scripts/generate_audio.py](scripts/generate_audio.py)，用 **Karplus-Strong 拨弦物理建模**（噪声激励 + 延迟线反馈，本身就是为模拟弦振动设计的算法）纯 Python 合成古琴风格音频——五音各用对应的中国五声调式（宫 C 系统中正平和 / 商 D 系统清肃 / 角 E 系统舒展 / 徵 G 系统明快 / 羽 A 系统柔润安宁），低音区 + 慢速稀疏音符 + 长延音 + 偶发低八度散音，贴近古琴气质；每段 78 秒 / 22.05kHz / 16bit / mono WAV（3.4MB），固定随机种子可复现。② **[MIGRATION] audio_url 切 .wav**（`audio_url切wav`）：[database.py](app/database.py) 新增幂等数据迁移 `UPDATE musics SET audio_url = REPLACE(audio_url, '.mp3', '.wav')`（老库自动切换，重启即生效）；[seed.py](app/seed.py) 新曲目直接写 `.wav`，占位兜底改为写最小合法 RIFF 静音 WAV。③ **[CHORE] 删除 5 个假 MP3 占位文件**。说明：沙箱环境网络下载（curl/git/pip）全被拦截且 GitHub 无古琴音频仓库，故选择本地合成方案——零版权风险 + 完全离线可复现；恢复/重新生成音频运行 `python scripts/generate_audio.py`。详见 [HANDOFF §4 Phase 14](file:///c:/Users/dog51/Desktop/webwrold/HANDOFF.md)。关键词 `v2.4.6` / `五音音频合成` / `Karplus-Strong` / `audio_url切wav` 在 6 份文档中都要出现。
+
+---
+
+> 🔁 **2026-08-16 v2.4.7 音频方案回退（合成 wav 移除，恢复 mp3 占位，待接入真实曲库）**：v2.4.6 的 Karplus-Strong 合成方案上线后用户试听反馈「不是音乐，只是随机拨弦声」——合成音频无旋律结构、无乐句呼应，起不到乐曲的疗愈作用，方案否决。① **[REVERT] 移除合成音频**：删除 `scripts/generate_audio.py` 与 5 个合成 wav（`static/audio/*.wav`），恢复 5 个 mp3 静音占位（`恢复mp3占位`，各 5338 字节，与 v2.4.5 完全一致）；② **[MIGRATION] audio_url 切回 .mp3**（`音频方案回退`）：[database.py](app/database.py) 幂等反向迁移 `.wav→.mp3`（跑过 v2.4.6 的老库重启自动切回）；[seed.py](app/seed.py) 恢复 mp3 占位逻辑；③ **[PLAN] 待接入真实曲库**（`待接入真实曲库`）：用户将自行寻找真实古琴音频，**放置方式：下载音频命名为 `gong/shang/jue/zhi/yu.mp3` 覆盖 `static/audio/` 同名文件即可，无需改代码**（同一音的 22 首曲目按 yin_type 共享 5 个音频文件，沿用原架构）。教训：音频疗愈的核心是「成曲」而非「乐器音色模拟」，算法生成的随机音符序列再逼真也不构成音乐，此类需求应直接采用真实录音。详见 [HANDOFF §4 Phase 15](file:///c:/Users/dog51/Desktop/webwrold/HANDOFF.md)。关键词 `v2.4.7` / `音频方案回退` / `恢复mp3占位` / `待接入真实曲库` 在 6 份文档中都要出现。
 
 ---
 
