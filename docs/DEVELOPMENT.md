@@ -44,6 +44,10 @@
 
 ---
 
+> 🛠️ **2026-08-17 v2.4.9 开发规则（全站稳定性大修的 4 条新铁律）**：本次 6 个 bug 总结出 4 条开发规则，写代码时必须遵守：① **GSAP 入场动画只允许位移**（`GSAP位移化`）——`gsap.from()` 一律不设 `opacity` / `scale` 初始态（只传 `y` / `x`），动画被中断（路由切换 / 切后台）时元素会永久卡在初始态，v2.4.4 / v2.4.5 / v2.4.9 三次同类 bug 全因此而起；② **iconify 图标名必须查数据**（`图标名修正`）——写 `twemoji:xxx` 前先查 `frontend/node_modules/@iconify-json/twemoji/icons.json` 实际存在（含 `aliases`），凭记忆写会 404（wave→water-wave / gift→wrapped-gift / magnifying-glass-left→left-pointing-magnifying-glass）；③ **EMOJI_MAP 新增图标的流程**（`emoji离线注册`）——改 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) EMOJI_MAP 时同步改 [scripts/extract_twemoji.mjs](../../scripts/extract_twemoji.mjs) 的 NEEDED 列表 → 运行 `node scripts/extract_twemoji.mjs` 重新生成 [twemoji-icons.js](../../frontend/src/assets/twemoji-icons.js) → `npm run build`（未注册的图标会退回运行时请求 api.iconify.design，破坏离线性）；④ **api 返回值不要再取 `.data`**（`双重解包修复`）——[api/index.js](../../frontend/src/api/index.js) 拦截器已解包 `response.data`，视图里 `const res = await api.get(...)` 的 `res` **就是**后端 JSON body（写 `res.data?.xxx` = 双重解包永远 undefined，MusicDetailView 为此空列表 / MusicListView 为此推荐永远失败）；⑤ **同类 bug 必须全局排查**——修一个 bug 时 grep 全站同类模式（本次 11 个视图的 opacity:0 是历史遗留单点修补的恶果）。关键词 `v2.4.9` / `GSAP位移化` / `emoji离线注册` / `twemoji-icons.js` / `图标名修正` / `wavePhases作用域修复` / `yin端点恢复` / `双重解包修复` / `cookie_txt清理` 在 6 份文档中都要出现。
+
+---
+
 ## 1. 开发铁律
 
 ### 1.1 分层不许乱

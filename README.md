@@ -5,7 +5,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Status](https://img.shields.io/badge/status-v2.4.8-success)]()
+[![Status](https://img.shields.io/badge/status-v2.4.9-success)]()
 
 一个旨在缓解现代人焦虑情绪、关注心理健康的 Web 应用。通过「古琴五音疗愈」与「私密情绪记录」相结合，提供一个安全、安静、无压力的精神角落。
 
@@ -46,6 +46,10 @@
 ---
 
 > 🎵 **2026-08-16 v2.4.8 曲目独立音频架构（22 首曲目一曲一文件，替换五音共享 5 文件）**：用户指出核心架构问题——网页里有 22 首真实曲目（梅花三弄 / 流水 / 广陵散 / 卡农等），却按五音共享 5 个音频文件，「这么多曲目对应 5 个文件」根本没法按曲放置真实音频。① **[ARCH] 每曲独立文件**（`曲目独立音频`）：`audio_url` 从 `/static/audio/{五音}.mp3` 改为 `/static/audio/tracks/{曲名}.mp3`（22 个文件，中文曲名直接命名）——[seed.py](app/seed.py) 新曲目直写 tracks 路径，`_ensure_placeholder_audio()` 改为按 SEED_MUSIC 逐曲生成静音占位（缺失才写）；② **[MIGRATION] 22 行 audio_url 重定向**（`audio_url迁移tracks`）：[database.py](app/database.py) 幂等迁移 `UPDATE musics SET audio_url = '/static/audio/tracks/' || title || '.mp3'`（按曲名拼接，老库重启自动切换，已在 tracks/ 的行不受影响）；③ **[CHORE] 删除 5 个五音共享占位**。**用户接入真实音频（零代码）**：下载对应曲目音频命名为曲名（如 `流水.mp3`）放入 `static/audio/tracks/` 同名覆盖即可，每首曲目独立对应、互不影响；前端播放器直接用 DB `audio_url`，零改动。详见 [HANDOFF §4 Phase 16](file:///c:/Users/dog51/Desktop/webwrold/HANDOFF.md)。关键词 `v2.4.8` / `曲目独立音频` / `audio_url迁移tracks` / `五音共享废弃` 在 6 份文档中都要出现。
+
+---
+
+> 🛠️ **2026-08-17 v2.4.9 全站稳定性大修（6 个 bug 修复 + 项目结构清理）**：全站回归测试发现 6 个真实 bug 全部修复。① **[BUG FIX] GSAP 动画永久不可见全站根治**（`GSAP位移化`）：11 个视图（HomeView / MusicListView / MusicWesternView / AIChatView / ProfileView / GardenView / ShopView / NotificationsView / DiaryListView / DiaryWriteView / PickBottleView）的 `gsap.from()` 仍带 `opacity:0` 初始态，动画被中断（路由切换 / 切后台）时元素**永久卡在不可见状态**——「首页主标题不见」「/music 页整页空白」的根因；全部改为只保留位移 `y` 动画（v2.4.5 MoodCalendarView 同类修复的**全站推广**）。② **[BUG FIX] EmojiIcon 离线注册**（`emoji离线注册`）：[EmojiIcon.vue](frontend/src/components/EmojiIcon.vue) 用 `<Icon>` 却从未注册图标数据，运行时逐个请求 `api.iconify.design`（断网 / 被墙图标全消失，与「离线 0 HTTP」注释矛盾）；新增 [scripts/extract_twemoji.mjs](scripts/extract_twemoji.mjs) 从 `@iconify-json/twemoji`（10MB 全集）提取 28 个项目图标生成 [frontend/src/assets/twemoji-icons.js](frontend/src/assets/twemoji-icons.js)（30KB），EmojiIcon 启动时 `addIcon` 注册——真正 **0 运行时 HTTP**。③ **[BUG FIX] 3 个错误图标名**（`图标名修正`）：EMOJI_MAP 中 `wave` / `gift` / `magnifying-glass-left` 在 twemoji 集合**不存在**（联网也 404）→ `water-wave` / `wrapped-gift` / `left-pointing-magnifying-glass`。④ **[BUG FIX] AudioVisualizer 崩溃**（`wavePhases作用域修复`）：`wavePhases` 声明在 `startRender()` 内部而 `renderWave()` 在外部引用 → 默认「流动波形」模式一渲染就 `ReferenceError`；提升为模块级常量。⑤ **[BUG FIX] 五音详情页 404**（`yin端点恢复`）：前端调 `GET /api/music/yin/{yin}`，该端点在历史重构中丢失（落入 SPA 兜底 404，「曲目加载失败」）→ [music.py](app/routers/music.py) 补回，返回 `{musics:[...]}`。⑥ **[BUG FIX] axios 双重解包**（`双重解包修复`）：api 拦截器已解包 `response.data`，[MusicDetailView.vue](frontend/src/views/music/MusicDetailView.vue) `res.data?.musics`（永远空列表）+ [MusicListView.vue](frontend/src/views/music/MusicListView.vue) AI 推荐 `res.data || {}`（推荐永远失败）→ `res?.musics` / `res || {}`。⑦ **[CHORE] 结构清理**（`cookie_txt清理`）：删 git 追踪的 cookie.txt（curl 会话文件不该入库）+ `.gitignore` 增补。**无新依赖 / 无数据库迁移**，main.py 版本号 2.4.8 → 2.4.9。浏览器端到端回归：首页 / 音乐列表 / 五音详情（4 首可播放）/ 西方曲谱 / 日记 / 情绪日历打卡 / 花园 / 花坊 / 树洞 / 通知 / 个人主页全部 PASS。详见 [HANDOFF §4 Phase 17](file:///c:/Users/dog51/Desktop/webwrold/HANDOFF.md)。关键词 `v2.4.9` / `GSAP位移化` / `emoji离线注册` / `twemoji-icons.js` / `图标名修正` / `wavePhases作用域修复` / `yin端点恢复` / `双重解包修复` / `cookie_txt清理` 在 6 份文档中都要出现。
 
 ---
 

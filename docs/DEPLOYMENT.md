@@ -52,6 +52,10 @@
 
 ---
 
+> 🛠️ **2026-08-17 v2.4.9 部署须知（全站稳定性大修：必须重新构建前端）**：本次修复了 GSAP 动画不可见 / emoji 图标外网请求 / 五音详情 404 等 6 个 bug，**涉及前端源码改动，部署时必须重新构建**。部署步骤：① `python start.py build`（或 `cd frontend && npm install && npm run build`）——新前端包含 11 个视图的 GSAP 修复 + EmojiIcon 离线注册（twemoji-icons.js 打进 bundle）+ 双重解包修复；② `python start.py restart`——新后端包含 `GET /api/music/yin/{yin}` 端点补回（[app/routers/music.py](../../app/routers/music.py)）；③ **无新依赖**（package.json 无变化，`@iconify/vue` / `@iconify-json/twemoji` 原本就有）/ **无数据库迁移** / **无 .env 变更**；④ 版本号：[app/main.py](../../app/main.py) 2.4.8 → 2.4.9（`版本号对齐`）；⑤ 仓库变化：新增 [scripts/extract_twemoji.mjs](../../scripts/extract_twemoji.mjs) + [frontend/src/assets/twemoji-icons.js](../../frontend/src/assets/twemoji-icons.js)，删除 cookie.txt（`.gitignore` 已增补）。验证：部署后浏览器打开 `/music/gong` 应显示 4 首曲目（梅花三弄等）且 console 无 `api.iconify.design` 请求。关键词 `v2.4.9` / `GSAP位移化` / `emoji离线注册` / `twemoji-icons.js` / `图标名修正` / `wavePhases作用域修复` / `yin端点恢复` / `双重解包修复` / `cookie_txt清理` 在 6 份文档中都要出现。
+
+---
+
 ## 前端构建（v2.0 Vue 3 重构后必做，所有部署方式通用）
 
 > 2026-07-19 v2.0 全站 Vue 3 重构后，前台从 Jinja2 SSR 迁移到 Vue 3 SPA。**部署前必须先构建前端**，否则访问 :5000 只看到「dist 未构建」提示页。

@@ -37,13 +37,17 @@
 
 ---
 
+> 🛠️ **2026-08-17 v2.4.9 全站稳定性大修（6 个 bug 修复 + 项目结构清理）**：全站回归测试发现 6 个真实 bug 全部修复。① **GSAP 动画永久不可见全站根治**（`GSAP位移化`）：11 个视图的 `gsap.from()` 仍带 `opacity:0` 初始态（首页主标题不见 / /music 整页空白的根因），全部改为只保留位移 `y` 动画；② **EmojiIcon 离线注册**（`emoji离线注册`）：新增 [scripts/extract_twemoji.mjs](../../scripts/extract_twemoji.mjs) 提取 28 个图标生成 [twemoji-icons.js](../../frontend/src/assets/twemoji-icons.js)（30KB），`addIcon` 启动注册，真正 0 运行时 HTTP；③ **3 个错误图标名**（`图标名修正`）：wave / gift / magnifying-glass-left → water-wave / wrapped-gift / left-pointing-magnifying-glass；④ **AudioVisualizer 崩溃**（`wavePhases作用域修复`）：`wavePhases` 提升为模块级常量；⑤ **五音详情 404**（`yin端点恢复`）：补回 `GET /api/music/yin/{yin}`；⑥ **axios 双重解包**（`双重解包修复`）：`res.data?.musics` → `res?.musics` 等 2 处；⑦ **结构清理**（`cookie_txt清理`）。无新依赖 / 无迁移，版本号 2.4.8 → 2.4.9。详见 §4 Phase 17。关键词 `v2.4.9` / `GSAP位移化` / `emoji离线注册` / `twemoji-icons.js` / `图标名修正` / `wavePhases作用域修复` / `yin端点恢复` / `双重解包修复` / `cookie_txt清理` 在 6 份文档中都要出现。
+
+---
+
 ## 0. 你正在接手什么
 
 **项目名**：静屿（代号，可改）
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 强隐私 / 轻运营
 **代码体量**：约 2 500 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.4.8 — 2026-08-16 曲目独立音频架构（22 首曲目从「按五音共享 5 个文件」改为「一曲一文件」`static/audio/tracks/{曲名}.mp3`，musics.audio_url 幂等迁移按 title 拼接重定向，**待接入真实曲库**：用户下载对应曲目音频命名为曲名放入 tracks/ 同名覆盖即可，零代码）。前一阶段 v2.4.7（2026-08-16 音频方案回退：v2.4.6 Karplus-Strong 合成试听否决，删脚本恢复 mp3 占位，详见 §4 Phase 15）+ v2.4.6（2026-08-16 五音音频真实化尝试，**已被 v2.4.7 回退**，详见 §4 Phase 14）+ v2.4.5（2026-08-16 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一，详见 §4 Phase 13）+ v2.4.4（2026-08-15 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨，详见 §4 Phase 12）+ v2.4.3（2026-08-14 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复，详见 §4 Phase 11）+ v2.4.2（2026-08-13 整体架构优化与冗余清理，维护性清理版本，详见 §4 Phase 10 后段）+ v2.4.1（2026-08-10 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图，详见 §4 Phase 10）+ v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊改名 + 露水累加修复，详见 §4 Phase 9）+ v2.3.3（2026-07-30 Safari 兼容性修复：3D 上下文恢复 + emoji 跨浏览器一致，详见 §4 Phase 8）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱，详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
+**当前阶段**：v2.4.9 — 2026-08-17 全站稳定性大修（回归测试发现 6 个真实 bug 全部修复：GSAP `opacity:0` 永久不可见 11 视图根治 / EmojiIcon 离线注册（twemoji-icons.js 28 图标 0 运行时 HTTP）/ 3 个错误图标名 / AudioVisualizer wavePhases 作用域 / 五音详情 `GET /api/music/yin/{yin}` 端点补回 / axios 双重解包 2 处 + cookie.txt 结构清理，详见 §4 Phase 17）。前一阶段 v2.4.8（2026-08-16 曲目独立音频架构：22 首曲目一曲一文件 `static/audio/tracks/{曲名}.mp3`，**待接入真实曲库**：同名覆盖即可零代码，详见 §4 Phase 16）+ v2.4.7（2026-08-16 音频方案回退：v2.4.6 Karplus-Strong 合成试听否决，删脚本恢复 mp3 占位，详见 §4 Phase 15）+ v2.4.6（2026-08-16 五音音频真实化尝试，**已被 v2.4.7 回退**，详见 §4 Phase 14）+ v2.4.5（2026-08-16 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一，详见 §4 Phase 13）+ v2.4.4（2026-08-15 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨，详见 §4 Phase 12）+ v2.4.3（2026-08-14 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复，详见 §4 Phase 11）+ v2.4.2（2026-08-13 整体架构优化与冗余清理，维护性清理版本，详见 §4 Phase 10 后段）+ v2.4.1（2026-08-10 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图，详见 §4 Phase 10）+ v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊改名 + 露水累加修复，详见 §4 Phase 9）+ v2.3.3（2026-07-30 Safari 兼容性修复：3D 上下文恢复 + emoji 跨浏览器一致，详见 §4 Phase 8）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱，详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
 
 ---
 
@@ -668,6 +672,26 @@ webwrold/
 **Smoke test 结果**（2026-08-16 实测）：22 个占位文件生成，`Glob` 校验中文文件名全部正确（梅花三弄/阳关三叠/…/昨日重现，各 5338 字节）✅；audio 根目录仅 tracks/ 子目录、无五音残留 ✅；迁移 SQL 为纯字符串拼接幂等逻辑，老库重启生效（沙箱内无 sqlalchemy 无法起后端实测，风险低）
 
 **6 份文档同步**（Iron Rule）：README 状态徽章 v2.4.7→v2.4.8 + 顶部 v2.4.8 提示块 / HANDOFF §0 当前阶段 + 顶部提示块 + §4 Phase 16（本节）/ PROJECT_STATE §1（新增 v2.4.8 行）+ §2（新增 2026-08-16 v2.4.8 节）+ 顶部提示块 + 「最后更新」v2.4.8 / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
+
+### Phase 17 — v2.4.9 全站稳定性大修（6 bug 修复 + 结构清理）（2026-08-17 加）
+
+> 起因：用户要求全面测试找 bug。浏览器端到端回归（注册 → 登录 → 逐模块走查）揪出 6 个真实 bug——其中 3 个是「页面能打开但内容不可见」的隐形炸弹（GSAP / 图标 / 可视化各一），2 个是五音详情页数据链路断裂，1 个是仓库卫生问题。
+
+**改动清单**（7 项，详见 [README 顶部 v2.4.9 提示块](../../README.md)）：
+
+1. **[BUG FIX] GSAP 动画永久不可见全站根治**（`GSAP位移化`）：11 个视图（HomeView / MusicListView / MusicWesternView / AIChatView / ProfileView / GardenView / ShopView / NotificationsView / DiaryListView / DiaryWriteView / PickBottleView）的 `gsap.from()` 仍带 `opacity:0` 初始态——动画被中断（路由切换 / 切后台）时元素**永久卡在 opacity:0**。这是 v2.4.4/v2.4.5 修过的同类 bug（当时只修了 MoodCalendarView 一处），本次全站推广：入场动画只保留位移 `y`，一律不设 `opacity`/`scale` 初始态。**教训：同类 bug 修复时必须全局 grep 排查，逐处修补会漏**。
+2. **[BUG FIX] EmojiIcon 离线注册**（`emoji离线注册`）：[EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue) 用 `@iconify/vue` 的 `<Icon>` 却从未注册图标数据——运行时逐个请求 `api.iconify.design`（断网 / 被墙图标全消失，与注释「离线 0 HTTP」矛盾，浏览器测试实锤外网请求失败）。修复：新增 [scripts/extract_twemoji.mjs](../../scripts/extract_twemoji.mjs)（一次性脚本）从 `@iconify-json/twemoji`（10MB 全集）提取项目所需 28 个图标生成 [frontend/src/assets/twemoji-icons.js](../../frontend/src/assets/twemoji-icons.js)（30KB，含别名解析），EmojiIcon 导入后 `addIcon` 逐个注册——**真正 0 运行时 HTTP**。改 EMOJI_MAP 新增图标时：改脚本 NEEDED 列表 → `node scripts/extract_twemoji.mjs` 重新生成。
+3. **[BUG FIX] 3 个错误图标名**（`图标名修正`）：EMOJI_MAP 中 `twemoji:wave` / `twemoji:gift` / `twemoji:magnifying-glass-left` 在 twemoji 集合**不存在**（联网也 404）→ `water-wave` / `wrapped-gift` / `left-pointing-magnifying-glass`。**教训：iconify 图标名必须以 @iconify-json 包内 icons.json 实际存在为准，不能凭记忆写**。
+4. **[BUG FIX] AudioVisualizer 渲染崩溃**（`wavePhases作用域修复`）：`wavePhases` 声明在 `startRender()` 函数内部，而 `renderWave()` 定义在组件外部作用域引用它 → 默认「流动波形」模式一进渲染循环就 `ReferenceError: wavePhases is not defined`（RAF 循环中断，可视化冻结）。修复：提升为模块级常量。**教训：模块级工具函数只能引用模块级变量，函数内部 const 不会外泄**。
+5. **[BUG FIX] 五音详情页 404**（`yin端点恢复`）：前端 [MusicDetailView.vue](../../frontend/src/views/music/MusicDetailView.vue) 调 `GET /api/music/yin/{yin}`，该端点在历史重构中丢失（不匹配任何路由 → 落入 SPA 兜底 → 404 JSON「曲目加载失败」）。修复：[music.py](../../app/routers/music.py) 补回 `GET /api/music/yin/{yin}`，返回 `{musics: [MusicOut...]}`（注册在 `/{music_id}` 之前）。
+6. **[BUG FIX] axios 双重解包**（`双重解包修复`）：[api/index.js](../../frontend/src/api/index.js) 响应拦截器已 `(response) => response.data`，视图里再取 `res.data` = 双重解包永远 undefined——MusicDetailView `res.data?.musics`（端点补回后列表仍永远空）+ MusicListView AI 推荐 `res.data || {}`（推荐永远走「暂时无法推荐」分支）。修复为 `res?.musics` / `res || {}`。**教训：改拦截器后必须全量排查调用点的取值方式**。
+7. **[CHORE] 结构清理**（`cookie_txt清理`）：删 git 追踪的 cookie.txt（curl 会话 cookie，不该入库）+ `.gitignore` 增补 `cookie.txt`。
+
+**改动文件**：11 个 .vue 视图（GSAP）+ EmojiIcon.vue + AudioVisualizer.vue + frontend/src/assets/twemoji-icons.js（新增）+ scripts/extract_twemoji.mjs（新增）+ app/routers/music.py + .gitignore + 删 cookie.txt + app/main.py 版本号 2.4.8 → 2.4.9（`版本号对齐`）。**无新依赖**（`@iconify/vue` / `@iconify-json/twemoji` 原本就在 package.json）。
+
+**Smoke test 结果**（2026-08-17 浏览器实测）：首页主标题+模块卡可见且 console 无 iconify 外网请求 ✅ / /music 五音 5 卡+西洋卡+AI 选音可见 ✅ / /music/gong 4 首曲目加载+选中播放+可视化正常 ✅ / /music/western 曲目列表 ✅ / 日记列表+写日记表单 ✅ / 情绪日历打卡成功+柱状图+罗素环 ✅ / /garden 资源卡+花田 ✅ / /shop 商品列表 ✅ / 树洞发消息 ✅ / 通知 ✅ / 个人主页统计+编辑弹窗 ✅
+
+**6 份文档同步**（Iron Rule）：README 状态徽章 v2.4.8→v2.4.9 + 顶部 v2.4.9 提示块 / HANDOFF §0 当前阶段 + 顶部提示块 + §4 Phase 17（本节）/ PROJECT_STATE §1（新增 v2.4.9 行）+ §2（新增 2026-08-17 v2.4.9 节）+ 顶部提示块 + 「最后更新」v2.4.9 / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
 
 ---
 

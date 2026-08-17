@@ -48,6 +48,10 @@
 
 ---
 
+> 🛠️ **2026-08-17 v2.4.9 全站稳定性大修（前端表现层 + API 契约层修复，架构无变化）**：本次为 bug 修复版本，**分层架构 / 数据库结构均无变化**，但有两个架构层教训：① **表现层——GSAP 动画初始态**（`GSAP位移化`）：11 个视图 `gsap.from({opacity:0})` 是「动画被中断 → 元素永久不可见」的定时炸弹（v2.4.4/v2.4.5 两度修复同类 bug 都只修单点，本次全站根治）——**架构规则固化：入场动画只允许位移（`y`），禁止 `opacity`/`scale` 初始态**；② **资源层——图标离线化**（`emoji离线注册`）：EmojiIcon 用 `@iconify/vue` 的 `<Icon>` 不注册数据 = 运行时外网请求 `api.iconify.design`（与离线承诺矛盾）——修复为**构建期代码生成**：[scripts/extract_twemoji.mjs](../../scripts/extract_twemoji.mjs) 从 10MB 全集提取 28 个图标生成 [frontend/src/assets/twemoji-icons.js](../../frontend/src/assets/twemoji-icons.js)（30KB 模块，含别名解析），`addIcon` 启动注册（**架构模式：外部资源 → 构建期裁剪 → 静态模块打包，杜绝运行时外网依赖**）；③ **API 契约层**（`yin端点恢复` / `双重解包修复`）：前端调用的 `GET /api/music/yin/{yin}` 在历史重构中丢失（无路由匹配 → SPA 兜底 404），补回该端点；同时 [api/index.js](../../frontend/src/api/index.js) 响应拦截器已解包 `response.data`，视图层再取 `res.data` = 双重解包——**教训：拦截器改过解包行为后必须全量排查调用点**。④ **图标名以数据为准**（`图标名修正`）：twemoji 图标名必须查 icons.json 实际存在（wave→water-wave / gift→wrapped-gift / magnifying-glass-left→left-pointing-magnifying-glass），不能凭记忆写。关键词 `v2.4.9` / `GSAP位移化` / `emoji离线注册` / `twemoji-icons.js` / `图标名修正` / `wavePhases作用域修复` / `yin端点恢复` / `双重解包修复` / `cookie_txt清理` 在 6 份文档中都要出现。
+
+---
+
 ## 1. 总体架构
 
 > **2026-07-19 v2.0 全站 Vue 3 重构**：前端从 Jinja2 SSR + 原生 JS 迁移到 Vue 3 SPA + Vite 工程化，后端 FastAPI 简化为纯 API + SPA fallback。
