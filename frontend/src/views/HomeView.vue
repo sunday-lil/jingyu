@@ -85,12 +85,12 @@ const scrollToModules = () => {
 }
 
 onMounted(() => {
-  // Hero 入场动效
+  // Hero 入场动效（只做位移，不设 opacity/scale 初始态，防动画中断后永久不可见）
   const tl = gsap.timeline({ delay: 0.2 })
-  tl.from('.hero-verse', { y: 20, opacity: 0, duration: 1, ease: 'power3.out' })
-    .from('.hero-title', { y: 30, opacity: 0, duration: 1.2, ease: 'power4.out' }, '-=0.6')
+  tl.from('.hero-verse', { y: 20, duration: 1, ease: 'power3.out' })
+    .from('.hero-title', { y: 30, duration: 1.2, ease: 'power4.out' }, '-=0.6')
     .from('.module-card', {
-      y: 30, opacity: 0, duration: 0.7, stagger: 0.08, ease: 'power3.out'
+      y: 30, duration: 0.7, stagger: 0.08, ease: 'power3.out'
     }, '-=0.4')
 
   // 岛屿图标持续呼吸

@@ -22,7 +22,15 @@
  * - 正文/用户输入的 emoji 保持系统 emoji（更自然）
  */
 import { computed } from 'vue'
-import { Icon } from '@iconify/vue'
+import { Icon, addIcon } from '@iconify/vue'
+import twemojiIcons from '@/assets/twemoji-icons'
+
+// 离线注册图标数据（v2.4.9 修复：此前未注册，Icon 组件会运行时请求
+// api.iconify.design，断网/被墙时图标全部消失）。数据由
+// scripts/extract_twemoji.mjs 从 @iconify-json/twemoji 提取生成。
+for (const [name, data] of Object.entries(twemojiIcons)) {
+  addIcon(`twemoji:${name}`, data)
+}
 
 const props = defineProps({
   emoji: {
@@ -38,8 +46,10 @@ const props = defineProps({
 // 项目用到的功能性 emoji → Twemoji 图标名映射
 // 完整列表见 https://icon-sets.iconify.design/twemoji/
 // v2.4.2：🏝️ 沙滩已下线（改用 🌊 海浪）；🍶 清酒瓶已下线（改用 🏺 双耳瓶）
+// v2.4.9：修正 3 个不存在的图标名（wave→water-wave / gift→wrapped-gift /
+//         magnifying-glass-left→left-pointing-magnifying-glass）
 const EMOJI_MAP = {
-  '🌊': 'twemoji:wave',
+  '🌊': 'twemoji:water-wave',
   '🌿': 'twemoji:herb',
   '🌱': 'twemoji:seedling',
   '🌸': 'twemoji:cherry-blossom',
@@ -53,7 +63,7 @@ const EMOJI_MAP = {
   '📖': 'twemoji:open-book',
   '🌙': 'twemoji:crescent-moon',
   '💛': 'twemoji:yellow-heart',
-  '🎁': 'twemoji:gift',
+  '🎁': 'twemoji:wrapped-gift',
   '✨': 'twemoji:sparkles',
   '🎶': 'twemoji:musical-notes',
   '🌳': 'twemoji:deciduous-tree',
@@ -61,7 +71,7 @@ const EMOJI_MAP = {
   '🐚': 'twemoji:spiral-shell',
   '🥂': 'twemoji:clinking-glasses',
   '🍾': 'twemoji:bottle-with-popping-cork',
-  '🔍': 'twemoji:magnifying-glass-left',
+  '🔍': 'twemoji:left-pointing-magnifying-glass',
   '⚙️': 'twemoji:gear',
   '🚪': 'twemoji:door',
   '📝': 'twemoji:memo',

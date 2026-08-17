@@ -267,17 +267,16 @@ onMounted(async () => {
   await startNewConversation()
 
   nextTick(() => {
-    gsap.from('.chat-header', { y: -16, opacity: 0, duration: 0.6, ease: 'power2.out' })
+    // 只做位移动画，不设 opacity 初始态（防动画中断后永久不可见）
+    gsap.from('.chat-header', { y: -16, duration: 0.6, ease: 'power2.out' })
     gsap.from('.chat-privacy', {
       y: -8,
-      opacity: 0,
       duration: 0.6,
       ease: 'power2.out',
       delay: 0.1,
     })
     gsap.from('.msg-row', {
       y: 14,
-      opacity: 0,
       duration: 0.5,
       ease: 'power3.out',
       stagger: 0.08,
@@ -285,7 +284,6 @@ onMounted(async () => {
     })
     gsap.from('.chat-input-wrap', {
       y: 20,
-      opacity: 0,
       duration: 0.6,
       ease: 'power3.out',
       delay: 0.25,

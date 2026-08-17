@@ -143,7 +143,7 @@ const setCurrency = (c) => {
   nextTick(() => {
     if (document.querySelector('.shop-card')) {
       gsap.from('.shop-card', {
-        y: 12, opacity: 0, duration: 0.4, stagger: 0.04, ease: 'power2.out',
+        y: 12, duration: 0.4, stagger: 0.04, ease: 'power2.out',
       })
     }
   })
@@ -152,14 +152,15 @@ const setCurrency = (c) => {
 onMounted(() => {
   fetchShop()
   nextTick(() => {
-    gsap.from('.shop-header', { y: -20, opacity: 0, duration: 0.6, ease: 'power2.out' })
-    gsap.from('.shop-energy', { y: 16, opacity: 0, duration: 0.55, ease: 'power3.out', delay: 0.1 })
-    gsap.from('.currency-tabs', { y: 12, opacity: 0, duration: 0.5, ease: 'power2.out', delay: 0.15 })
+    // 只做位移动画，不设 opacity 初始态（防动画中断后永久不可见）
+    gsap.from('.shop-header', { y: -20, duration: 0.6, ease: 'power2.out' })
+    gsap.from('.shop-energy', { y: 16, duration: 0.55, ease: 'power3.out', delay: 0.1 })
+    gsap.from('.currency-tabs', { y: 12, duration: 0.5, ease: 'power2.out', delay: 0.15 })
     gsap.from('.shop-group', {
-      y: 24, opacity: 0, duration: 0.55, stagger: 0.12, ease: 'power2.out', delay: 0.2,
+      y: 24, duration: 0.55, stagger: 0.12, ease: 'power2.out', delay: 0.2,
     })
     gsap.from('.shop-card', {
-      y: 18, opacity: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.35,
+      y: 18, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.35,
     })
   })
 })

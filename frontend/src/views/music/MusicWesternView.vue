@@ -219,7 +219,7 @@ const goBack = () => {
 onMounted(() => {
   fetchMusics()
   nextTick(() => {
-    gsap.from('.western-header', { y: -20, opacity: 0, duration: 0.6, ease: 'power2.out' })
+    gsap.from('.western-header', { y: -20, duration: 0.6, ease: 'power2.out' })
     if (audioEl.value) audioEl.value.volume = volume.value
   })
 })

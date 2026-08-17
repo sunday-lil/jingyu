@@ -192,16 +192,17 @@ const collectLeaves = async (flower) => {
 
 // 入场动画：对每个选择器先检查存在再调 gsap，避免 GSAP "target not found" 警告
 const playEnterAnimations = () => {
-  gsap.from('.garden-header', { y: -20, opacity: 0, duration: 0.6, ease: 'power2.out' })
-  gsap.from('.resource-card', { y: 20, opacity: 0, duration: 0.6, ease: 'power3.out', delay: 0.1, stagger: 0.08 })
+  // 只做位移动画，不设 opacity 初始态（防动画中断后永久不可见）
+  gsap.from('.garden-header', { y: -20, duration: 0.6, ease: 'power2.out' })
+  gsap.from('.resource-card', { y: 20, duration: 0.6, ease: 'power3.out', delay: 0.1, stagger: 0.08 })
   if (document.querySelector('.flower-card')) {
     gsap.from('.flower-card', {
-      y: 18, opacity: 0, duration: 0.5, stagger: 0.06, ease: 'power2.out', delay: 0.3,
+      y: 18, duration: 0.5, stagger: 0.06, ease: 'power2.out', delay: 0.3,
     })
   }
   if (document.querySelector('.garden-item')) {
     gsap.from('.garden-item', {
-      y: 16, opacity: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.5,
+      y: 16, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.5,
     })
   }
 }

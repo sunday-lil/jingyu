@@ -42,7 +42,8 @@ const recommendMusic = async () => {
   loading.value = true
   try {
     const res = await api.post('/ai/recommend-music', { user_state: text })
-    const { yin, reason, available } = res.data || {}
+    // api 拦截器已解包 response.data，res 即后端 JSON body
+    const { yin, reason, available } = res || {}
     if (!available || !YIN_INFO[yin]) {
       alert('暂时无法为你推荐，请稍后再试')
       return
@@ -56,24 +57,22 @@ const recommendMusic = async () => {
   }
 }
 
-// 入场动画：卡片 stagger 浮入
+// 入场动画：卡片 stagger 浮入（只做位移，不设 opacity 初始态，防动画中断后永久不可见）
 onMounted(() => {
   nextTick(() => {
     gsap.from('.ai-section', {
       y: -20,
-      opacity: 0,
       duration: 0.6,
       ease: 'power2.out',
     })
     gsap.from('.yin-card', {
       y: 30,
-      opacity: 0,
       duration: 0.8,
       stagger: 0.12,
       ease: 'power3.out',
     })
     gsap.from('.western-card', {
-      y: 24, opacity: 0, duration: 0.7, ease: 'power3.out', delay: 0.4,
+      y: 24, duration: 0.7, ease: 'power3.out', delay: 0.4,
     })
   })
 })

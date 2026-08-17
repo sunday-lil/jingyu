@@ -55,6 +55,10 @@ const YIN_COLORS = {
 // 5 音配色全集（每条曲线一个色）
 const WAVE_COLORS = ['#E8B8A8', '#E8C5A8', '#A8C5A0', '#E8A8B8', '#A8B8C5']
 
+// 5 条波的相位偏移（模块级作用域：renderWave 在 startRender 外部定义，
+// 若声明在 startRender 内部会 ReferenceError —— v2.4.9 修复）
+const wavePhases = [0, 0.6, 1.2, 1.8, 2.4]
+
 // 4 种模式定义
 const MODES = [
   { key: 'wave', name: '流动波形' },
@@ -166,9 +170,6 @@ const startRender = () => {
   const fps = isMobile() ? 24 : 30
   const frameInterval = 1000 / fps
   let lastFrame = 0
-
-  // 5 条波的相位偏移
-  const wavePhases = [0, 0.6, 1.2, 1.8, 2.4]
 
   const render = (ts) => {
     if (ts - lastFrame < frameInterval) {

@@ -74,7 +74,8 @@ const fetchMusics = async () => {
   errorMsg.value = ''
   try {
     const res = await api.get(`/music/yin/${yinKey.value}`)
-    musics.value = res.data?.musics || []
+    // api 拦截器已解包 response.data，res 即后端 JSON body
+    musics.value = res?.musics || []
   } catch (e) {
     errorMsg.value = '曲目加载失败，请稍后再试'
   } finally {

@@ -76,7 +76,7 @@ const fetchNotifications = async () => {
     await nextTick()
     if (document.querySelector('.notif-item')) {
       gsap.from('.notif-item', {
-        y: 16, opacity: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out',
+        y: 16, duration: 0.45, stagger: 0.05, ease: 'power2.out',
       })
     }
   } catch (e) {

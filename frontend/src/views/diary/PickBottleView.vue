@@ -168,10 +168,10 @@ const sendEncourage = async () => {
 
 onMounted(() => {
   nextTick(() => {
-    gsap.from('.pick-header', { y: -20, opacity: 0, duration: 0.6, ease: 'power2.out' })
+    // 只做位移动画，不设 opacity 初始态（防动画中断后永久不可见）
+    gsap.from('.pick-header', { y: -20, duration: 0.6, ease: 'power2.out' })
     gsap.from('.pick-hero', {
       y: 20,
-      opacity: 0,
       duration: 0.8,
       ease: 'power3.out',
       delay: 0.1,

@@ -32,6 +32,7 @@ logs/
 tmp/
 temp/
 *.tmp
+cookie.txt
 
 # 测试
 .pytest_cache/

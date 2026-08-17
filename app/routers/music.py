@@ -50,6 +50,36 @@ def list_music(
     ]
 
 
+@router.get("/yin/{yin}")
+def list_music_by_yin(yin: str, db: Session = Depends(get_db)):
+    """按五音列出曲目（宫/商/角/徵/羽）。
+
+    v2.4.9 修复：前端 MusicDetailView 调用 /api/music/yin/{yin}，
+    该端点在重构中丢失导致五音详情页「曲目加载失败」。
+    """
+    rows = (
+        db.query(Music)
+        .filter(Music.yin_type == yin)
+        .order_by(Music.id.asc())
+        .all()
+    )
+    return {
+        "musics": [
+            MusicOut(
+                id=m.id,
+                title=m.title,
+                audio_url=m.audio_url,
+                cover_image=m.cover_image,
+                yin_type=m.yin_type,
+                category=m.category,
+                duration=m.duration,
+                tags=m.tag_list(),
+            )
+            for m in rows
+        ]
+    }
+
+
 @router.get("/{music_id}", response_model=MusicOut)
 def get_music(music_id: int, db: Session = Depends(get_db)):
     m = db.get(Music, music_id)

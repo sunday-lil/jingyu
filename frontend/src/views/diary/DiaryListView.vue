@@ -108,10 +108,10 @@ const goPick = () => router.push('/diary/pick')
 onMounted(() => {
   fetchDiaries()
   nextTick(() => {
-    gsap.from('.diary-header', { y: -20, opacity: 0, duration: 0.6, ease: 'power2.out' })
+    // 只做位移动画，不设 opacity 初始态（防动画中断后永久不可见）
+    gsap.from('.diary-header', { y: -20, duration: 0.6, ease: 'power2.out' })
     gsap.from('.diary-item', {
       y: 24,
-      opacity: 0,
       duration: 0.7,
       stagger: 0.1,
       ease: 'power3.out',
