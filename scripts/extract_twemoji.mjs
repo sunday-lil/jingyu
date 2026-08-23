@@ -33,7 +33,10 @@ const out = {}
 const missing = []
 for (const name of NEEDED) {
   const data = resolve(name)
-  if (data) out[name] = data
+  // 图标条目通常只有 body，width/height 继承自 icons.json 顶层（twemoji 是 36×36）。
+  // 必须显式合并，否则 addIcon 按默认 16×16 渲染，viewBox 与 36 坐标的 path 不匹配，
+  // 图标只显示左上角一小块（v2.4.10 教训）。
+  if (data) out[name] = { width: src.width, height: src.height, ...data }
   else missing.push(name)
 }
 
