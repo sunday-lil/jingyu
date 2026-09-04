@@ -850,3 +850,22 @@ python start.py restart
 - [ ] 宝塔面板改默认端口 + 强密码
 
 **完事。** 静屿已正式上线。🌿
+
+---
+
+## 附：start.py 命令速查（自 README 迁入）
+
+| 命令 | 行为 |
+|---|---|
+| `python start.py` | 后台启动，默认生产模式（FastAPI :5000 单进程；`static/dist/` 不存在时自动 `npm install + npm run build`，需 Node.js 18+） |
+| `python start.py start` | 同上 |
+| `python start.py --prod` | 显式生产模式（与默认行为一致，加不加效果一样） |
+| `python start.py --dev` | 应用/开发模式：Vite :5000（HMR 热更新，用户入口）+ FastAPI :5001（API）；Vite proxy 把 `/api` / `/static` / `/admin` / `/docs` / `/openapi.json` 转发到 :5001；`frontend/node_modules` 不存在时自动 `npm install`（约 7 分钟，仅首次） |
+| `python start.py stop` | 优雅停止（同时停 FastAPI + Vite） |
+| `python start.py restart` | 重启（默认生产模式） |
+| `python start.py status` | 查看状态（FastAPI / Vite 两个进程的 PID + 端口） |
+| `python start.py fg` | 前台运行（systemd / 调试用，关终端即停；默认生产模式，可加 `--dev` 切应用模式） |
+| `python start.py build` | 仅构建前端到 `static/dist/`（不启动服务；自动 `npm install + npm run build`） |
+| `python start.py --init-db` | 启动前重置数据库 |
+
+PID 文件：`run/healing.pid`（FastAPI）+ `run/vite.pid`（Vite）；日志：`logs/healing.log` + `logs/vite.log`。
