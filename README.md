@@ -330,8 +330,6 @@ webwrold/
 
 ### 3.4 能量规则（[app/services/energy_service.py](app/services/energy_service.py)）
 
-> 🔒 **2026-07-25 v2.3 双资源系统**：原三资源（露水 / 阳光 / 养分）合并为**双资源**——`露水`（`User.total_energy` 字段保留作露水，向内获得：听歌 / 打卡 / 写日记）+ `落叶`（`User.leaves` 新字段，向外获得：花朵枯萎后拾取）。`User` 表加 `leaves` 列（`_migrate_legacy_columns()` 自动迁移老库，`total_energy` 即露水不作改动），`ShopItem` 表加 `cost_currency` 列（`dew` / `leaves`，决定兑换时扣哪种资源）。露水日上限维持 20 不变（`constants.py` `DAILY_ENERGY_LIMITS` 仅含 `listen_music: 20` / `write_diary: 10` / `checkin: 5`，未引入 leaves 项）。seed 数据同步更新。
-
 **资源哲学**：
 - 露水（`User.total_energy`）= 向内获得（听歌 / 写日记 / 打卡），用于浇灌花朵
 - 落叶（`User.leaves`）= 花朵枯萎后拾取获得，用于在花坊兑换花种（寓意「落叶归根能施肥种花」）
@@ -694,7 +692,7 @@ v2.3 改动后跑的冒烟测试结果（详见 [PROJECT_STATE §2 v2.3 条目](
 
 ### 9.3 提交前自检 5 件事
 
-> 🔒 **2026-07-25 v2.3 pre-commit 5 项 checklist 正式化**：本项目 pre-commit checklist 固化为 5 项（与 [HANDOFF §12.4](HANDOFF.md) / [PROJECT_STATE §8.3](docs/PROJECT_STATE.md) 一致）。**改代码 + 改文档 = 同一个 commit** 的铁律依赖此 5 项自检。
+与 [HANDOFF §12.4](HANDOFF.md) / [PROJECT_STATE §8.3](docs/PROJECT_STATE.md) 一致；**改代码 + 改文档 = 同一个 commit** 的铁律依赖此 5 项自检。
 
 - [ ] 改的 Pydantic 字段在 `*Out` schema 里**也都声明了**（→ 防止静默过滤 Bug）
 - [ ] 改的 model 字段长度 / 类型在 schema 里**也同步了**（→ 如 v2.4.4 `avatar 字段长度 String(255) / ProfileUpdateIn max_length=255`）
