@@ -81,6 +81,18 @@ const fetchShop = async () => {
   try {
     const shop = await api.get('/garden/shop')
     shopItems.value = shop || []
+    // 商品渲染后再播入场动画（onMounted 时数据未到，选择器为空会报 GSAP null target 警告）
+    await nextTick()
+    if (document.querySelector('.shop-group')) {
+      gsap.from('.shop-group', {
+        y: 24, duration: 0.55, stagger: 0.12, ease: 'power2.out', delay: 0.2,
+      })
+    }
+    if (document.querySelector('.shop-card')) {
+      gsap.from('.shop-card', {
+        y: 18, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.35,
+      })
+    }
   } catch (e) {
     showToast(e.message || '商店加载失败', 2500)
   } finally {
@@ -156,12 +168,7 @@ onMounted(() => {
     gsap.from('.shop-header', { y: -20, duration: 0.6, ease: 'power2.out' })
     gsap.from('.shop-energy', { y: 16, duration: 0.55, ease: 'power3.out', delay: 0.1 })
     gsap.from('.currency-tabs', { y: 12, duration: 0.5, ease: 'power2.out', delay: 0.15 })
-    gsap.from('.shop-group', {
-      y: 24, duration: 0.55, stagger: 0.12, ease: 'power2.out', delay: 0.2,
-    })
-    gsap.from('.shop-card', {
-      y: 18, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.35,
-    })
+    // .shop-group / .shop-card 动画移至 fetchShop 成功后播放（数据到位时目标才存在）
   })
 })
 

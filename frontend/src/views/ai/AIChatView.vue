@@ -275,13 +275,16 @@ onMounted(async () => {
       ease: 'power2.out',
       delay: 0.1,
     })
-    gsap.from('.msg-row', {
-      y: 14,
-      duration: 0.5,
-      ease: 'power3.out',
-      stagger: 0.08,
-      delay: 0.15,
-    })
+    // 新对话挂载时还没有消息行，加守卫避免 GSAP null target 警告
+    if (document.querySelector('.msg-row')) {
+      gsap.from('.msg-row', {
+        y: 14,
+        duration: 0.5,
+        ease: 'power3.out',
+        stagger: 0.08,
+        delay: 0.15,
+      })
+    }
     gsap.from('.chat-input-wrap', {
       y: 20,
       duration: 0.6,

@@ -33,6 +33,16 @@ const fetchDiaries = async () => {
     const res = await api.get('/diary/mine', { params: { page: 1, per_page: 50 } })
     diaries.value = res?.items || []
     total.value = res?.total || 0
+    // 列表渲染后再播入场动画（onMounted 时数据未到，选择器为空会报 GSAP null target 警告）
+    await nextTick()
+    if (document.querySelector('.diary-item')) {
+      gsap.from('.diary-item', {
+        y: 24,
+        duration: 0.7,
+        stagger: 0.1,
+        ease: 'power3.out',
+      })
+    }
   } catch (e) {
     errorMsg.value = e.message || '日记加载失败'
   } finally {
@@ -110,12 +120,7 @@ onMounted(() => {
   nextTick(() => {
     // 只做位移动画，不设 opacity 初始态（防动画中断后永久不可见）
     gsap.from('.diary-header', { y: -20, duration: 0.6, ease: 'power2.out' })
-    gsap.from('.diary-item', {
-      y: 24,
-      duration: 0.7,
-      stagger: 0.1,
-      ease: 'power3.out',
-    })
+    // .diary-item 动画移至 fetchDiaries 成功后播放（数据到位时目标才存在）
   })
 })
 

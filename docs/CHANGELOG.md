@@ -1,7 +1,11 @@
 # 静屿 · 更新日志（CHANGELOG）
 
-> 全部版本变更记录（v2.2.2 → v2.5.0），按版本倒序排列。
+> 全部版本变更记录（v2.2.2 → v2.5.1），按版本倒序排列。
 > 各版本部署须知见 [DEPLOYMENT.md](DEPLOYMENT.md) 顶部版本块；决策背景与踩坑见 [HANDOFF.md](HANDOFF.md)。
+
+---
+
+> 🔧 **2026-09-12 v2.5.1 日常维护：GSAP 空目标警告清理（3 视图 4 处）**：全站质量巡检（后端日志零错误 + 浏览器逐页扫描 11 个页面）发现唯一遗留问题——数据依赖型列表动画在 `onMounted + nextTick` 时机执行时 API 数据尚未返回，选择器为空触发 GSAP "target not found" 警告（且入场动画实际未播出）。修复对齐既有守卫模式（GardenView/NotificationsView 先例）：① [DiaryListView.vue](../frontend/src/views/diary/DiaryListView.vue) `.diary-item`、② [ShopView.vue](../frontend/src/views/garden/ShopView.vue) `.shop-group`/`.shop-card` 动画移至 fetch 成功后 `nextTick + querySelector` 守卫播放；③ [AIChatView.vue](../frontend/src/views/ai/AIChatView.vue) `.msg-row`（新对话挂载时必无消息行）加守卫。新标签页复验三页 console **零消息**，前端已重新构建。巡检其余确认：后端日志无 ERROR、代码无 TODO 残留、HeroScene WebGL context lost 有完整恢复兜底、写入/打卡/AI 对话交互全通。**前端动画规范沉淀（DEVELOPMENT §GSAP）**：*列表类入场动画必须在 fetch 成功后播，且带 querySelector 守卫——onMounted 时数据未到，动画不播还报警告*。
 
 ---
 

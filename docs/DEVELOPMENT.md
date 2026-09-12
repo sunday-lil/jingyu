@@ -48,6 +48,10 @@
 
 ---
 
+> 🔧 **2026-09-12 v2.5.1 开发规则（GSAP 列表动画第 3 条铁律）**：在 v2.4.9「GSAP 位移化」规则之上补充：**列表类入场动画必须在 fetch 成功后播 + querySelector 守卫**（`列表动画时机`）——`onMounted + nextTick` 时机 fetch 的 API 数据尚未返回（或列表为空），选择器无匹配元素，GSAP 报 "target not found" 警告且动画实际没播出。**正确写法模板：`fetch 成功 → 数据赋值 → await nextTick() → if (document.querySelector(sel)) gsap.from(sel, {...})`**（GardenView / NotificationsView / ShopView.setCurrency 为先例，v2.5.1 补齐 DiaryListView `.diary-item` / ShopView `.shop-group`+`.shop-card` / AIChatView `.msg-row` 三处）。**验证动画类修复时要用新标签页看 console**——旧标签页的 console 是跨导航累积的历史消息，勿被旧警告误导。纯前端修复，需重新 `npm run build`。关键词 `v2.5.1` / `列表动画时机` / `GSAP空目标` 在 6 份文档中都要出现。
+
+---
+
 > 🔧 **2026-08-23 v2.4.10 开发规则（图标数据生成第 2 条铁律）**：在 v2.4.9 规则之上补充：**生成 twemoji-icons.js 必须合并顶层尺寸**（`viewBox尺寸合并`）——Iconify 的 icons.json 是「顶层默认 + 条目可覆盖」继承结构，图标条目通常只有 `body`，`width/height` 在 JSON 顶层（twemoji 36×36）；[extract_twemoji.mjs](../scripts/extract_twemoji.mjs) 生成时必须 `out[name] = { width: src.width, height: src.height, ...data }`——缺了 width/height，`addIcon` 按 Iconify 默认 16×16 渲染，viewBox 与 36×36 坐标 path 不匹配，图标只显示左上角 44% 方块（`图标左上角裁切`，v2.4.10 修复的 v2.4.9 回归）。**通用教训：序列化局部数据时，永远检查「这条数据离开父级上下文后还完整吗」**。关键词 `v2.4.10` / `viewBox尺寸合并` / `图标左上角裁切` 在 6 份文档中都要出现。
 
 ---
