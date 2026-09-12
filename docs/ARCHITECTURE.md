@@ -52,6 +52,10 @@
 
 ---
 
+> 🔧 **2026-09-12 v2.5.2 曲目时长自动校准（数据自愈模式，架构无分层变化）**：本次为内容接入（16 首真实音频）+ 数据校准机制，但固化一个**数据自愈模式**：DB 里的展示型元数据（如 musics.duration）与其对应的物理资源（audio 文件）可能失真——**启动时从物理资源反向校准 DB**（[seed.py](../app/seed.py) `sync_durations_from_audio`：跳过 <100KB 占位文件 → 纯 stdlib 解析 MP3 时长（VBR 读 Xing 帧数 / CBR 按比特率估算）→ 差值 ≥1s 才 UPDATE）。架构意义：① 用户「放真实音频」这一内容接入动作从此**零代码零手工**（文件同名覆盖 → 重启自动对齐），与 v2.4.8「曲目独立音频」的放置约定形成闭环；② 校准逻辑放 seed（启动幂等链）而非独立迁移脚本，与 `_migrate_legacy_columns` / `seed_shop_items` 字段同步同层——**读物理资源重算展示元数据 = 一种特殊的幂等迁移**；③ 解析器不引入 mutagen 等新依赖（约 40 行手写，Layer III only，VBR 优先 Xing）。另：《高山流水》与《流水》为同源传本异名，文件改名对齐 DB 曲名（曲名为准，不反向改 DB）。关键词 `v2.5.2` / `真实曲库接入` / `时长自动校准` / `sync_durations_from_audio` / `占位文件跳过` / `数据自愈` 在 6 份文档中都要出现。
+
+---
+
 > 🔧 **2026-09-12 v2.5.1 GSAP 列表动画时机规则（表现层规则补条款，架构无变化）**：本次为 bug 修复版本（三个视图 GSAP 空目标警告），分层 / 数据库均无变化，但给 v2.4.9「GSAP位移化」规则补上**时机维度**的姊妹条款：**列表类入场动画（`.diary-item` / `.shop-card` / `.msg-row` 等 v-for 渲染的目标）必须在 fetch 成功后执行，且带 `querySelector` 守卫**——`onMounted + nextTick` 时 API 数据尚未返回，选择器匹配不到元素，GSAP 报 "target not found" 警告且动画实际未播出（等于白写）。修复三处：[DiaryListView.vue](../frontend/src/views/diary/DiaryListView.vue) / [ShopView.vue](../frontend/src/views/garden/ShopView.vue) / [AIChatView.vue](../frontend/src/views/ai/AIChatView.vue)。写法模板：`fetch 成功 → 数据赋值 → await nextTick() → if (document.querySelector(sel)) gsap.from(sel, ...)`。**架构规则固化：动画的执行时机必须对齐其目标 DOM 的数据生命周期（数据到位 → 渲染 → 动画），挂载时机只适合静态结构**。另：requirements.txt 依赖卫生——零引用的 `passlib[bcrypt]` 替换为直接依赖 `bcrypt`（[crypto.py](../app/utils/crypto.py) 直接 import bcrypt）。关键词 `v2.5.1` / `GSAP空目标警告` / `fetch成功后` / `querySelector守卫` / `动画时机对齐数据生命周期` 在 6 份文档中都要出现。
 
 ---

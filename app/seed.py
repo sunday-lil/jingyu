@@ -26,33 +26,33 @@ from app.utils.crypto import generate_salt, hash_password
 logger = logging.getLogger(__name__)
 
 
-# 真实古琴曲名（占位音频）
+# 真实古琴曲名（16 首已放真实音频，6 首西洋改编暂为占位——时长为实测值/估值）
 SEED_MUSIC: list[dict] = [
     # 宫音（土）
-    {"title": "梅花三弄",  "yin_type": "gong",   "category": "classic", "duration": 240, "tags": "健脾,古典"},
-    {"title": "阳关三叠",  "yin_type": "gong",   "category": "classic", "duration": 200, "tags": "助消化,送别"},
-    {"title": "平沙落雁",  "yin_type": "gong",   "category": "classic", "duration": 320, "tags": "健脾,秋意"},
+    {"title": "梅花三弄",  "yin_type": "gong",   "category": "classic", "duration": 418, "tags": "健脾,古典"},
+    {"title": "阳关三叠",  "yin_type": "gong",   "category": "classic", "duration": 364, "tags": "助消化,送别"},
+    {"title": "平沙落雁",  "yin_type": "gong",   "category": "classic", "duration": 471, "tags": "健脾,秋意"},
 
     # 商音（金）
-    {"title": "潇湘水云",  "yin_type": "shang",  "category": "classic", "duration": 280, "tags": "润肺,山水"},
-    {"title": "长门怨",    "yin_type": "shang",  "category": "classic", "duration": 220, "tags": "舒缓,古意"},
-    {"title": "佩兰",      "yin_type": "shang",  "category": "classic", "duration": 180, "tags": "润肺,雅正"},
+    {"title": "潇湘水云",  "yin_type": "shang",  "category": "classic", "duration": 461, "tags": "润肺,山水"},
+    {"title": "长门怨",    "yin_type": "shang",  "category": "classic", "duration": 352, "tags": "舒缓,古意"},
+    {"title": "佩兰",      "yin_type": "shang",  "category": "classic", "duration": 481, "tags": "润肺,雅正"},
 
     # 角音（木）
-    {"title": "流水",      "yin_type": "jue",    "category": "classic", "duration": 420, "tags": "疏肝,解郁,抗焦虑"},
-    {"title": "渔樵问答",  "yin_type": "jue",    "category": "classic", "duration": 260, "tags": "疏肝,问答"},
-    {"title": "鸥鹭忘机",  "yin_type": "jue",    "category": "classic", "duration": 200, "tags": "解郁,自在"},
+    {"title": "流水",      "yin_type": "jue",    "category": "classic", "duration": 528, "tags": "疏肝,解郁,抗焦虑"},
+    {"title": "渔樵问答",  "yin_type": "jue",    "category": "classic", "duration": 553, "tags": "疏肝,问答"},
+    {"title": "鸥鹭忘机",  "yin_type": "jue",    "category": "classic", "duration": 386, "tags": "解郁,自在"},
 
     # 徵音（火）
-    {"title": "醉渔唱晚",  "yin_type": "zhi",    "category": "classic", "duration": 240, "tags": "养心,渔歌"},
-    {"title": "山居吟",    "yin_type": "zhi",    "category": "classic", "duration": 200, "tags": "安神,山居"},
-    {"title": "神人畅",    "yin_type": "zhi",    "category": "classic", "duration": 180, "tags": "养心,古意"},
+    {"title": "醉渔唱晚",  "yin_type": "zhi",    "category": "classic", "duration": 283, "tags": "养心,渔歌"},
+    {"title": "山居吟",    "yin_type": "zhi",    "category": "classic", "duration": 333, "tags": "安神,山居"},
+    {"title": "神人畅",    "yin_type": "zhi",    "category": "classic", "duration": 299, "tags": "养心,古意"},
 
     # 羽音（水）
-    {"title": "广陵散",    "yin_type": "yu",     "category": "classic", "duration": 480, "tags": "宁心,助眠,古曲"},
-    {"title": "大胡笳",    "yin_type": "yu",     "category": "classic", "duration": 360, "tags": "助眠,胡笳"},
-    {"title": "幽兰",      "yin_type": "yu",     "category": "classic", "duration": 220, "tags": "宁心,兰香"},
-    {"title": "普庵咒",    "yin_type": "yu",     "category": "classic", "duration": 260, "tags": "助眠,梵音"},
+    {"title": "广陵散",    "yin_type": "yu",     "category": "classic", "duration": 442, "tags": "宁心,助眠,古曲"},
+    {"title": "大胡笳",    "yin_type": "yu",     "category": "classic", "duration": 706, "tags": "助眠,胡笳"},
+    {"title": "幽兰",      "yin_type": "yu",     "category": "classic", "duration": 605, "tags": "宁心,兰香"},
+    {"title": "普庵咒",    "yin_type": "yu",     "category": "classic", "duration": 342, "tags": "助眠,梵音"},
 
     # ── 古琴弹西洋曲谱（v2.3 新增子板块） ──
     # 用古琴演绎西洋经典旋律，yin_type 取最贴近的五音归类
@@ -119,6 +119,88 @@ def seed_music(db: Session) -> int:
     db.commit()
     logger.info("已插入 %d 首古琴曲目", len(new_rows))
     return len(new_rows)
+
+
+def _mp3_duration_seconds(path: Path) -> int | None:
+    """解析 MP3 时长（秒）。VBR 读 Xing 帧数，CBR 按比特率估算。解析失败返回 None。"""
+    data = path.read_bytes()
+    n = len(data)
+    i = 0
+    if data[:3] == b"ID3":  # 跳过 ID3v2 标签
+        size = ((data[6] & 0x7F) << 21) | ((data[7] & 0x7F) << 14) | \
+               ((data[8] & 0x7F) << 7) | (data[9] & 0x7F)
+        i = 10 + size
+    while i < n - 4:  # 找帧同步字
+        if data[i] == 0xFF and (data[i + 1] & 0xE0) == 0xE0:
+            break
+        i += 1
+    else:
+        return None
+    b1, b2, b3 = data[i + 1], data[i + 2], data[i + 3]
+    ver_bits, layer = (b1 >> 3) & 0x03, (b1 >> 1) & 0x03
+    if ver_bits not in (0, 2, 3) or layer != 1:  # 仅支持 Layer III
+        return None
+    br_idx, sr_idx = (b2 >> 4) & 0x0F, (b2 >> 2) & 0x03
+    if br_idx in (0, 15) or sr_idx == 3:
+        return None
+    if ver_bits == 3:  # MPEG1
+        bitrate = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0][br_idx] * 1000
+        samplerate = [44100, 48000, 32000][sr_idx]
+        samples_per_frame, side_info = 1152, 32
+    else:  # MPEG2 / MPEG2.5
+        bitrate = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0][br_idx] * 1000
+        samplerate = ([22050, 24000, 16000] if ver_bits == 2 else [11025, 12000, 8000])[sr_idx]
+        samples_per_frame, side_info = 576, 17
+    if ((b3 >> 6) & 0x03) == 3:  # 单声道 side info 减半
+        side_info //= 2
+    x = i + 4 + side_info
+    if data[x:x + 4] in (b"Xing", b"Info"):  # VBR：帧数最准
+        flags = int.from_bytes(data[x + 4:x + 8], "big")
+        if flags & 1:
+            frames = int.from_bytes(data[x + 8:x + 12], "big")
+            return round(frames * samples_per_frame / samplerate)
+    if bitrate == 0:
+        return None
+    return round((n - i) * 8 / bitrate)  # CBR 估算
+
+
+def sync_durations_from_audio(db: Session) -> int:
+    """v2.5.2：从真实音频文件校准 musics.duration。
+
+    占位文件（约 5KB）跳过；>100KB 视为真实音频，按解析出的实际时长
+    覆盖 DB 里的种子估值。用户同名覆盖放入真实音频后，下次重启即自动
+    对齐时长（放完不用改库也不用改代码）。
+    """
+    from sqlalchemy import text
+
+    tracks_dir = settings.audio_dir / "tracks"
+    if not tracks_dir.exists():
+        return 0
+    updated = 0
+    for path in tracks_dir.glob("*.mp3"):
+        if path.stat().st_size < 100_000:  # 占位文件
+            continue
+        title = path.stem
+        real = _mp3_duration_seconds(path)
+        if real is None:
+            logger.warning("[SYNC] %s 时长解析失败，跳过", path.name)
+            continue
+        row = db.execute(
+            text("SELECT duration FROM musics WHERE title = :t"), {"t": title}
+        ).fetchone()
+        if row is None:
+            continue
+        if abs((row[0] or 0) - real) < 1:
+            continue
+        db.execute(
+            text("UPDATE musics SET duration = :d WHERE title = :t"),
+            {"d": float(real), "t": title},
+        )
+        updated += 1
+    if updated:
+        db.commit()
+        logger.info("[SYNC] 已按真实音频校准 %d 首曲目时长", updated)
+    return updated
 
 
 def seed_shop_items(db: Session) -> int:
@@ -243,6 +325,7 @@ def seed_shop_items(db: Session) -> int:
 def run_seed(db: Session) -> None:
     """启动时执行：建表 → 种子数据 → 引导管理员。"""
     seed_music(db)
+    sync_durations_from_audio(db)
     seed_shop_items(db)
     ensure_first_admin(db)
 

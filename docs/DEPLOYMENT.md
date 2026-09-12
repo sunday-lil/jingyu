@@ -56,6 +56,10 @@
 
 ---
 
+> 🎵 **2026-09-12 v2.5.2 部署须知（真实曲库入库 + 时长自动校准：重启即生效，无需构建）**：本次为内容接入（16 首真实音频入 git，约 280MB）+ [seed.py](../app/seed.py) 新增时长校准，**纯后端改动，无需 npm run build**。部署步骤：① `git pull`（首次拉取后仓库约 +280MB，单文件最大 28MB，GitHub 硬限 100MB 内）；② `pip install -r requirements.txt`（若尚未同步 v2.5.1 的 `passlib[bcrypt]` → `bcrypt` 变更）；③ `python start.py restart`——启动日志可见 `[SYNC] 已按真实音频校准 N 首曲目时长`（老库 musics.duration 从种子估值自动对齐真实时长；已对齐则为 0 条）；④ **无数据库 schema 迁移 / 无 .env 变更 / 无新 Python 依赖**。验证：打开 `/music/jue`，列表应显示 `流水 08:48`（528s）等真实时长；点播放实际出声。**用户后续接入剩余 6 首西洋改编音频**：同名覆盖放入 `static/audio/tracks/` → 重启 → 时长自动校准，零手工。关键词 `v2.5.2` / `真实曲库接入` / `时长自动校准` / `sync_durations_from_audio` 在 6 份文档中都要出现。
+
+---
+
 > 🔧 **2026-09-12 v2.5.1 部署须知（GSAP 列表动画修复 + 依赖卫生：需重新构建前端）**：本次修复 DiaryListView / ShopView / AIChatView 三视图 GSAP 空目标警告（列表动画移至 fetch 成功后 + `querySelector` 守卫），**涉及前端源码改动，部署时必须重新构建**。部署步骤：① `python start.py build`（或 `cd frontend && npm run build`）；② `python start.py restart`（后端仅版本号变更 2.5.0 → 2.5.1，无路由 / 迁移 / .env 变化）；③ **无数据库迁移 / 无 .env 变更**；④ 依赖卫生：requirements.txt 将零引用的 `passlib[bcrypt]` 替换为直接依赖 `bcrypt>=4.0.0,<6.0.0`（[crypto.py](../app/utils/crypto.py) 直接 `import bcrypt`，passlib 全仓库无引用；部署机 `pip install -r requirements.txt` 同步即可，bcrypt 4.x / 5.x 均兼容）。验证：部署后浏览器打开 `/diary`、`/shop`、`/ai-chat`，console 无 "target not found" 警告。关键词 `v2.5.1` / `GSAP空目标警告` / `fetch成功后` / `querySelector守卫` 在 6 份文档中都要出现。
 
 ---

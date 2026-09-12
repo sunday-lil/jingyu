@@ -3,6 +3,8 @@
 > 写给接手这个项目的下一个 AI（Cursor / Copilot / Devin / 任何 Agent）。
 > 读这一份文件 ≈ 读完整套文档。它是项目元信息 + 关键决策 + 踩坑清单的汇总。
 
+> 🎵 **2026-09-12 v2.5.2 真实曲库接入（16/22）+ 曲目时长自动校准**：用户从 Bilibili 下载 16 首古琴曲真实音频（10–28MB/首）同名覆盖进 `static/audio/tracks/`，音乐疗愈模块从占位音频变真实曲库（剩 6 首西洋改编仍占位）。两个关键处理：① **《高山流水》→《流水》**：用户按俗名下载了《高山流水》（同源传本异名），DB 曲名为《流水》——文件改名对齐曲名（曲名为准，不反向改 DB，否则破坏 v2.4.8 的 title 幂等迁移链）；② **时长自动校准**（[seed.py](../app/seed.py) `sync_durations_from_audio`，启动幂等链新成员）：16 首种子估值全不准（如大胡笳 706s 实际 vs 360s 估值）——启动时解析真实音频 MP3 时长（纯 stdlib 手写解析器 `_mp3_duration_seconds`，VBR 读 Xing 帧数 / CBR 按比特率估算，跳过 <100KB 占位文件，差值 ≥1s 才 UPDATE），覆盖 DB 估值。**从此用户放音频 = 文件同名覆盖 + 重启，时长自动对齐零手工**（对剩余 6 首西洋曲同样生效）。破坏性验证：DB 故意改错流水 999s → 重启 → `[SYNC] 已按真实音频校准 1 首` → API 528.0 ✓；浏览器播放实测 00:14/08:48 实时走秒 ✓。SEED_MUSIC classic 16 首时长同步改实测值。无前端改动 / 无新依赖 / 无 schema 迁移。
+
 > 🔧 **2026-09-12 v2.5.1 日常维护：GSAP 空目标警告清理（3 视图 4 处）**：全站质量巡检（后端日志零 ERROR + 浏览器逐页扫描 11 页，写日记/打卡/AI 对话交互全通）发现唯一遗留——数据依赖型列表动画在 `onMounted + nextTick` 时机跑，API 数据未到选择器为空，GSAP 报 "target not found" 警告且动画实际没播。修复对齐 GardenView/NotificationsView 既有守卫模式：[DiaryListView.vue](../frontend/src/views/diary/DiaryListView.vue) `.diary-item`、[ShopView.vue](../frontend/src/views/garden/ShopView.vue) `.shop-group`/`.shop-card` 动画移至 fetch 成功后 `nextTick + querySelector` 守卫播；[AIChatView.vue](../frontend/src/views/ai/AIChatView.vue) `.msg-row`（新对话挂载必无消息行）加守卫。新标签页复验三页 console **零消息**；已 `npm run build`。**动画规范沉淀（DEVELOPMENT §GSAP 已更新）：列表类入场动画必须在 fetch 成功后播 + querySelector 守卫——onMounted 时数据未到，动画不播还报警告**。
 
 > 🗂️ **2026-09-12 文档结构收纳（文档整理，版本号不变 v2.5.0）**：根目录仅保留 [README.md](../README.md)，**本文档及 CHANGELOG.md / 曲目清单.md 均已移入 [docs/](./)**（`git mv` 保留历史）。顺带全量修复 md 交叉链接 1400+ 处：docs/ 内 585 处 `../../` 层级错误（多算一层，GitHub 渲染 404）→ `../`；本文档 158 处旧机器 `file:///c:/Users/Administrator/...` 绝对链接 → 相对链接；76 处历史死链（v2.4.2 已删 SSR 模板/前台脚本）→ 纯代码文本；路径笔误修正（config.py→app/config.py、shop→garden、封面 img→images）；README/HANDOFF 目录树同步真实结构（templates/ 仅剩 admin/、static/ 补全）。**链接检查器复检 1463 个链接全部可解析**。纯文档改动。教训：**新写文档一律用「从本文件出发的相对路径」并在提交前跑一次链接检查**（`](../` 从 docs/ 出发只允许一层）。
@@ -749,6 +751,22 @@ webwrold/
 **教训（写入 DEVELOPMENT GSAP 规范）**：列表类入场动画必须在 fetch 成功后播 + querySelector 守卫。`onMounted + nextTick` 时数据未到——动画不播还报警告。写法模板：`fetch 成功 → 数据赋值 → await nextTick() → if (document.querySelector(sel)) gsap.from(sel, ...)`。
 
 **改动文件**：上述 3 个 .vue + app/main.py 版本号 2.5.0 → 2.5.1 + 6 文档同步（README 徽章 / ARCHITECTURE / DEPLOYMENT 为事后补漏——首提交 a1fbb4c 实际只更了 4 份文档，用户质询「确定都更新啦？！」后补齐，教训：**铁律清单要在提交前逐项核对，不能凭印象声称完成**）+ requirements.txt 依赖卫生（`passlib[bcrypt]` → `bcrypt>=4.0.0,<6.0.0`，crypto.py 直接 import bcrypt，passlib 全仓库零引用）。
+
+### Phase 21 — v2.5.2 真实曲库接入 + 时长自动校准（2026-09-12 加）
+
+**背景**：用户从 Bilibili 下载 16 首古琴曲真实音频放入 `static/audio/tracks/`（同名覆盖占位文件）。验证发现两个问题：① 多了一个 `高山流水.mp3` 而 DB 曲名是《流水》（占位文件还在）——用户按俗名搜索下载（B 站搜「流水」常出「高山流水」）；② 曲目列表显示的时长来自 DB 种子估值，与真实音频不符（16 首全不准，最大偏差大胡笳 360s→706s）。
+
+**处理**：
+1. `高山流水.mp3` → 改名 `流水.mp3` 对齐 DB 曲名（《高山流水》与《流水》为同源传本异名；**曲名为准，不反向改 DB**——audio_url 迁移按 title 拼接，改 DB 曲名会破坏 v2.4.8 幂等迁移链）
+2. [seed.py](../app/seed.py) 新增 `sync_durations_from_audio()` + `_mp3_duration_seconds()`（纯 stdlib MP3 时长解析器）：启动幂等链（run_seed）中 seed_music 之后执行——遍历 tracks/*.mp3，跳过 <100KB 占位文件，解析时长（VBR 读 Xing 帧数 / CBR 按比特率估算），与 DB 差值 ≥1s 才 UPDATE。**用户后续放剩余 6 首西洋音频后重启即自动校准，零手工**
+3. SEED_MUSIC classic 16 首时长改为实测值（western 6 首保持估值——音频未放）
+4. 手工把 16 首实测时长同步进本机 healing.db（老库不等重启）
+
+**验证**：① HTTP 200 + content-length 与文件大小一致；② API `/api/music/yin/jue` 返回流水 528.0 ✓；③ 浏览器 /music/jue 列表显示 08:48/09:13/06:26 ✓，点播放 00:14/08:48 实时走秒、paused=false ✓；④ **破坏性验证**：DB 故意把流水改成 999s → 重启 → 日志 `[SYNC] 已按真实音频校准 1 首曲目时长` → API 回 528.0 ✓。
+
+**教训**：**展示型元数据（duration）与物理资源（音频文件）的失真，用启动时反向校准自愈，而不是让用户手工对齐**——这是「内容接入零代码」约定的最后一块拼图（v2.4.8 解决了文件放置，本次解决元数据对齐）。另：环境注意——本机 `python` 命令是 Microsoft Store 占位符（exit 9009），要用 `py -3.15` 启动；DB 文件是 `data/healing.db`（不是 qi.db）。
+
+**改动文件**：static/audio/tracks/ 16 个真实 mp3（~280MB 入库）+ app/seed.py（解析器 + 校准 + SEED_MUSIC 时长）+ app/main.py 版本号 2.5.1 → 2.5.2 + docs/曲目清单.md 状态 + 6 文档同步。
 
 ---
 
