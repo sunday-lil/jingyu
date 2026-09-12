@@ -2,7 +2,7 @@
 
 > 三种部署方式：**宝塔面板**（最简单，私人项目首选）、**systemd**（VPS 标准）、**手动 nohup**（临时调试）。
 
-> 🔒 **改了本文件涉及的部署配置（端口 / Nginx / systemd / HTTPS / 反代 / 前端构建），必须同步更新**：[README §1](../../README.md) / [HANDOFF §1](../../HANDOFF.md) / [PROJECT_STATE §4](../PROJECT_STATE.md)。详见 [HANDOFF §12](../../HANDOFF.md) 文档自动同步铁律。
+> 🔒 **改了本文件涉及的部署配置（端口 / Nginx / systemd / HTTPS / 反代 / 前端构建），必须同步更新**：[README §1](../README.md) / [HANDOFF §1](HANDOFF.md) / [PROJECT_STATE §4](PROJECT_STATE.md)。详见 [HANDOFF §12](HANDOFF.md) 文档自动同步铁律。
 
 > 🔒 **2026-07-19 v2.0 Vue 3 重构**：部署前**必须**先 `cd frontend && npm install && npm run build`（或 `python start.py build` 一键构建）输出 `static/dist/`，否则 `python start.py` 后访问 :5000 只会看到「dist 未构建」提示页。关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）中都要出现。
 
@@ -22,45 +22,45 @@
 
 > 🔒 **2026-07-30 v2.3.3 Safari 兼容性修复（3D 上下文恢复 + emoji 跨浏览器一致）**：① **部署前必须重新 `npm run build`**，否则 Safari / iOS 用户拿不到 **Safari 兼容**修复——主页 3D 浮岛不渲染（`hasWebGL` 误判 + `webglcontextlost` 无恢复 + Bloom/PMREM 内存超限）+ emoji 风格不一致（Apple Color Emoji vs 系统 emoji）。修复：[utils/visual.js](../frontend/src/utils/visual.js) **`hasWebGL` 重写**（区分 WebGL1/2 + 检测扩展 + max texture size）+ 新增 `getWebGLCaps()` / `isSafari()` / `isIOS()`；[utils/three-helpers.js](../frontend/src/utils/three-helpers.js) 添加 `webglcontextlost` / `webglcontextrestored` 事件监听处理 **WebGL 上下文丢失**；[HeroScene.vue](../frontend/src/components/HeroScene.vue) **iOS 降级**（**Bloom 降级**：iOS 关闭 UnrealBloomPass；**PMREM 降级**：iOS PMREM 256→128、阴影 2048→1024、dpr 2→1.5）；新建 [EmojiIcon.vue](../frontend/src/components/EmojiIcon.vue) 组件用 **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**，替换 AppLayout.vue + ProfileView.vue 所有 emoji。构建 209 modules / 12.30s，HeroScene +0.71KB（降级逻辑）。无数据库迁移 / 无新依赖（Iconify + twemoji 已在 frontend/package.json）。关键词 `Safari 兼容` / `WebGL 上下文丢失` / `webglcontextlost` / `iOS 降级` / `EmojiIcon` / `Iconify` / `twemoji` / `SVG emoji` / `跨浏览器一致` / `hasWebGL 重写` / `getWebGLCaps` / `isSafari` / `isIOS` / `Bloom 降级` / `PMREM 降级` / `v2.3.3` 在 6 份文档中都要出现。
 
-> 🔒 **2026-08-10 v2.4.0 UI/UX 18 项调整 + 头像/昵称编辑 + 一天多条心情 + 花坊改名 + 静屿使用指南**：① **部署前必须重新 `npm run build`**，否则用户拿不到 v2.4.0 新功能——首页文案改为「**潮声不止心安自屿**」（删「静屿」副标题 + 删今日打卡板块）+ 漂流日记入口统一显示「日记海岸」（含拾瓶/写日记）+ 情绪日历 emoji 显示/选择修复 + **一天多条心情**记录（情绪是多变的）+ 30 天心情趋势 1-5 评分多条取**平均分**（ecstatic=5/happy=4/calm=3/tired=2/anxious=2/angry=1/sad=1）+ 心语树洞 AI 系统提示词 **humanize**（更接地气、像朋友聊天）+ 「落叶画坊」→「**花坊**」改名 + 花种扩充至 12 种（向日葵/竹子/雏菊/莲花/薰衣草/郁金香/梅花/桃花/兰花/青松/桂花/银杏）+ 新装扮（油纸伞/蓑衣/乌篷船/鱼竿/橘猫/白鹤）+ 「古琴初学者」→「**琴音知音**」徽章改名 + **每板块徽章**（琴音知音/日记达人/七日静心/拾瓶旅人/树洞倾心/花田主人）+ 「竹编帽」描述改为「种花人遮阳的草帽」+ 花田 AI 基于实际种花情况（没种花不显示）+ 「我的」页面修复（收到鼓励/岛上物件可点击跳转 + 删重复岛上物件 + 新增**静屿使用指南**详细介绍所有模块）+ **头像/昵称修改**（[ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue) 编辑弹窗 24 个可选 emoji）+ **露水累加修复**（写日记和留言鼓励后正确发放露水）；② 数据库**自动迁移**（`_migrate_legacy_columns()`）：① `users.avatar` 加列（`ALTER TABLE users ADD COLUMN avatar VARCHAR(16) DEFAULT '🙂' NOT NULL`，**User.avatar** 默认 🙂，与树洞显示一致）② **mood_checkins 唯一约束移除**（SQLite 重建表方式：CREATE TABLE _new AS SELECT * → DROP → RENAME → CREATE INDEX，支持一天多条心情记录）；③ 新增 schema 文件 [app/schemas/profile.py](../../app/schemas/profile.py) + `ProfileUpdateIn`（nickname 2-20 字符可选 / avatar 1-16 字符可选）；④ 新增 router **PATCH /api/profile**（更新头像/昵称，昵称查重 409，**头像同步树洞**显示——[AIChatView.vue](../../frontend/src/views/ai/AIChatView.vue) 用 `userStore.avatar`）；⑤ service 重构 [app/services/mood_service.py](../../app/services/mood_service.py)：`upsert_checkin` → `add_checkin`（不再 UPSERT，允许一天多条）+ 新增 `get_today_moods`（获取今日所有心情）+ `get_recent_trend` 多条取**平均分**；⑥ seed 更新：[DEFAULT_SHOP_ITEMS](../../app/utils/constants.py) 扩充至 27 件（12 花种 + 9 装扮 + 6 徽章），「古琴初学者」→「琴音知音」，「竹编帽」描述更新，新增 6 件装扮；⑦ 前端 stores/user.js 新增 `updateProfile` action。无数据库手动 ALTER / 无新前端依赖（Iconify + twemoji 已在 v2.3.3 加入）。关键词 `v2.4` / `潮声不止心安自屿` / `花坊` / `一天多条心情` / `mood_checkins 唯一约束移除` / `add_checkin` / `get_today_moods` / `平均分` / `humanize` / `琴音知音` / `每板块徽章` / `User.avatar` / `PATCH /api/profile` / `ProfileUpdateIn` / `头像同步树洞` / `静屿使用指南` / `露水累加修复` 在 6 份文档中都要出现。
+> 🔒 **2026-08-10 v2.4.0 UI/UX 18 项调整 + 头像/昵称编辑 + 一天多条心情 + 花坊改名 + 静屿使用指南**：① **部署前必须重新 `npm run build`**，否则用户拿不到 v2.4.0 新功能——首页文案改为「**潮声不止心安自屿**」（删「静屿」副标题 + 删今日打卡板块）+ 漂流日记入口统一显示「日记海岸」（含拾瓶/写日记）+ 情绪日历 emoji 显示/选择修复 + **一天多条心情**记录（情绪是多变的）+ 30 天心情趋势 1-5 评分多条取**平均分**（ecstatic=5/happy=4/calm=3/tired=2/anxious=2/angry=1/sad=1）+ 心语树洞 AI 系统提示词 **humanize**（更接地气、像朋友聊天）+ 「落叶画坊」→「**花坊**」改名 + 花种扩充至 12 种（向日葵/竹子/雏菊/莲花/薰衣草/郁金香/梅花/桃花/兰花/青松/桂花/银杏）+ 新装扮（油纸伞/蓑衣/乌篷船/鱼竿/橘猫/白鹤）+ 「古琴初学者」→「**琴音知音**」徽章改名 + **每板块徽章**（琴音知音/日记达人/七日静心/拾瓶旅人/树洞倾心/花田主人）+ 「竹编帽」描述改为「种花人遮阳的草帽」+ 花田 AI 基于实际种花情况（没种花不显示）+ 「我的」页面修复（收到鼓励/岛上物件可点击跳转 + 删重复岛上物件 + 新增**静屿使用指南**详细介绍所有模块）+ **头像/昵称修改**（[ProfileView.vue](../frontend/src/views/profile/ProfileView.vue) 编辑弹窗 24 个可选 emoji）+ **露水累加修复**（写日记和留言鼓励后正确发放露水）；② 数据库**自动迁移**（`_migrate_legacy_columns()`）：① `users.avatar` 加列（`ALTER TABLE users ADD COLUMN avatar VARCHAR(16) DEFAULT '🙂' NOT NULL`，**User.avatar** 默认 🙂，与树洞显示一致）② **mood_checkins 唯一约束移除**（SQLite 重建表方式：CREATE TABLE _new AS SELECT * → DROP → RENAME → CREATE INDEX，支持一天多条心情记录）；③ 新增 schema 文件 [app/schemas/profile.py](../app/schemas/profile.py) + `ProfileUpdateIn`（nickname 2-20 字符可选 / avatar 1-16 字符可选）；④ 新增 router **PATCH /api/profile**（更新头像/昵称，昵称查重 409，**头像同步树洞**显示——[AIChatView.vue](../frontend/src/views/ai/AIChatView.vue) 用 `userStore.avatar`）；⑤ service 重构 [app/services/mood_service.py](../app/services/mood_service.py)：`upsert_checkin` → `add_checkin`（不再 UPSERT，允许一天多条）+ 新增 `get_today_moods`（获取今日所有心情）+ `get_recent_trend` 多条取**平均分**；⑥ seed 更新：[DEFAULT_SHOP_ITEMS](../app/utils/constants.py) 扩充至 27 件（12 花种 + 9 装扮 + 6 徽章），「古琴初学者」→「琴音知音」，「竹编帽」描述更新，新增 6 件装扮；⑦ 前端 stores/user.js 新增 `updateProfile` action。无数据库手动 ALTER / 无新前端依赖（Iconify + twemoji 已在 v2.3.3 加入）。关键词 `v2.4` / `潮声不止心安自屿` / `花坊` / `一天多条心情` / `mood_checkins 唯一约束移除` / `add_checkin` / `get_today_moods` / `平均分` / `humanize` / `琴音知音` / `每板块徽章` / `User.avatar` / `PATCH /api/profile` / `ProfileUpdateIn` / `头像同步树洞` / `静屿使用指南` / `露水累加修复` 在 6 份文档中都要出现。
 
-> 🔒 **2026-08-10 v2.4.1 情绪日历罗素情绪环模型四象限图表**：① **部署前必须重新 `npm run build`**，否则用户拿不到情绪环模型图表（[MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue) 移除 30 天趋势柱状图，新增罗素情绪环模型四象限图表——横轴效价 Valence 左消极→右积极 / 纵轴唤醒度 Arousal 下低唤醒→上高唤醒 / 四象限 Q1积极+高唤醒 · Q2消极+高唤醒 · Q3消极+低唤醒 · Q4积极+低唤醒 / `CIRCUMPLEX_EMOTIONS` 20 种情绪 / 点击 emoji 弹详情卡片显示「本月出现 X 次」）；② **无后端改动**（纯前端变更，[app/](../../app/) 下无任何 Python 代码改动）；③ **无数据库迁移**（不涉及 `_migrate_legacy_columns()`，`mood_checkins` 表结构不变，沿用 v2.4.0 的多条心情记录模型）；④ **无新依赖**（`frontend/package.json` 无新增，GSAP / Vue 3 已在依赖中）；⑤ `fetchTrend` 仍调用（为 `currentStreak` 连续打卡天数显示），`trend` 数据不再用于渲染。关键词 `v2.4.1` / `Russell情绪环模型` / `Circumplex Model` / `四象限图表` / `效价Valence` / `唤醒度Arousal` / `CIRCUMPLEX_EMOTIONS` / `emotionPosition` / `moodCounts` / `20种情绪` / `点击交互` / `本月出现次数` 在 6 份文档中都要出现。
+> 🔒 **2026-08-10 v2.4.1 情绪日历罗素情绪环模型四象限图表**：① **部署前必须重新 `npm run build`**，否则用户拿不到情绪环模型图表（[MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue) 移除 30 天趋势柱状图，新增罗素情绪环模型四象限图表——横轴效价 Valence 左消极→右积极 / 纵轴唤醒度 Arousal 下低唤醒→上高唤醒 / 四象限 Q1积极+高唤醒 · Q2消极+高唤醒 · Q3消极+低唤醒 · Q4积极+低唤醒 / `CIRCUMPLEX_EMOTIONS` 20 种情绪 / 点击 emoji 弹详情卡片显示「本月出现 X 次」）；② **无后端改动**（纯前端变更，[app/](../app/) 下无任何 Python 代码改动）；③ **无数据库迁移**（不涉及 `_migrate_legacy_columns()`，`mood_checkins` 表结构不变，沿用 v2.4.0 的多条心情记录模型）；④ **无新依赖**（`frontend/package.json` 无新增，GSAP / Vue 3 已在依赖中）；⑤ `fetchTrend` 仍调用（为 `currentStreak` 连续打卡天数显示），`trend` 数据不再用于渲染。关键词 `v2.4.1` / `Russell情绪环模型` / `Circumplex Model` / `四象限图表` / `效价Valence` / `唤醒度Arousal` / `CIRCUMPLEX_EMOTIONS` / `emotionPosition` / `moodCounts` / `20种情绪` / `点击交互` / `本月出现次数` 在 6 份文档中都要出现。
 
-> 🔒 **2026-08-13 v2.4.2 整体架构优化与冗余清理（维护性清理版本，无部署迁移）**：本次为维护性清理版本，**无功能变化 / 无数据库迁移 / 无新依赖 / 无需重新 `npm run build`**（前端无改动），纯清理 + 一致性对齐。① **无需重新构建前端**——本次改动不涉及 `frontend/src/`，`static/dist/` 沿用 v2.4.1 构建产物即可；删除的是 Vue 3 SPA 迁移前的旧 Jinja2 SSR 死模板（[templates/](../../templates/) 下 15 个 `.html` + `templates/partials/` 空目录，`死模板清理`）+ 死页面脚本（[static/js/pages/](../../static/js/pages/) 下 10 个非 admin `.js`，`死页面脚本`），仅保留 [templates/admin/](../../templates/admin/)（[admin_pages.py](../../app/routers/admin_pages.py) 仍用 Jinja2 SSR）。② **无数据库迁移**——不改后端模型 / 不改 API / 不改 service / 不改 `_migrate_legacy_columns()`。③ **无新依赖**——[requirements.txt](../../requirements.txt) / `frontend/package.json` 均不动。④ **[app/main.py](../../app/main.py) 版本号 1.0.0 → 2.4.2**（`版本号对齐`）+ `EXT_TO_MIME` 删除重复 `.webp` 条目（`EXT_TO_MIME`）。⑤ **过时端口注释修复**（`过时注释`）：[app/routers/pages.py](../../app/routers/pages.py) / [frontend/vite.config.js](../../frontend/vite.config.js) / [static/js/app.js](../../static/js/app.js) 中 `:5173 → :5000`（Vite）/ `:5000 → :5001`（FastAPI 开发），与实际端口策略一致。⑥ **新增 5 个五音封面 SVG**（`SVG封面`）：[static/img/cover_gong.svg](../../static/img/cover_gong.svg) / `cover_shang.svg` / `cover_jue.svg` / `cover_zhi.svg` / `cover_yu.svg`，修复 [app/seed.py](../../app/seed.py) 引用的缺失资源。⑦ **[app/routers/admin_pages.py](../../app/routers/admin_pages.py) admin_users N+1 查询优化**（`N+1优化` / `GROUP BY`）：151 次→4 次查询。**服务器部署**：直接 `python start.py`（dist 沿用 v2.4.1 构建产物，无需重新 build），首次重启自动应用清理。关键词 `v2.4.2` / `死模板清理` / `死页面脚本` / `N+1优化` / `GROUP BY` / `SVG封面` / `EXT_TO_MIME` / `版本号对齐` / `过时注释` 在 6 份文档中都要出现。
+> 🔒 **2026-08-13 v2.4.2 整体架构优化与冗余清理（维护性清理版本，无部署迁移）**：本次为维护性清理版本，**无功能变化 / 无数据库迁移 / 无新依赖 / 无需重新 `npm run build`**（前端无改动），纯清理 + 一致性对齐。① **无需重新构建前端**——本次改动不涉及 `frontend/src/`，`static/dist/` 沿用 v2.4.1 构建产物即可；删除的是 Vue 3 SPA 迁移前的旧 Jinja2 SSR 死模板（[templates/](../templates/) 下 15 个 `.html` + `templates/partials/` 空目录，`死模板清理`）+ 死页面脚本（[static/js/pages/](../static/js/pages/) 下 10 个非 admin `.js`，`死页面脚本`），仅保留 [templates/admin/](../templates/admin/)（[admin_pages.py](../app/routers/admin_pages.py) 仍用 Jinja2 SSR）。② **无数据库迁移**——不改后端模型 / 不改 API / 不改 service / 不改 `_migrate_legacy_columns()`。③ **无新依赖**——[requirements.txt](../requirements.txt) / `frontend/package.json` 均不动。④ **[app/main.py](../app/main.py) 版本号 1.0.0 → 2.4.2**（`版本号对齐`）+ `EXT_TO_MIME` 删除重复 `.webp` 条目（`EXT_TO_MIME`）。⑤ **过时端口注释修复**（`过时注释`）：[app/routers/pages.py](../app/routers/pages.py) / [frontend/vite.config.js](../frontend/vite.config.js) / [static/js/app.js](../static/js/app.js) 中 `:5173 → :5000`（Vite）/ `:5000 → :5001`（FastAPI 开发），与实际端口策略一致。⑥ **新增 5 个五音封面 SVG**（`SVG封面`）：`static/images/cover_gong.svg` / `cover_shang.svg` / `cover_jue.svg` / `cover_zhi.svg` / `cover_yu.svg`，修复 [app/seed.py](../app/seed.py) 引用的缺失资源。⑦ **[app/routers/admin_pages.py](../app/routers/admin_pages.py) admin_users N+1 查询优化**（`N+1优化` / `GROUP BY`）：151 次→4 次查询。**服务器部署**：直接 `python start.py`（dist 沿用 v2.4.1 构建产物，无需重新 build），首次重启自动应用清理。关键词 `v2.4.2` / `死模板清理` / `死页面脚本` / `N+1优化` / `GROUP BY` / `SVG封面` / `EXT_TO_MIME` / `版本号对齐` / `过时注释` 在 6 份文档中都要出现。
 
-> 🔒 **2026-08-14 v2.4.3 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复（内容运营 + Bug 修复版本，部署需重新 build）**：本次为内容运营 + Bug 修复版本，**无新依赖**，但**前端有改动，部署前必须重新 `npm run build`**，否则用户拿不到 v2.4.3 新文案 / emoji 修正 / 落叶 toast / 情绪日历修复 / 花田 AI 条件渲染。① **部署前必须重新 `npm run build`**——前端涉及 [HomeView.vue](../../frontend/src/views/HomeView.vue)（首页 emoji 🏝️→🌊 + 模块名「花坊」→「落叶花坊」+ 漂流瓶 🍶→🏺）+ [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue)（可选链修复空白 + 落叶/徽章 toast）+ [GardenView.vue](../../frontend/src/views/garden/GardenView.vue)（花田 AI `v-if="flowers.length > 0"` + 「岛上物件🏝️」+ 「落叶花坊」改名）+ [ShopView.vue](../../frontend/src/views/shop/ShopView.vue) / [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（文案改名）+ [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue)（🌊 / 🏺 映射）+ 各 View 的落叶/徽章 toast；② **数据库自动迁移**（无需手动 ALTER）——seed.py 启动时自动执行 `RENAME_MAP` 改名迁移（桂花→小麦 / 银杏→青叶 / 兰花+梅花→樱花去重 / 白鹤→火烈鸟 / 蓑衣→斗篷 / 花田主人→花间客）+ 删除「古琴初学者」废弃徽章（含 GardenItem 引用清理），老库重启即生效；③ **无新依赖**——[requirements.txt](../../requirements.txt) / `frontend/package.json` 均不动；④ **不改后端模型结构**——不新增表 / 不新增列 / 不改 `_migrate_legacy_columns()`，仅 [constants.py](../../app/utils/constants.py) 新增 `BADGE_LEAF_REWARD=10` 常量 + [energy_service.py](../../app/services/energy_service.py) `check_achievements` 返回值新增 `new_badges` / `new_leaves` / `leaves_balance` 三个字段；⑤ **服务器部署**：`python start.py build && python start.py --prod`（重新构建 dist + 单进程模式），或 `python start.py`（应用模式，自动 HMR）。关键词 `v2.4.3` / `花语化` / `emoji对齐` / `BADGE_LEAF_REWARD` / `落叶死锁解除` / `树洞三层回复` / `情绪日历空bug` / `花田AI` / `改名迁移` / `落叶花坊` / `花间客` 在 6 份文档中都要出现。
+> 🔒 **2026-08-14 v2.4.3 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复（内容运营 + Bug 修复版本，部署需重新 build）**：本次为内容运营 + Bug 修复版本，**无新依赖**，但**前端有改动，部署前必须重新 `npm run build`**，否则用户拿不到 v2.4.3 新文案 / emoji 修正 / 落叶 toast / 情绪日历修复 / 花田 AI 条件渲染。① **部署前必须重新 `npm run build`**——前端涉及 [HomeView.vue](../frontend/src/views/HomeView.vue)（首页 emoji 🏝️→🌊 + 模块名「花坊」→「落叶花坊」+ 漂流瓶 🍶→🏺）+ [MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue)（可选链修复空白 + 落叶/徽章 toast）+ [GardenView.vue](../frontend/src/views/garden/GardenView.vue)（花田 AI `v-if="flowers.length > 0"` + 「岛上物件🏝️」+ 「落叶花坊」改名）+ [ShopView.vue](../frontend/src/views/garden/ShopView.vue) / [ProfileView.vue](../frontend/src/views/profile/ProfileView.vue)（文案改名）+ [EmojiIcon.vue](../frontend/src/components/EmojiIcon.vue)（🌊 / 🏺 映射）+ 各 View 的落叶/徽章 toast；② **数据库自动迁移**（无需手动 ALTER）——seed.py 启动时自动执行 `RENAME_MAP` 改名迁移（桂花→小麦 / 银杏→青叶 / 兰花+梅花→樱花去重 / 白鹤→火烈鸟 / 蓑衣→斗篷 / 花田主人→花间客）+ 删除「古琴初学者」废弃徽章（含 GardenItem 引用清理），老库重启即生效；③ **无新依赖**——[requirements.txt](../requirements.txt) / `frontend/package.json` 均不动；④ **不改后端模型结构**——不新增表 / 不新增列 / 不改 `_migrate_legacy_columns()`，仅 [constants.py](../app/utils/constants.py) 新增 `BADGE_LEAF_REWARD=10` 常量 + [energy_service.py](../app/services/energy_service.py) `check_achievements` 返回值新增 `new_badges` / `new_leaves` / `leaves_balance` 三个字段；⑤ **服务器部署**：`python start.py build && python start.py --prod`（重新构建 dist + 单进程模式），或 `python start.py`（应用模式，自动 HMR）。关键词 `v2.4.3` / `花语化` / `emoji对齐` / `BADGE_LEAF_REWARD` / `落叶死锁解除` / `树洞三层回复` / `情绪日历空bug` / `花田AI` / `改名迁移` / `落叶花坊` / `花间客` 在 6 份文档中都要出现。
 
-> 🔧 **2026-08-15 v2.4.3 补丁（首页滚动提示可点击）**：[HomeView.vue](../../frontend/src/views/HomeView.vue) Hero 底部滚动提示改为可点击 `<button>`（原 `pointer-events:none` 点击无反应），文案「向下沉入海面」→「向下，遇见岛上的去处」。纯前端交互修复，**部署需重新 `npm run build`**。
+> 🔧 **2026-08-15 v2.4.3 补丁（首页滚动提示可点击）**：[HomeView.vue](../frontend/src/views/HomeView.vue) Hero 底部滚动提示改为可点击 `<button>`（原 `pointer-events:none` 点击无反应），文案「向下沉入海面」→「向下，遇见岛上的去处」。纯前端交互修复，**部署需重新 `npm run build`**。
 
-> 🔒 **2026-08-15 v2.4.4 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨（Bug 修复 + 功能增强版本，部署需重新 build + 数据库迁移）**：本次为 Bug 修复 + 功能增强版本，**无新依赖**，但**前端 + 后端均有改动，部署前必须重新 `npm run build`，且数据库迁移在启动时自动执行**（`_migrate_legacy_columns()` + `mood_checkins` 表重建）。① **部署前必须重新 `npm run build`**——前端涉及 [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue)（移除 GSAP `opacity:0` 透明 bug + 情绪日历使用指南改罗素情绪环模型）+ [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（头像上传按钮 + 图片渲染）+ [AIChatView.vue](../../frontend/src/views/ai/AIChatView.vue)（图片头像渲染）+ [GardenView.vue](../../frontend/src/views/garden/GardenView.vue)（岛上物件 emoji 🎁→🧳）+ 通知 emoji 统一 💛；② **数据库自动迁移**（无需手动 ALTER）——`_migrate_legacy_columns()` 启动时自动执行：`mood_checkins` 表重建（`CREATE TABLE AS SELECT` 丢主键 → `id INTEGER PRIMARY KEY AUTOINCREMENT` + FK + 索引，数据完整迁移）+ `User.avatar` 字段长度 `String(16)` → `String(255)`（SQLite 重建表方式 ALTER）+ 旧版加密日记 `content` 空字段自动填入提示文本「（这段日记来自旧版本，内容已无法读取）」；③ **`static/uploads/avatars/` 目录自动创建**——`POST /api/profile/avatar` 上传端点首次调用时 `os.makedirs(exist_ok=True)` 自动创建目录，**部署无需手动 mkdir**；④ **无新依赖**——[requirements.txt](../../requirements.txt) / `frontend/package.json` 均不动；⑤ **服务器部署**：`python start.py build && python start.py --prod`（重新构建 dist + 单进程模式），或 `python start.py`（应用模式，自动 HMR）；首次启动时自动执行数据库迁移（`mood_checkins` 重建 + `avatar` 字段扩展 + 旧版日记填充）。关键词 `v2.4.4` / `情绪日历透明修复` / `旧版日记迁移` / `mood_checkins 主键重建` / `avatar 字段长度` / `头像图片上传` / `花朵介绍` / `徽章落叶分级` / `情绪日历指南` / `岛上物件 emoji` / `通知 emoji 统一` 在 6 份文档中都要出现。
-
----
-
-> 🔒 **2026-08-16 v2.4.5 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一（Bug 修复版本，部署需重新 build）**：本次为 Bug 修复版本，**纯前端改动（3 个文件），无后端改动 / 无数据库迁移 / 无新依赖**，但**前端有改动，部署前必须重新 `npm run build`**。① **部署前必须重新 `npm run build`**——前端涉及 [MoodCalendarView.vue](../../frontend/src/views/mood/MoodCalendarView.vue)（恢复 30 天趋势柱状图 + GSAP 动画只保留位移）+ [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（移除 `capture="environment"`，头像支持相册选择）+ [NotificationsView.vue](../../frontend/src/views/notification/NotificationsView.vue)（空状态 emoji 🌙→💛）；② **无数据库迁移**——不涉及 `_migrate_legacy_columns()` / 不改表结构 / 不改 API；③ **无新依赖**——[requirements.txt](../../requirements.txt) / `frontend/package.json` 均不动；④ **版本号**：[app/main.py](../../app/main.py) 2.4.4 → 2.4.5（`版本号对齐`）；⑤ **服务器部署**：`python start.py build && python start.py --prod`（重新构建 dist + 单进程模式），或 `python start.py`（首次检测 dist 已存在则直接启动）。关键词 `v2.4.5` / `30天趋势柱状图恢复` / `罗素情绪环显示修复` / `头像相册选择` / `通知空状态emoji` 在 6 份文档中都要出现。
+> 🔒 **2026-08-15 v2.4.4 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨（Bug 修复 + 功能增强版本，部署需重新 build + 数据库迁移）**：本次为 Bug 修复 + 功能增强版本，**无新依赖**，但**前端 + 后端均有改动，部署前必须重新 `npm run build`，且数据库迁移在启动时自动执行**（`_migrate_legacy_columns()` + `mood_checkins` 表重建）。① **部署前必须重新 `npm run build`**——前端涉及 [MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue)（移除 GSAP `opacity:0` 透明 bug + 情绪日历使用指南改罗素情绪环模型）+ [ProfileView.vue](../frontend/src/views/profile/ProfileView.vue)（头像上传按钮 + 图片渲染）+ [AIChatView.vue](../frontend/src/views/ai/AIChatView.vue)（图片头像渲染）+ [GardenView.vue](../frontend/src/views/garden/GardenView.vue)（岛上物件 emoji 🎁→🧳）+ 通知 emoji 统一 💛；② **数据库自动迁移**（无需手动 ALTER）——`_migrate_legacy_columns()` 启动时自动执行：`mood_checkins` 表重建（`CREATE TABLE AS SELECT` 丢主键 → `id INTEGER PRIMARY KEY AUTOINCREMENT` + FK + 索引，数据完整迁移）+ `User.avatar` 字段长度 `String(16)` → `String(255)`（SQLite 重建表方式 ALTER）+ 旧版加密日记 `content` 空字段自动填入提示文本「（这段日记来自旧版本，内容已无法读取）」；③ **`static/uploads/avatars/` 目录自动创建**——`POST /api/profile/avatar` 上传端点首次调用时 `os.makedirs(exist_ok=True)` 自动创建目录，**部署无需手动 mkdir**；④ **无新依赖**——[requirements.txt](../requirements.txt) / `frontend/package.json` 均不动；⑤ **服务器部署**：`python start.py build && python start.py --prod`（重新构建 dist + 单进程模式），或 `python start.py`（应用模式，自动 HMR）；首次启动时自动执行数据库迁移（`mood_checkins` 重建 + `avatar` 字段扩展 + 旧版日记填充）。关键词 `v2.4.4` / `情绪日历透明修复` / `旧版日记迁移` / `mood_checkins 主键重建` / `avatar 字段长度` / `头像图片上传` / `花朵介绍` / `徽章落叶分级` / `情绪日历指南` / `岛上物件 emoji` / `通知 emoji 统一` 在 6 份文档中都要出现。
 
 ---
 
-> 🔊 **2026-08-16 v2.4.6 五音音频真实化（部署须知：音频文件更新 + 数据迁移自动执行）**：本次为历史遗留清理版本，**无新依赖、无需重新 npm run build（前端零改动）**，但有以下部署要点：① **静态音频文件更新**——`static/audio/` 下 5 个假 MP3 占位删除，新增 5 个真实 WAV（Karplus-Strong 合成古琴五音，各 78 秒 / 3.4MB，共约 17MB，git 拉取后自动就位）；② **数据迁移自动执行**——重启后端时 `_migrate_legacy_columns()` 自动把 `musics.audio_url` 从 `.mp3` 切到 `.wav`（幂等，日志可见 `[MIGRATE] musics.audio_url 已切换`），**无需手动操作**；③ **音频误删恢复**——运行 `python scripts/generate_audio.py` 一键重新生成 5 个 WAV（纯标准库零依赖，固定种子输出一致）；④ **版本号**：[app/main.py](../../app/main.py) 2.4.5 → 2.4.6（`版本号对齐`）；⑤ **服务器部署**：`python start.py`（静态文件 + 迁移全自动，无需 build）。关键词 `v2.4.6` / `五音音频合成` / `Karplus-Strong` / `audio_url切wav` 在 6 份文档中都要出现。
+> 🔒 **2026-08-16 v2.4.5 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一（Bug 修复版本，部署需重新 build）**：本次为 Bug 修复版本，**纯前端改动（3 个文件），无后端改动 / 无数据库迁移 / 无新依赖**，但**前端有改动，部署前必须重新 `npm run build`**。① **部署前必须重新 `npm run build`**——前端涉及 [MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue)（恢复 30 天趋势柱状图 + GSAP 动画只保留位移）+ [ProfileView.vue](../frontend/src/views/profile/ProfileView.vue)（移除 `capture="environment"`，头像支持相册选择）+ [NotificationsView.vue](../frontend/src/views/notification/NotificationsView.vue)（空状态 emoji 🌙→💛）；② **无数据库迁移**——不涉及 `_migrate_legacy_columns()` / 不改表结构 / 不改 API；③ **无新依赖**——[requirements.txt](../requirements.txt) / `frontend/package.json` 均不动；④ **版本号**：[app/main.py](../app/main.py) 2.4.4 → 2.4.5（`版本号对齐`）；⑤ **服务器部署**：`python start.py build && python start.py --prod`（重新构建 dist + 单进程模式），或 `python start.py`（首次检测 dist 已存在则直接启动）。关键词 `v2.4.5` / `30天趋势柱状图恢复` / `罗素情绪环显示修复` / `头像相册选择` / `通知空状态emoji` 在 6 份文档中都要出现。
 
 ---
 
-> 🔁 **2026-08-16 v2.4.7 部署须知（音频方案回退：重启即自动切回 .mp3）**：v2.4.6 合成 wav 方案已回退（用户试听否决），**无新依赖、前端零改动、无需 npm run build**。部署要点：① **重启后端时数据迁移自动执行**——`musics.audio_url` 从 `.wav` 切回 `.mp3`（幂等，日志可见 `[MIGRATE] musics.audio_url 已切回 .mp3`），**无需手动操作**；② **静态音频恢复占位**——`static/audio/` 下回到 5 个 mp3 静音占位（各 5338 字节），合成 wav 与 generate_audio.py 已删除；③ **接入真实曲库（待办，`待接入真实曲库`）**——下载真实古琴音频命名为 `gong/shang/jue/zhi/yu.mp3` 覆盖 `static/audio/` 同名文件即可，无需改代码 / 无需重启（静态文件即时生效）；④ **版本号**：[app/main.py](../../app/main.py) 2.4.6 → 2.4.7（`版本号对齐`）。关键词 `v2.4.7` / `音频方案回退` / `恢复mp3占位` / `待接入真实曲库` 在 6 份文档中都要出现。
+> 🔊 **2026-08-16 v2.4.6 五音音频真实化（部署须知：音频文件更新 + 数据迁移自动执行）**：本次为历史遗留清理版本，**无新依赖、无需重新 npm run build（前端零改动）**，但有以下部署要点：① **静态音频文件更新**——`static/audio/` 下 5 个假 MP3 占位删除，新增 5 个真实 WAV（Karplus-Strong 合成古琴五音，各 78 秒 / 3.4MB，共约 17MB，git 拉取后自动就位）；② **数据迁移自动执行**——重启后端时 `_migrate_legacy_columns()` 自动把 `musics.audio_url` 从 `.mp3` 切到 `.wav`（幂等，日志可见 `[MIGRATE] musics.audio_url 已切换`），**无需手动操作**；③ **音频误删恢复**——运行 `python scripts/generate_audio.py` 一键重新生成 5 个 WAV（纯标准库零依赖，固定种子输出一致）；④ **版本号**：[app/main.py](../app/main.py) 2.4.5 → 2.4.6（`版本号对齐`）；⑤ **服务器部署**：`python start.py`（静态文件 + 迁移全自动，无需 build）。关键词 `v2.4.6` / `五音音频合成` / `Karplus-Strong` / `audio_url切wav` 在 6 份文档中都要出现。
 
 ---
 
-> 🎵 **2026-08-16 v2.4.8 部署须知（曲目独立音频：重启自动迁移 + 真实音频放置指引）**：本次为架构升级，**无新依赖、前端零改动、无需 npm run build**。部署要点：① **重启后端时数据迁移自动执行**——22 行 `musics.audio_url` 从 `/static/audio/{五音}.mp3` 重定向到 `/static/audio/tracks/{曲名}.mp3`（按 title 拼接，幂等，日志可见 `[MIGRATE] musics.audio_url 已切换为每曲独立文件`）；② **静态文件变化**——`static/audio/` 根目录下 5 个五音占位删除，新增 `static/audio/tracks/` 子目录（22 个中文曲名占位 mp3，各 5338 字节）；③ **接入真实曲库（核心用法）**——下载对应曲目音频，命名为曲名（如 `流水.mp3`、`梅花三弄.mp3`）放入 `static/audio/tracks/` **同名覆盖**即可：无需改代码 / 无需重启（静态文件即时生效）；④ **版本号**：[app/main.py](../../app/main.py) 2.4.7 → 2.4.8（`版本号对齐`）。关键词 `v2.4.8` / `曲目独立音频` / `audio_url迁移tracks` / `五音共享废弃` 在 6 份文档中都要出现。
+> 🔁 **2026-08-16 v2.4.7 部署须知（音频方案回退：重启即自动切回 .mp3）**：v2.4.6 合成 wav 方案已回退（用户试听否决），**无新依赖、前端零改动、无需 npm run build**。部署要点：① **重启后端时数据迁移自动执行**——`musics.audio_url` 从 `.wav` 切回 `.mp3`（幂等，日志可见 `[MIGRATE] musics.audio_url 已切回 .mp3`），**无需手动操作**；② **静态音频恢复占位**——`static/audio/` 下回到 5 个 mp3 静音占位（各 5338 字节），合成 wav 与 generate_audio.py 已删除；③ **接入真实曲库（待办，`待接入真实曲库`）**——下载真实古琴音频命名为 `gong/shang/jue/zhi/yu.mp3` 覆盖 `static/audio/` 同名文件即可，无需改代码 / 无需重启（静态文件即时生效）；④ **版本号**：[app/main.py](../app/main.py) 2.4.6 → 2.4.7（`版本号对齐`）。关键词 `v2.4.7` / `音频方案回退` / `恢复mp3占位` / `待接入真实曲库` 在 6 份文档中都要出现。
 
 ---
 
-> 🏝️ **2026-09-12 v2.5.0 部署须知（首页重构：必须重新构建前端）**：本次为首页动线与理念呈现重构第一期（`hero理念卡` + `模块奖励行` + `岛上指南手风琴` + `指南数据共享` + `开启我的岛`），**纯前端改动，涉及前端构建产物，部署时必须重新构建**。部署步骤：① `python start.py build`（或 `cd frontend && npm run build`）——新前端包含 [HomeView.vue](../../frontend/src/views/HomeView.vue) hero 理念卡 / 模块卡奖励行 / 岛上指南手风琴 + 新文件 [frontend/src/data/islandGuide.js](../../frontend/src/data/islandGuide.js)；② `python start.py restart`——后端仅版本号变更 2.4.10 → 2.5.0（`版本号对齐`），无路由 / 迁移 / .env 变化；③ **无新依赖**（package.json 无变化）/ **无数据库迁移** / **无 .env 变更**。验证：部署后打开首页——hero 右侧理念卡显示「每一个情绪，都值得一座岛。」；六张模块卡带「✦ 怎么玩」奖励行；向下滚动「岛上指南」6 张卡点击可展开/收起明细；未登录时底部 CTA 按钮文案为「开启我的岛」。关键词 `v2.5.0` / `hero理念卡` / `模块奖励行` / `岛上指南手风琴` / `指南数据共享` / `开启我的岛` 在 6 份文档中都要出现。
+> 🎵 **2026-08-16 v2.4.8 部署须知（曲目独立音频：重启自动迁移 + 真实音频放置指引）**：本次为架构升级，**无新依赖、前端零改动、无需 npm run build**。部署要点：① **重启后端时数据迁移自动执行**——22 行 `musics.audio_url` 从 `/static/audio/{五音}.mp3` 重定向到 `/static/audio/tracks/{曲名}.mp3`（按 title 拼接，幂等，日志可见 `[MIGRATE] musics.audio_url 已切换为每曲独立文件`）；② **静态文件变化**——`static/audio/` 根目录下 5 个五音占位删除，新增 `static/audio/tracks/` 子目录（22 个中文曲名占位 mp3，各 5338 字节）；③ **接入真实曲库（核心用法）**——下载对应曲目音频，命名为曲名（如 `流水.mp3`、`梅花三弄.mp3`）放入 `static/audio/tracks/` **同名覆盖**即可：无需改代码 / 无需重启（静态文件即时生效）；④ **版本号**：[app/main.py](../app/main.py) 2.4.7 → 2.4.8（`版本号对齐`）。关键词 `v2.4.8` / `曲目独立音频` / `audio_url迁移tracks` / `五音共享废弃` 在 6 份文档中都要出现。
 
 ---
 
-> 🔧 **2026-08-23 v2.4.10 部署须知（图标 viewBox 修复：必须重新构建前端）**：本次修复 v2.4.9 图标数据缺 width/height 导致的 viewBox 裁切（图标只显示左上角方块），**涉及前端构建产物，部署时必须重新构建**。部署步骤：① `node scripts/extract_twemoji.mjs`（若直接拉取仓库则跳过——生成的 [twemoji-icons.js](../../frontend/src/assets/twemoji-icons.js) 已入库）；② `python start.py build`（或 `cd frontend && npm run build`）；③ `python start.py restart`（后端仅版本号变更 2.4.9 → 2.4.10，无路由/迁移变化）；④ **无新依赖 / 无数据库迁移 / 无 .env 变更**。验证：部署后打开首页，导航栏图标（🎵📖🌙🌳🍂🌸👤🌊🔔💧）应显示完整彩色图形，浏览器 DevTools 检查 `.nav-link__icon svg` 的 viewBox 应为 `0 0 36 36`。关键词 `v2.4.10` / `viewBox尺寸合并` / `图标左上角裁切` 在 6 份文档中都要出现。
+> 🏝️ **2026-09-12 v2.5.0 部署须知（首页重构：必须重新构建前端）**：本次为首页动线与理念呈现重构第一期（`hero理念卡` + `模块奖励行` + `岛上指南手风琴` + `指南数据共享` + `开启我的岛`），**纯前端改动，涉及前端构建产物，部署时必须重新构建**。部署步骤：① `python start.py build`（或 `cd frontend && npm run build`）——新前端包含 [HomeView.vue](../frontend/src/views/HomeView.vue) hero 理念卡 / 模块卡奖励行 / 岛上指南手风琴 + 新文件 [frontend/src/data/islandGuide.js](../frontend/src/data/islandGuide.js)；② `python start.py restart`——后端仅版本号变更 2.4.10 → 2.5.0（`版本号对齐`），无路由 / 迁移 / .env 变化；③ **无新依赖**（package.json 无变化）/ **无数据库迁移** / **无 .env 变更**。验证：部署后打开首页——hero 右侧理念卡显示「每一个情绪，都值得一座岛。」；六张模块卡带「✦ 怎么玩」奖励行；向下滚动「岛上指南」6 张卡点击可展开/收起明细；未登录时底部 CTA 按钮文案为「开启我的岛」。关键词 `v2.5.0` / `hero理念卡` / `模块奖励行` / `岛上指南手风琴` / `指南数据共享` / `开启我的岛` 在 6 份文档中都要出现。
 
 ---
 
-> 🛠️ **2026-08-17 v2.4.9 部署须知（全站稳定性大修：必须重新构建前端）**：本次修复了 GSAP 动画不可见 / emoji 图标外网请求 / 五音详情 404 等 6 个 bug，**涉及前端源码改动，部署时必须重新构建**。部署步骤：① `python start.py build`（或 `cd frontend && npm install && npm run build`）——新前端包含 11 个视图的 GSAP 修复 + EmojiIcon 离线注册（twemoji-icons.js 打进 bundle）+ 双重解包修复；② `python start.py restart`——新后端包含 `GET /api/music/yin/{yin}` 端点补回（[app/routers/music.py](../../app/routers/music.py)）；③ **无新依赖**（package.json 无变化，`@iconify/vue` / `@iconify-json/twemoji` 原本就有）/ **无数据库迁移** / **无 .env 变更**；④ 版本号：[app/main.py](../../app/main.py) 2.4.8 → 2.4.9（`版本号对齐`）；⑤ 仓库变化：新增 [scripts/extract_twemoji.mjs](../../scripts/extract_twemoji.mjs) + [frontend/src/assets/twemoji-icons.js](../../frontend/src/assets/twemoji-icons.js)，删除 cookie.txt（`.gitignore` 已增补）。验证：部署后浏览器打开 `/music/gong` 应显示 4 首曲目（梅花三弄等）且 console 无 `api.iconify.design` 请求。关键词 `v2.4.9` / `GSAP位移化` / `emoji离线注册` / `twemoji-icons.js` / `图标名修正` / `wavePhases作用域修复` / `yin端点恢复` / `双重解包修复` / `cookie_txt清理` 在 6 份文档中都要出现。
+> 🔧 **2026-08-23 v2.4.10 部署须知（图标 viewBox 修复：必须重新构建前端）**：本次修复 v2.4.9 图标数据缺 width/height 导致的 viewBox 裁切（图标只显示左上角方块），**涉及前端构建产物，部署时必须重新构建**。部署步骤：① `node scripts/extract_twemoji.mjs`（若直接拉取仓库则跳过——生成的 [twemoji-icons.js](../frontend/src/assets/twemoji-icons.js) 已入库）；② `python start.py build`（或 `cd frontend && npm run build`）；③ `python start.py restart`（后端仅版本号变更 2.4.9 → 2.4.10，无路由/迁移变化）；④ **无新依赖 / 无数据库迁移 / 无 .env 变更**。验证：部署后打开首页，导航栏图标（🎵📖🌙🌳🍂🌸👤🌊🔔💧）应显示完整彩色图形，浏览器 DevTools 检查 `.nav-link__icon svg` 的 viewBox 应为 `0 0 36 36`。关键词 `v2.4.10` / `viewBox尺寸合并` / `图标左上角裁切` 在 6 份文档中都要出现。
+
+---
+
+> 🛠️ **2026-08-17 v2.4.9 部署须知（全站稳定性大修：必须重新构建前端）**：本次修复了 GSAP 动画不可见 / emoji 图标外网请求 / 五音详情 404 等 6 个 bug，**涉及前端源码改动，部署时必须重新构建**。部署步骤：① `python start.py build`（或 `cd frontend && npm install && npm run build`）——新前端包含 11 个视图的 GSAP 修复 + EmojiIcon 离线注册（twemoji-icons.js 打进 bundle）+ 双重解包修复；② `python start.py restart`——新后端包含 `GET /api/music/yin/{yin}` 端点补回（[app/routers/music.py](../app/routers/music.py)）；③ **无新依赖**（package.json 无变化，`@iconify/vue` / `@iconify-json/twemoji` 原本就有）/ **无数据库迁移** / **无 .env 变更**；④ 版本号：[app/main.py](../app/main.py) 2.4.8 → 2.4.9（`版本号对齐`）；⑤ 仓库变化：新增 [scripts/extract_twemoji.mjs](../scripts/extract_twemoji.mjs) + [frontend/src/assets/twemoji-icons.js](../frontend/src/assets/twemoji-icons.js)，删除 cookie.txt（`.gitignore` 已增补）。验证：部署后浏览器打开 `/music/gong` 应显示 4 首曲目（梅花三弄等）且 console 无 `api.iconify.design` 请求。关键词 `v2.4.9` / `GSAP位移化` / `emoji离线注册` / `twemoji-icons.js` / `图标名修正` / `wavePhases作用域修复` / `yin端点恢复` / `双重解包修复` / `cookie_txt清理` 在 6 份文档中都要出现。
 
 ---
 
@@ -68,7 +68,7 @@
 
 > 2026-07-19 v2.0 全站 Vue 3 重构后，前台从 Jinja2 SSR 迁移到 Vue 3 SPA。**部署前必须先构建前端**，否则访问 :5000 只看到「dist 未构建」提示页。
 
-> 2026-07-19 v2.0.1 起 [start.py](../../start.py) 新增 `build` 子命令：`python start.py build` 一键执行 `npm install && npm run build`（自动检测 Node 是否装好 + 自动 cd frontend + 输出到 ../static/dist/），推荐用此方式。
+> 2026-07-19 v2.0.1 起 [start.py](../start.py) 新增 `build` 子命令：`python start.py build` 一键执行 `npm install && npm run build`（自动检测 Node 是否装好 + 自动 cd frontend + 输出到 ../static/dist/），推荐用此方式。
 
 ### 构建步骤
 
@@ -79,10 +79,10 @@
 python start.py build
 ```
 
-[start.py](../../start.py) 的 `build` 子命令内部做了 3 件事：
+[start.py](../start.py) 的 `build` 子命令内部做了 3 件事：
 1. 检查 `frontend/node_modules/` 是否存在，不存在自动 `npm install`
 2. 执行 `npm run build`（Vite 5 + Rollup）
-3. 输出到 `../static/dist/`（即 [static/dist/](../../static/dist/)）
+3. 输出到 `../static/dist/`（即 [static/dist/](../static/dist/)）
 
 #### 方式 B：手动两步
 
@@ -93,7 +93,7 @@ node --version    # 应 >= v18
 # 2. 进入前端目录
 cd frontend
 
-# 3. 安装依赖（首次：含 three.js 等大包，约 7 分钟，详见 [HANDOFF §6.14](../../HANDOFF.md)）
+# 3. 安装依赖（首次：含 three.js 等大包，约 7 分钟，详见 [HANDOFF §6.14](HANDOFF.md)）
 npm install
 
 # 4. 构建（Vite 5 + Rollup，输出到 ../static/dist/）
@@ -117,19 +117,19 @@ dist/assets/index-xxxxxx.css     ← Tailwind CSS
 ✓ built in Xs
 ```
 
-> 💡 **Three.js chunk（v2.2 更新）**：[FlowerField.vue](../../frontend/src/components/FlowerField.vue)（`/garden`）、[HeroScene.vue](../../frontend/src/components/HeroScene.vue)（`/`）和 [AmbientBackground.vue](../../frontend/src/components/AmbientBackground.vue)（全局，挂在 AppLayout）都用 `defineAsyncComponent` 异步导入 `three` + `three/addons/*`，所以 Three.js + addons 被打成单独的 `three-vendor-*.js` chunk，**首屏不加载**，仅在用户访问 `/` 或 `/garden` 时按需拉取。三处共享同一 chunk，不重复下载。v2.2 起 chunk 体积从 175KB 增长到 719.84KB，因为加入了 PBR 渲染管线所需的 addons：`OrbitControls`（交互）/ `EffectComposer` + `RenderPass` + `UnrealBloomPass` + `OutputPass`（后处理）/ `RoomEnvironment`（环境映射）。AmbientBackground 首屏 DOM 由 CSS 雾气光斑 + Canvas2D 光点兜底，Three.js 加载完前页面已有完整视觉效果（三层渐进增强）。
+> 💡 **Three.js chunk（v2.2 更新）**：[FlowerField.vue](../frontend/src/components/FlowerField.vue)（`/garden`）、[HeroScene.vue](../frontend/src/components/HeroScene.vue)（`/`）和 [AmbientBackground.vue](../frontend/src/components/AmbientBackground.vue)（全局，挂在 AppLayout）都用 `defineAsyncComponent` 异步导入 `three` + `three/addons/*`，所以 Three.js + addons 被打成单独的 `three-vendor-*.js` chunk，**首屏不加载**，仅在用户访问 `/` 或 `/garden` 时按需拉取。三处共享同一 chunk，不重复下载。v2.2 起 chunk 体积从 175KB 增长到 719.84KB，因为加入了 PBR 渲染管线所需的 addons：`OrbitControls`（交互）/ `EffectComposer` + `RenderPass` + `UnrealBloomPass` + `OutputPass`（后处理）/ `RoomEnvironment`（环境映射）。AmbientBackground 首屏 DOM 由 CSS 雾气光斑 + Canvas2D 光点兜底，Three.js 加载完前页面已有完整视觉效果（三层渐进增强）。
 
 ### 构建产物去向
 
 | 文件 | 路径 | 由谁服务 |
 |---|---|---|
-| `index.html` | [static/dist/index.html](../../static/dist/) | FastAPI SPA fallback 兜底返回 |
-| JS chunk | [static/dist/assets/index-*.js](../../static/dist/) | FastAPI StaticFiles `/static/dist/*` |
-| CSS chunk | [static/dist/assets/index-*.css](../../static/dist/) | FastAPI StaticFiles `/static/dist/*` |
+| `index.html` | [static/dist/index.html](../static/dist/) | FastAPI SPA fallback 兜底返回 |
+| JS chunk | [static/dist/assets/index-*.js](../static/dist/) | FastAPI StaticFiles `/static/dist/*` |
+| CSS chunk | [static/dist/assets/index-*.css](../static/dist/) | FastAPI StaticFiles `/static/dist/*` |
 
 ### 为什么必须先构建再启动
 
-[app/main.py](../../app/main.py) 末尾的 SPA fallback 通配路由会检查 `static/dist/index.html` 是否存在：
+[app/main.py](../app/main.py) 末尾的 SPA fallback 通配路由会检查 `static/dist/index.html` 是否存在：
 - **存在** → 返回 `index.html`，Vue Router 接管客户端路由（生产模式）
 - **不存在** → 返回提示页引导访问 Vite dev server（开发模式，详见 [DEVELOPMENT 前端开发](DEVELOPMENT.md)）
 
@@ -137,14 +137,14 @@ dist/assets/index-xxxxxx.css     ← Tailwind CSS
 
 | 改动 | 是否需要 `npm run build` |
 |---|---|
-| 改 [`frontend/src/`](../../frontend/src/) 下任何 `.vue` / `.js` / `.ts` / `.css` | ✅ 必须 |
-| 改 [`frontend/tailwind.config.js`](../../frontend/tailwind.config.js) | ✅ 必须 |
-| 改 [`frontend/vite.config.js`](../../frontend/vite.config.js) | ✅ 必须 |
-| 改 [`app/`](../../app/) 下 Python 代码 | ❌ 不需要（重启 `python start.py restart` 即可） |
-| 改 [`templates/admin/`](../../templates/admin/) 后台 SSR 模板 | ❌ 不需要（Jinja2 模板运行时渲染） |
-| 改 [`.env`](../../.env.example) | ❌ 不需要（重启即可） |
+| 改 [`frontend/src/`](../frontend/src/) 下任何 `.vue` / `.js` / `.ts` / `.css` | ✅ 必须 |
+| 改 [`frontend/tailwind.config.js`](../frontend/tailwind.config.js) | ✅ 必须 |
+| 改 [`frontend/vite.config.js`](../frontend/vite.config.js) | ✅ 必须 |
+| 改 [`app/`](../app/) 下 Python 代码 | ❌ 不需要（重启 `python start.py restart` 即可） |
+| 改 [`templates/admin/`](../templates/admin/) 后台 SSR 模板 | ❌ 不需要（Jinja2 模板运行时渲染） |
+| 改 [`.env`](../.env.example) | ❌ 不需要（重启即可） |
 
-> 💡 **v2.3.3 Safari 兼容修复示例**：本次改了 [utils/visual.js](../../frontend/src/utils/visual.js)（**`hasWebGL` 重写** + `getWebGLCaps` / `isSafari` / `isIOS`）+ [utils/three-helpers.js](../../frontend/src/utils/three-helpers.js)（`webglcontextlost` / `webglcontextrestored` 监听）+ [HeroScene.vue](../../frontend/src/components/HeroScene.vue)（**iOS 降级**：**Bloom 降级** + **PMREM 降级**）+ 新建 [EmojiIcon.vue](../../frontend/src/components/EmojiIcon.vue)（**Iconify** + `twemoji` **SVG emoji**）+ 改 [AppLayout.vue](../../frontend/src/components/AppLayout.vue) / [ProfileView.vue](../../frontend/src/views/profile/ProfileView.vue)（替换 emoji）——全部命中表格首行（`.vue` / `.js`），**必须重新 `npm run build`** 才能让 Safari / iOS 用户拿到 **Safari 兼容**修复 + **跨浏览器一致** emoji。
+> 💡 **v2.3.3 Safari 兼容修复示例**：本次改了 [utils/visual.js](../frontend/src/utils/visual.js)（**`hasWebGL` 重写** + `getWebGLCaps` / `isSafari` / `isIOS`）+ [utils/three-helpers.js](../frontend/src/utils/three-helpers.js)（`webglcontextlost` / `webglcontextrestored` 监听）+ [HeroScene.vue](../frontend/src/components/HeroScene.vue)（**iOS 降级**：**Bloom 降级** + **PMREM 降级**）+ 新建 [EmojiIcon.vue](../frontend/src/components/EmojiIcon.vue)（**Iconify** + `twemoji` **SVG emoji**）+ 改 [AppLayout.vue](../frontend/src/components/AppLayout.vue) / [ProfileView.vue](../frontend/src/views/profile/ProfileView.vue)（替换 emoji）——全部命中表格首行（`.vue` / `.js`），**必须重新 `npm run build`** 才能让 Safari / iOS 用户拿到 **Safari 兼容**修复 + **跨浏览器一致** emoji。
 
 ### 部署流程（生产，v2.3.2 起默认生产模式 + 自动构建）
 
@@ -187,7 +187,7 @@ cd frontend && npm run dev     # http://127.0.0.1:5000/
 set QI_PORT=5001 && python start.py fg    # http://127.0.0.1:5001/
 ```
 
-> ⚠️ **v2.0.1 端口策略调整**：应用/开发模式 Vite 占 :5000（用户入口 + HMR），FastAPI 退到 :5001（API）；不再是 v2.0 的 Vite :5173 + FastAPI :5000。理由：让 FastAPI 反代 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 会因 null 字节转义 + 冒号失败（详见 [HANDOFF §6.16](../../HANDOFF.md)）。**用户始终访问 :5000**。
+> ⚠️ **v2.0.1 端口策略调整**：应用/开发模式 Vite 占 :5000（用户入口 + HMR），FastAPI 退到 :5001（API）；不再是 v2.0 的 Vite :5173 + FastAPI :5000。理由：让 FastAPI 反代 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 会因 null 字节转义 + 冒号失败（详见 [HANDOFF §6.16](HANDOFF.md)）。**用户始终访问 :5000**。
 
 Vite dev server 提供 HMR 热更新 + 自动 proxy `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 到 FastAPI :5001，详见 [DEVELOPMENT 前端开发](DEVELOPMENT.md)。
 
@@ -230,7 +230,7 @@ git clone <your-repo-url> healing
 
 **为什么用自定义命令**：
 - 宝塔默认用 `gunicorn`，但本项目**没有** gunicorn 依赖
-- 我们用自研的 [start.py](../../start.py)，自带 PID / 日志 / 重启
+- 我们用自研的 [start.py](../start.py)，自带 PID / 日志 / 重启
 
 ### 1.4 配置 .env
 
@@ -336,7 +336,7 @@ python start.py          # v2.3.2 起默认 = 生产模式（FastAPI :5000 单�
 | 更新代码（仅后端改动） | `git pull && python start.py restart` |
 | 更新代码（含前端改动） | `git pull && cd frontend && npm install && npm run build && cd .. && python start.py restart` |
 
-> 🔒 **改了部署相关配置（端口 / Nginx / systemd / HTTPS）必须同步更新**：[README §1](../../README.md) / [HANDOFF §1](../../HANDOFF.md) / 本文件对应章节。改代码不改文档 = 改了一半（详见 [HANDOFF §12](../../HANDOFF.md)）。
+> 🔒 **改了部署相关配置（端口 / Nginx / systemd / HTTPS）必须同步更新**：[README §1](../README.md) / [HANDOFF §1](HANDOFF.md) / 本文件对应章节。改代码不改文档 = 改了一半（详见 [HANDOFF §12](HANDOFF.md)）。
 
 ---
 
@@ -532,7 +532,7 @@ sudo journalctl -u healing -f        # 日志（systemd 自带）
 tail -f /home/healing/app/logs/healing.log   # 业务日志
 ```
 
-> 🔒 **改了 systemd unit / Nginx 配置 / 端口** → 必须同步更新 [README §1](../../README.md) / [HANDOFF §1](../../HANDOFF.md) / 本文件对应章节（详见 [HANDOFF §12](../../HANDOFF.md)）。
+> 🔒 **改了 systemd unit / Nginx 配置 / 端口** → 必须同步更新 [README §1](../README.md) / [HANDOFF §1](HANDOFF.md) / 本文件对应章节（详见 [HANDOFF §12](HANDOFF.md)）。
 
 ---
 
@@ -634,11 +634,11 @@ sqlite> .quit
 
 ## AI 接入（可选，2026-07-17 加）
 
-> **本节是可选功能**。不配置 AI 也能跑，4 个 AI 端点会优雅降级返回治愈系友好提示，业务不中断。详见 [ARCHITECTURE §6.6](../ARCHITECTURE.md) / [HANDOFF §5.7](../../HANDOFF.md)。
+> **本节是可选功能**。不配置 AI 也能跑，4 个 AI 端点会优雅降级返回治愈系友好提示，业务不中断。详见 [ARCHITECTURE §6.6](ARCHITECTURE.md) / [HANDOFF §5.7](HANDOFF.md)。
 
 ### 是什么
 
-静屿 4 个场景接入 NVIDIA NIM API（OpenAI 兼容格式），模型 `meta/llama-3.1-8b-instruct`（8B 小模型，响应快；原默认 `nvidia/llama-3.1-nemotron-70b-instruct` 在用户 NVIDIA 账户下 404 不可用，详见 [HANDOFF §5.7](../../HANDOFF.md)）：
+静屿 4 个场景接入 NVIDIA NIM API（OpenAI 兼容格式），模型 `meta/llama-3.1-8b-instruct`（8B 小模型，响应快；原默认 `nvidia/llama-3.1-nemotron-70b-instruct` 在用户 NVIDIA 账户下 404 不可用，详见 [HANDOFF §5.7](HANDOFF.md)）：
 
 | 场景 | 端点 | 入口 |
 |---|---|---|
@@ -651,7 +651,7 @@ sqlite> .quit
 
 获取 NVIDIA 免费 API key：访问 [build.nvidia.com](https://build.nvidia.com) → 注册 → 在 `meta/llama-3.1-8b-instruct` 模型页生成 key（格式 `nvapi-xxxxx`）。
 
-在 `.env` 加入（或取消注释 [.env.example](../../.env.example) 末尾的对应行）：
+在 `.env` 加入（或取消注释 [.env.example](../.env.example) 末尾的对应行）：
 
 ```env
 # NVIDIA NIM API（OpenAI 兼容格式）
@@ -689,7 +689,7 @@ curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
 ### 网络要求
 
 - 出站访问 `https://integrate.api.nvidia.com`（443）— 服务器防火墙需放行
-- 超时设置：[app/services/ai_service.py](../../app/services/ai_service.py) `_call_nvidia()` 默认 **60 秒**（8B 模型实际 1-10s，60s 纯兜底）
+- 超时设置：[app/services/ai_service.py](../app/services/ai_service.py) `_call_nvidia()` 默认 **60 秒**（8B 模型实际 1-10s，60s 纯兜底）
 - 调用失败（网络/超时/限流/4xx/5xx）→ 端点返回 200 + `available:false` + 治愈系提示，**不报 500**
 - **前端字体**：模板通过 `fonts.loli.net` / `gstatic.loli.net`（Google Fonts 国内镜像）加载 Noto Sans/Serif SC，国内可访问；如完全离线部署（不允许任何出站），CSS 变量 `--font-sans` / `--font-serif` 有 `"PingFang SC", "Microsoft YaHei"` 等系统字体兜底，不影响功能
 
@@ -707,7 +707,7 @@ curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
 | 情绪日历 AI 治愈语 | 心情 emoji + 可选 note | ❌ 不入库 |
 | 音乐 AI 心情推荐 | 用户描述的状态文本 | ❌ 不入库 |
 
-**API key 不入仓**：`.env` 已在 `.gitignore` 里，[.env.example](../../.env.example) 只放注释掉的占位。
+**API key 不入仓**：`.env` 已在 `.gitignore` 里，[.env.example](../.env.example) 只放注释掉的占位。
 
 **完全离线方案**：不配 `QI_NVIDIA_API_KEY` → 4 个端点自动降级 → 业务正常跑（仅少 AI 文案）。适合内网部署 / 不允许数据出站的环境。
 

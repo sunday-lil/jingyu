@@ -47,14 +47,14 @@ python start.py    # 浏览器打开 http://127.0.0.1:5000
 
 # 以下为开发者参考，普通用户可跳过
 
-> 🤖 **AI 接手请先看 [HANDOFF.md](HANDOFF.md)** —— 元信息 + 关键决策 + 踩坑清单的汇总。
-> 📜 **版本更新历史见 [CHANGELOG.md](CHANGELOG.md)**（v2.2.2 → v2.5.0 全部变更记录）。
+> 🤖 **AI 接手请先看 [HANDOFF.md](docs/HANDOFF.md)** —— 元信息 + 关键决策 + 踩坑清单的汇总。
+> 📜 **版本更新历史见 [CHANGELOG.md](docs/CHANGELOG.md)**（v2.2.2 → v2.5.0 全部变更记录）。
 
 ## 0. 一句话速览
 
 **FastAPI（纯 API 后端）+ Vue 3 SPA + SQLite** 的中文治愈系 Web 应用。完整 4 阶段功能：琴音疗心、漂流日记、情绪日历、屿上花田。前端 Vue 3 `<script setup>` + Vite 5 + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios，后端约 2 000 行 Python。无商业元素、无广告、无内购。
 
-> 📌 **2026-07-19 全站 Vue 3 重构**：前端从「Jinja2 SSR + 原生 HTML/CSS/JS」迁移到「Vue 3 SPA + Vite 工程化」。FastAPI 后端简化为纯 API + SPA fallback，所有页面逻辑迁入 `frontend/src/views/` 13 个 .vue 视图。详见 [HANDOFF.md](HANDOFF.md) 元信息。
+> 📌 **2026-07-19 全站 Vue 3 重构**：前端从「Jinja2 SSR + 原生 HTML/CSS/JS」迁移到「Vue 3 SPA + Vite 工程化」。FastAPI 后端简化为纯 API + SPA fallback，所有页面逻辑迁入 `frontend/src/views/` 13 个 .vue 视图。详见 [HANDOFF.md](docs/HANDOFF.md) 元信息。
 
 **强隐私承诺**：用户日记内容使用对称加密存储，密钥与用户密码派生。即便数据库泄露也无法直接读取明文（端到端加密）。
 
@@ -116,9 +116,9 @@ npm install     # 首次：装 vue / vue-router / pinia / axios / gsap / three /
 npm run dev     # 启动 Vite dev server，访问 http://127.0.0.1:5000/
 ```
 
-**dev proxy**：[frontend/vite.config.js](frontend/vite.config.js) 把 `/api` / `/static` / `/admin` / `/docs` / `/openapi.json` 反代到 FastAPI `:5001`，所以 Vite 跑 :5000、FastAPI 跑 :5001 同时开着，前端调 API 走代理无跨域。**注意** Vite host 显式设为 `127.0.0.1`（默认监听 IPv6 `[::1]` 会导致 127.0.0.1 连不上，详见 [HANDOFF.md](HANDOFF.md) 踩坑清单）。
+**dev proxy**：[frontend/vite.config.js](frontend/vite.config.js) 把 `/api` / `/static` / `/admin` / `/docs` / `/openapi.json` 反代到 FastAPI `:5001`，所以 Vite 跑 :5000、FastAPI 跑 :5001 同时开着，前端调 API 走代理无跨域。**注意** Vite host 显式设为 `127.0.0.1`（默认监听 IPv6 `[::1]` 会导致 127.0.0.1 连不上，详见 [HANDOFF.md](docs/HANDOFF.md) 踩坑清单）。
 
-> 📌 **为什么 Vite 占 :5000 而不是 :5173**：之前尝试 FastAPI :5000 代理转发到 Vite :5173，但 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含特殊字符（null 字符转义 + 冒号），httpx 转发会破坏，导致浏览器报 `SyntaxError: Unexpected token '.'`。改成 Vite 直接占 :5000 后，所有 Vite 内部路径都走本地，无转发问题。详见 [HANDOFF §6.16](HANDOFF.md) 踩坑清单。
+> 📌 **为什么 Vite 占 :5000 而不是 :5173**：之前尝试 FastAPI :5000 代理转发到 Vite :5173，但 Vite 内部路径 `/@id/__x00__plugin-vue:export-helper` 含特殊字符（null 字符转义 + 冒号），httpx 转发会破坏，导致浏览器报 `SyntaxError: Unexpected token '.'`。改成 Vite 直接占 :5000 后，所有 Vite 内部路径都走本地，无转发问题。详见 [HANDOFF §6.16](docs/HANDOFF.md) 踩坑清单。
 
 **生产模式**（部署用）：先 `python start.py build`（或手动 `cd frontend && npm run build`）输出到 `static/dist/`，再 `python start.py --prod` 走 FastAPI :5000 单进程 SPA fallback（详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)「开发/生产模式切换」节）。
 
@@ -130,7 +130,6 @@ npm run dev     # 启动 Vite dev server，访问 http://127.0.0.1:5000/
 webwrold/
 ├── start.py                      # 一键启动脚本（start/stop/restart/status/fg/build；自动检测 dist 切换端口策略）
 ├── README.md                     # 本文件
-├── HANDOFF.md                    # AI 交接说明（必读）
 │
 ├── app/
 │   ├── __init__.py
@@ -178,21 +177,8 @@ webwrold/
 │       ├── constants.py          # 5 音定义 / 心情枚举 / 能量来源枚举
 │       └── crypto.py             # bcrypt + Fernet + PBKDF2
 │
-├── templates/                    # Jinja2 SSR 模板
-│   ├── base.html                 #   全局骨架（导航 + Toast + 页脚）
-│   ├── _nav.html                 #   导航宏
-│   ├── _toast.html               #   全局 Toast 提示
-│   ├── index.html                #   首页（5 音入口 + 漂流瓶入口 + 情绪日历入口 + AI 推荐音卡片）
-│   ├── login.html / register.html
-│   ├── music_list.html           #   单音曲目列表 + 沉浸式播放器
-│   ├── diary_write.html          #   漂流瓶写作页（含投瓶动效）
-│   ├── my_bottles.html           #   我的瓶子时间线
-│   ├── diary_detail.html         #   单个瓶子详情
-│   ├── pick_bottle.html          #   拾取陌生人漂流瓶（含 #ai-encouragement 容器）
-│   ├── mood_calendar.html        #   情绪日历（今日打卡 + 月历 + 30 天趋势 + #ai-healing-msg 容器）
-│   ├── garden.html               #   屿上花田（已种植物 + 装扮）
-│   ├── shop.html                 #   兑换商店（花种 / 装扮 / 徽章）
-│   └── ai_chat.html              #   AI 树洞对话页（2026-07-17 加，需登录，多轮对话仅存浏览器）
+├── templates/                    # Jinja2 SSR 模板（v2.4.2 死模板清理后仅剩后台）
+│   └── admin/                    #   后台 SSR（_base / dashboard / login / logs / system / users / user_detail）
 │
 ├── frontend/                     # Vue 3 SPA 源码（2026-07-19 全站重构加）
 │   ├── package.json              #   依赖：vue ^3.4 / vue-router ^4.4 / pinia ^2.2 / axios ^1.7 / gsap ^3.12 / @vueuse/motion ^2.2 / three ^0.168；devDeps：vite ^5.4 / @vitejs/plugin-vue ^5.1 / tailwindcss ^3.4 / postcss / autoprefixer
@@ -245,20 +231,15 @@ webwrold/
 │           └── NotFoundView.vue
 │
 ├── static/
-│   ├── css/
-│   │   ├── style.css             #   入口（@import 7 个模块）
-│   │   ├── 00-variables.css      #   CSS 变量（治愈系配色 + 字体）
-│   │   ├── 01-reset.css          #   重置 + body 渐变背景
-│   │   ├── 02-layout.css         #   .container / .nav / .grid
-│   │   ├── 03-components.css     #   .btn / .card / .toast / .form
-│   │   ├── 04-pages.css          #   首页 / 列表页 / 详情页
-│   │   ├── 05-animations.css     #   漂流瓶动效 / 心情弹跳 / 花朵生长 / 滚动渐显 / 涟漪 / 花瓣 / 频谱
-│   │   └── 06-music.css          #   沉浸式播放器
+│   ├── dist/                     #   前端构建产物（npm run build 输出，git 忽略）
+│   ├── css/                      #   style.css 入口 + 7 个模块（variables/reset/layout/components/pages/animations/music/admin）
 │   ├── js/
-│   │   ├── app.js                #   window.QI 全局（fetch / toast / confirmThen / reveal / ripple / countUp / confetti）
-│   │   └── pages/                #   每个页面一个
-│   ├── audio/                    #   占位音频（5 个 mp3，每音一个）
-│   └── images/                   #   占位封面（5 音各 1 张 SVG）
+│   │   ├── app.js                #   后台用全局（fetch / toast）
+│   │   └── pages/                #   后台页面脚本（admin_*，前台脚本已随 SSR 模板删除）
+│   ├── audio/tracks/             #   曲目音频槽位（22 个，一曲一文件，同名覆盖接真实音频）
+│   ├── images/                   #   五音封面（5 张 SVG）
+│   ├── img/promo/                #   README 宣传截图（GitHub raw 直链用）
+│   └── uploads/                  #   用户头像上传目录
 │
 ├── data/
 │   └── healing.db                # SQLite 数据库（git 忽略）
@@ -267,15 +248,18 @@ webwrold/
 ├── logs/
 │   └── healing.log               # 后台进程日志
 │
-├── docs/                         # 详细文档
+├── docs/                         # 详细文档（除 README 外全部收纳于此）
+│   ├── HANDOFF.md                #   AI 交接说明（必读）
+│   ├── CHANGELOG.md              #   全部版本变更记录
+│   ├── 曲目清单.md                #   真实音频下载指引
+│   ├── HOME_REDESIGN_PROPOSAL.md #   首页重构设计稿（v2.5.0 第一期已落地）
 │   ├── ARCHITECTURE.md
 │   ├── DEPLOYMENT.md
 │   ├── DEVELOPMENT.md
 │   └── PROJECT_STATE.md
 │
 ├── .env.example
-├── requirements.txt
-└── README.md
+└── requirements.txt
 ```
 
 ---
@@ -294,14 +278,14 @@ webwrold/
   - **生产模式**（`--prod`）：FastAPI 监听 :5000，提供 SPA + API + 静态资源（Vite 不运行），需 `static/dist/` 已构建（未构建报错退出，提示先 `python start.py build`）
 - **SPA fallback**（[app/main.py](app/main.py)）：所有未匹配的 GET 请求（排除 `/api/`、`/static/`、`/admin`、`/docs`、`/openapi.json`）：
   - **生产态**（dist 已构建）：从 `static/dist/` 读取对应静态文件（`.js` / `.css` / `.woff2` 等通过 `EXT_TO_MIME` 映射正确设置 `Content-Type`），未命中文件返回 `index.html` 让 Vue Router 接管
-  - **开发态**（dist 未构建）：返回提示页引导用户访问 Vite dev server :5000（**不再**反向代理到 Vite，避免内部路径含特殊字符被 httpx 转发破坏，详见 [HANDOFF §6.16](HANDOFF.md)）
+  - **开发态**（dist 未构建）：返回提示页引导用户访问 Vite dev server :5000（**不再**反向代理到 Vite，避免内部路径含特殊字符被 httpx 转发破坏，详见 [HANDOFF §6.16](docs/HANDOFF.md)）
 - **路由兼容层**：[app/routers/pages.py](app/routers/pages.py) 简化为 4 个 302 重定向（`/mood`→`/calendar`、`/mood-calendar`→`/calendar`、`/my-bottles`→`/diary`、`/pick`→`/diary/pick`），兼容旧书签
 - **认证机制（不变）**：cookie session（不是 JWT token），登录用 nickname（不是 username），登录/注册直接返回 user 对象（不是 `{access_token, user}`），前端 userStore 只缓存 user 对象到 localStorage，不存 token
 - **配置修复**：[app/config.py](app/config.py) 加 `env_prefix="qi_"`，让 `.env` 里 `QI_*` 变量正确加载
 - **AI 调整**：[app/services/ai_service.py](app/services/ai_service.py) 超时 30s→60s；模型链 `nvidia/llama-3.1-nemotron-70b-instruct` → `meta/llama-3.3-70b-instruct` → `meta/llama-3.1-8b-instruct`
 - **删除的旧页面**：showcase 动效页（`templates/showcase.html`、`static/js/pages/showcase.js`、`static/css/08-showcase.css`）已删
 
-> 改代码 + 改文档 = 同一个 commit（详见 [HANDOFF §12](HANDOFF.md) 文档自动同步铁律）。本次 Vue 3 重构同步更新 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），互链保持一致。
+> 改代码 + 改文档 = 同一个 commit（详见 [HANDOFF §12](docs/HANDOFF.md) 文档自动同步铁律）。本次 Vue 3 重构同步更新 6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），互链保持一致。
 
 ### 3.2 数据访问层（`app/models/`）
 
@@ -429,7 +413,7 @@ YIN_TYPES = {
 
 ### 3.8 v2.3 新增章节速查（2026-07-25 加）
 
-> 本节集中列出 v2.3 引入的新模块 + 关键文件 + 路由，便于快速定位。详见对应 §3.x 子节 / [HANDOFF §4 Phase 7](HANDOFF.md) / [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §1.1.7。
+> 本节集中列出 v2.3 引入的新模块 + 关键文件 + 路由，便于快速定位。详见对应 §3.x 子节 / [HANDOFF §4 Phase 7](docs/HANDOFF.md) / [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §1.1.7。
 
 #### 3.8.1 六大四字名模块（顶部导航品牌图标同步更新）
 
@@ -470,7 +454,7 @@ YIN_TYPES = {
 - Router：[app/routers/notification.py](app/routers/notification.py) — `GET /api/notifications` / `GET /api/notifications/unread` / `POST /api/notifications/{id}/read` / `POST /api/notifications/read-all`
 - 触发点：拾瓶被鼓励（写入 Notification，type=`encouragement`）
 - 前端：[AppLayout.vue](frontend/src/components/AppLayout.vue) 顶部加 🔔 铃铛 + 红点未读数；60s 轮询 `/api/notifications/unread`；点击铃铛跳转 `/notifications` 路由（独立通知列表页 `NotificationsView.vue`）
-- Schema：[app/schemas/notification.py](app/schemas/notification.py) `NotificationOut` / `UnreadCountOut`
+- Schema：无独立 schema —— [app/routers/notification.py](app/routers/notification.py) 端点直接返回 dict（`{"unread": int}` / 通知行）
 
 #### 3.8.5 个人主页（v2.3 加）
 
@@ -638,14 +622,14 @@ v2.3 改动后跑的冒烟测试结果（详见 [PROJECT_STATE §2 v2.3 条目](
 | 能量规则 | [app/services/energy_service.py](app/services/energy_service.py) |
 | 5 音 / 心情 / 能量枚举 | [app/utils/constants.py](app/utils/constants.py) |
 | 种子数据 | [app/seed.py](app/seed.py) |
-| 基础模板 | [templates/base.html](templates/base.html) |
-| 导航宏 | [templates/_nav.html](templates/_nav.html) |
+| 基础模板 | `templates/base.html` |
+| 导航宏 | `templates/_nav.html` |
 | CSS 变量 | [static/css/00-variables.css](static/css/00-variables.css) |
 | 全局 JS | [static/js/app.js](static/js/app.js) |
 | AI 服务层 | [app/services/ai_service.py](app/services/ai_service.py) |
 | AI API 端点 | [app/routers/ai.py](app/routers/ai.py) |
 | AI Schema | [app/schemas/ai.py](app/schemas/ai.py) |
-| AI 树洞对话页 | [templates/ai_chat.html](templates/ai_chat.html) |
+| AI 树洞对话页 | `templates/ai_chat.html` |
 | **前端 Vue SPA 入口** | [frontend/src/main.js](frontend/src/main.js) |
 | **前端路由表** | [frontend/src/router/index.js](frontend/src/router/index.js) |
 | **前端 API 客户端** | [frontend/src/api/index.js](frontend/src/api/index.js) |
@@ -662,7 +646,7 @@ v2.3 改动后跑的冒烟测试结果（详见 [PROJECT_STATE §2 v2.3 条目](
 | **前端视觉能力检测工具** | [frontend/src/utils/visual.js](frontend/src/utils/visual.js)（v2.3.3 hasWebGL 重写 + getWebGLCaps / isSafari / isIOS） |
 | **前端 Three.js PBR 工具集** | [frontend/src/utils/three-helpers.js](frontend/src/utils/three-helpers.js) |
 | API 文档（自动） | http://127.0.0.1:5000/docs |
-| **AI 交接** | [HANDOFF.md](HANDOFF.md) |
+| **AI 交接** | [HANDOFF.md](docs/HANDOFF.md) |
 | 详细文档 | [docs/](docs/) |
 
 ---
@@ -670,7 +654,7 @@ v2.3 改动后跑的冒烟测试结果（详见 [PROJECT_STATE §2 v2.3 条目](
 ## 9. 文档自洽性（自动同步铁律）
 
 > 🔒 **本节是项目最高优先级的一条规则。** 改代码不改文档 = 改了一半。
-> 完整版见 [HANDOFF §12](HANDOFF.md) / [docs/PROJECT_STATE.md §8](docs/PROJECT_STATE.md) / [docs/DEVELOPMENT.md §1.8](docs/DEVELOPMENT.md)。
+> 完整版见 [HANDOFF §12](docs/HANDOFF.md) / [docs/PROJECT_STATE.md §8](docs/PROJECT_STATE.md) / [docs/DEVELOPMENT.md §1.8](docs/DEVELOPMENT.md)。
 
 ### 9.1 一句话铁律
 
@@ -683,16 +667,16 @@ v2.3 改动后跑的冒烟测试结果（详见 [PROJECT_STATE §2 v2.3 条目](
 | 新增页面 / 新文件 | §2 目录树 + §8 速查表 |
 | 新增模型 | §4 表速查 + [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §4 |
 | 新增能量规则 | §3.4 同步 |
-| **Pydantic schema 字段** | 对应 `*Out` schema + [HANDOFF §6.11](HANDOFF.md) |
+| **Pydantic schema 字段** | 对应 `*Out` schema + [HANDOFF §6.11](docs/HANDOFF.md) |
 | 端口/启动方式变动 | §1 + [.env.example](.env.example) + [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
-| 新增后台功能 | [HANDOFF §5.6](HANDOFF.md) + [docs/ARCHITECTURE.md §6.5](docs/ARCHITECTURE.md) + [docs/PROJECT_STATE.md §5.3](docs/PROJECT_STATE.md) |
+| 新增后台功能 | [HANDOFF §5.6](docs/HANDOFF.md) + [docs/ARCHITECTURE.md §6.5](docs/ARCHITECTURE.md) + [docs/PROJECT_STATE.md §5.3](docs/PROJECT_STATE.md) |
 | **前端 Vue 视图 / 路由 / store 改动** | §2 目录树 frontend/ 子树 + §3.5 前端架构 + [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)「前端架构」 + [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)「前端开发」 |
-| **Vite / Tailwind / 依赖改动** | §1.3 + [frontend/package.json](frontend/package.json) + [HANDOFF §2](HANDOFF.md) + [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)「前端构建」 |
+| **Vite / Tailwind / 依赖改动** | §1.3 + [frontend/package.json](frontend/package.json) + [HANDOFF §2](docs/HANDOFF.md) + [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)「前端构建」 |
 | **6 份文档同步**（Iron Rule） | 本次 Vue 3 重构涉及 README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT 6 份文档，必须同一 commit 一起更新 |
 
 ### 9.3 提交前自检 5 件事
 
-与 [HANDOFF §12.4](HANDOFF.md) / [PROJECT_STATE §8.3](docs/PROJECT_STATE.md) 一致；**改代码 + 改文档 = 同一个 commit** 的铁律依赖此 5 项自检。
+与 [HANDOFF §12.4](docs/HANDOFF.md) / [PROJECT_STATE §8.3](docs/PROJECT_STATE.md) 一致；**改代码 + 改文档 = 同一个 commit** 的铁律依赖此 5 项自检。
 
 - [ ] 改的 Pydantic 字段在 `*Out` schema 里**也都声明了**（→ 防止静默过滤 Bug）
 - [ ] 改的 model 字段长度 / 类型在 schema 里**也同步了**（→ 如 v2.4.4 `avatar 字段长度 String(255) / ProfileUpdateIn max_length=255`）
