@@ -748,7 +748,7 @@ webwrold/
 
 **教训（写入 DEVELOPMENT GSAP 规范）**：列表类入场动画必须在 fetch 成功后播 + querySelector 守卫。`onMounted + nextTick` 时数据未到——动画不播还报警告。写法模板：`fetch 成功 → 数据赋值 → await nextTick() → if (document.querySelector(sel)) gsap.from(sel, ...)`。
 
-**改动文件**：上述 3 个 .vue + app/main.py 版本号 2.5.0 → 2.5.1 + 6 文档同步。
+**改动文件**：上述 3 个 .vue + app/main.py 版本号 2.5.0 → 2.5.1 + 6 文档同步（README 徽章 / ARCHITECTURE / DEPLOYMENT 为事后补漏——首提交 a1fbb4c 实际只更了 4 份文档，用户质询「确定都更新啦？！」后补齐，教训：**铁律清单要在提交前逐项核对，不能凭印象声称完成**）+ requirements.txt 依赖卫生（`passlib[bcrypt]` → `bcrypt>=4.0.0,<6.0.0`，crypto.py 直接 import bcrypt，passlib 全仓库零引用）。
 
 ---
 

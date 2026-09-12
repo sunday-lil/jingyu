@@ -56,6 +56,10 @@
 
 ---
 
+> 🔧 **2026-09-12 v2.5.1 部署须知（GSAP 列表动画修复 + 依赖卫生：需重新构建前端）**：本次修复 DiaryListView / ShopView / AIChatView 三视图 GSAP 空目标警告（列表动画移至 fetch 成功后 + `querySelector` 守卫），**涉及前端源码改动，部署时必须重新构建**。部署步骤：① `python start.py build`（或 `cd frontend && npm run build`）；② `python start.py restart`（后端仅版本号变更 2.5.0 → 2.5.1，无路由 / 迁移 / .env 变化）；③ **无数据库迁移 / 无 .env 变更**；④ 依赖卫生：requirements.txt 将零引用的 `passlib[bcrypt]` 替换为直接依赖 `bcrypt>=4.0.0,<6.0.0`（[crypto.py](../app/utils/crypto.py) 直接 `import bcrypt`，passlib 全仓库无引用；部署机 `pip install -r requirements.txt` 同步即可，bcrypt 4.x / 5.x 均兼容）。验证：部署后浏览器打开 `/diary`、`/shop`、`/ai-chat`，console 无 "target not found" 警告。关键词 `v2.5.1` / `GSAP空目标警告` / `fetch成功后` / `querySelector守卫` 在 6 份文档中都要出现。
+
+---
+
 > 🔧 **2026-08-23 v2.4.10 部署须知（图标 viewBox 修复：必须重新构建前端）**：本次修复 v2.4.9 图标数据缺 width/height 导致的 viewBox 裁切（图标只显示左上角方块），**涉及前端构建产物，部署时必须重新构建**。部署步骤：① `node scripts/extract_twemoji.mjs`（若直接拉取仓库则跳过——生成的 [twemoji-icons.js](../frontend/src/assets/twemoji-icons.js) 已入库）；② `python start.py build`（或 `cd frontend && npm run build`）；③ `python start.py restart`（后端仅版本号变更 2.4.9 → 2.4.10，无路由/迁移变化）；④ **无新依赖 / 无数据库迁移 / 无 .env 变更**。验证：部署后打开首页，导航栏图标（🎵📖🌙🌳🍂🌸👤🌊🔔💧）应显示完整彩色图形，浏览器 DevTools 检查 `.nav-link__icon svg` 的 viewBox 应为 `0 0 36 36`。关键词 `v2.4.10` / `viewBox尺寸合并` / `图标左上角裁切` 在 6 份文档中都要出现。
 
 ---

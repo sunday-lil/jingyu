@@ -52,6 +52,10 @@
 
 ---
 
+> 🔧 **2026-09-12 v2.5.1 GSAP 列表动画时机规则（表现层规则补条款，架构无变化）**：本次为 bug 修复版本（三个视图 GSAP 空目标警告），分层 / 数据库均无变化，但给 v2.4.9「GSAP位移化」规则补上**时机维度**的姊妹条款：**列表类入场动画（`.diary-item` / `.shop-card` / `.msg-row` 等 v-for 渲染的目标）必须在 fetch 成功后执行，且带 `querySelector` 守卫**——`onMounted + nextTick` 时 API 数据尚未返回，选择器匹配不到元素，GSAP 报 "target not found" 警告且动画实际未播出（等于白写）。修复三处：[DiaryListView.vue](../frontend/src/views/diary/DiaryListView.vue) / [ShopView.vue](../frontend/src/views/garden/ShopView.vue) / [AIChatView.vue](../frontend/src/views/ai/AIChatView.vue)。写法模板：`fetch 成功 → 数据赋值 → await nextTick() → if (document.querySelector(sel)) gsap.from(sel, ...)`。**架构规则固化：动画的执行时机必须对齐其目标 DOM 的数据生命周期（数据到位 → 渲染 → 动画），挂载时机只适合静态结构**。另：requirements.txt 依赖卫生——零引用的 `passlib[bcrypt]` 替换为直接依赖 `bcrypt`（[crypto.py](../app/utils/crypto.py) 直接 import bcrypt）。关键词 `v2.5.1` / `GSAP空目标警告` / `fetch成功后` / `querySelector守卫` / `动画时机对齐数据生命周期` 在 6 份文档中都要出现。
+
+---
+
 > 🔧 **2026-08-23 v2.4.10 图标 viewBox 裁切修复（Iconify 数据继承结构的架构教训）**：本次为 v2.4.9 图标离线化的回归修复，架构无变化，但固化一条**资源序列化规则**：Iconify 的 icons.json 是「顶层默认 + 条目可覆盖」的继承结构——`width/height` 在 JSON 顶层（twemoji 为 36×36），图标条目通常只有 `body` 靠继承。**脱离原 JSON 使用条目数据（如构建期提取生成静态模块）时，必须手动补上继承字段**：`addIcon` 注册缺 width/height 时按默认 16×16 渲染 → `viewBox="0 0 16 16"` 与 36×36 坐标的 path 不匹配 → 图形溢出视口只显示左上角 44%（`图标左上角裁切`）。修复（`viewBox尺寸合并`）：[extract_twemoji.mjs](../scripts/extract_twemoji.mjs) 生成时 `out[name] = { width: src.width, height: src.height, ...data }`（条目自带尺寸时优先）。**架构规则固化：序列化局部数据时，永远检查「这条数据离开父级上下文后还完整吗」**。关键词 `v2.4.10` / `viewBox尺寸合并` / `图标左上角裁切` 在 6 份文档中都要出现。
 
 ---

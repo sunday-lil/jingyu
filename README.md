@@ -6,7 +6,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Status](https://img.shields.io/badge/status-v2.5.0-success)]()
+[![Status](https://img.shields.io/badge/status-v2.5.1-success)]()
 
 **English** — Jingyu (静屿, "Quiet Isle") is a non-commercial, privacy-first healing web app: guqin five-tone music therapy, end-to-end encrypted drifting diary bottles, a humanized AI tree-hole chat, a Russell-circumplex mood calendar, and a garden that grows with your daily check-ins. Built with FastAPI + Vue 3 + Three.js. Self-host in two commands.
 
@@ -48,7 +48,7 @@ python start.py    # 浏览器打开 http://127.0.0.1:5000
 # 以下为开发者参考，普通用户可跳过
 
 > 🤖 **AI 接手请先看 [HANDOFF.md](docs/HANDOFF.md)** —— 元信息 + 关键决策 + 踩坑清单的汇总。
-> 📜 **版本更新历史见 [CHANGELOG.md](docs/CHANGELOG.md)**（v2.2.2 → v2.5.0 全部变更记录）。
+> 📜 **版本更新历史见 [CHANGELOG.md](docs/CHANGELOG.md)**（v2.2.2 → v2.5.1 全部变更记录）。
 
 ## 0. 一句话速览
 
