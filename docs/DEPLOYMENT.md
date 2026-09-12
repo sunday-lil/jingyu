@@ -52,6 +52,10 @@
 
 ---
 
+> 🏝️ **2026-09-12 v2.5.0 部署须知（首页重构：必须重新构建前端）**：本次为首页动线与理念呈现重构第一期（`hero理念卡` + `模块奖励行` + `岛上指南手风琴` + `指南数据共享` + `开启我的岛`），**纯前端改动，涉及前端构建产物，部署时必须重新构建**。部署步骤：① `python start.py build`（或 `cd frontend && npm run build`）——新前端包含 [HomeView.vue](../../frontend/src/views/HomeView.vue) hero 理念卡 / 模块卡奖励行 / 岛上指南手风琴 + 新文件 [frontend/src/data/islandGuide.js](../../frontend/src/data/islandGuide.js)；② `python start.py restart`——后端仅版本号变更 2.4.10 → 2.5.0（`版本号对齐`），无路由 / 迁移 / .env 变化；③ **无新依赖**（package.json 无变化）/ **无数据库迁移** / **无 .env 变更**。验证：部署后打开首页——hero 右侧理念卡显示「每一个情绪，都值得一座岛。」；六张模块卡带「✦ 怎么玩」奖励行；向下滚动「岛上指南」6 张卡点击可展开/收起明细；未登录时底部 CTA 按钮文案为「开启我的岛」。关键词 `v2.5.0` / `hero理念卡` / `模块奖励行` / `岛上指南手风琴` / `指南数据共享` / `开启我的岛` 在 6 份文档中都要出现。
+
+---
+
 > 🔧 **2026-08-23 v2.4.10 部署须知（图标 viewBox 修复：必须重新构建前端）**：本次修复 v2.4.9 图标数据缺 width/height 导致的 viewBox 裁切（图标只显示左上角方块），**涉及前端构建产物，部署时必须重新构建**。部署步骤：① `node scripts/extract_twemoji.mjs`（若直接拉取仓库则跳过——生成的 [twemoji-icons.js](../../frontend/src/assets/twemoji-icons.js) 已入库）；② `python start.py build`（或 `cd frontend && npm run build`）；③ `python start.py restart`（后端仅版本号变更 2.4.9 → 2.4.10，无路由/迁移变化）；④ **无新依赖 / 无数据库迁移 / 无 .env 变更**。验证：部署后打开首页，导航栏图标（🎵📖🌙🌳🍂🌸👤🌊🔔💧）应显示完整彩色图形，浏览器 DevTools 检查 `.nav-link__icon svg` 的 viewBox 应为 `0 0 36 36`。关键词 `v2.4.10` / `viewBox尺寸合并` / `图标左上角裁切` 在 6 份文档中都要出现。
 
 ---

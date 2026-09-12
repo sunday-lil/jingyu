@@ -1,9 +1,11 @@
 # 静屿 · 更新日志（CHANGELOG）
 
-> 全部版本变更记录（v2.2.2 → v2.4.10），按版本倒序排列。
+> 全部版本变更记录（v2.2.2 → v2.5.0），按版本倒序排列。
 > 各版本部署须知见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) 顶部版本块；决策背景与踩坑见 [HANDOFF.md](HANDOFF.md)。
 
 ---
+
+> 🏝️ **2026-09-12 v2.5.0 首页动线与理念呈现重构（第一期：纯前端）**：用户读完 README 反馈两点——① 网站需向初访者清晰介绍理念/关怀系统及模块间关系；② 首页使用动线不清晰、缺主推核心体验。经设计提案讨论拍板（[HOME_REDESIGN_PROPOSAL.md](docs/HOME_REDESIGN_PROPOSAL.md) v2）：**主推 = 经营自己的小岛**（六模块并行同级，不设单一主推按钮），等级系统留第二期。① **[FEATURE] Hero 理念文案卡**（`hero理念卡`）：[HomeView.vue](frontend/src/views/HomeView.vue) hero 布局改左品牌（🌊 + 潮声不止 + 静屿）/右理念卡——主文案「每一个情绪，都值得一座岛。」+ 心灵港湾三句（听一曲古琴，写一封漂流的信，把说不出口的，种成一朵会开的花）+ 信任标记「🔒 日记端到端加密 · 无广告 · 无算法推荐」；移动端上下堆叠。② **[FEATURE] 模块卡奖励行**（`模块奖励行`）：六张模块卡 desc 下新增「✦ 怎么玩」一行（如「每听一曲 +1 露水 · 听满 10 首解锁「琴音知音」徽章」），首屏即传达玩法与激励，与岛上的露水/徽章资源闭环呼应。③ **[FEATURE] 岛上指南手风琴**（`岛上指南手风琴`）：首页新增「岛上指南」区块（副标题「每个去处怎么玩 · 一目了然」），六个手风琴折叠面板（`guideOpen` 展开收起，v-if + transition），不跳页不打断——使用指南从「我的」页面前置到首页。④ **[ARCH] 指南数据共享化**（`指南数据共享`）：ProfileView.vue 本地 `GUIDE_SECTIONS` 提取至新文件 [frontend/src/data/islandGuide.js](frontend/src/data/islandGuide.js)——导出 `GUIDE_SECTIONS`（六模块，首页手风琴与模块卡 reward 同源）+ `PROFILE_GUIDE_SECTIONS`（追加「我的」项，个人主页用），各条目新增 `reward` 字段；文案改一处两页同步。[ProfileView.vue](frontend/src/views/profile/ProfileView.vue) 改用共享数据源，删本地定义（-79 行）。⑤ **[COPY] guest-cta 文案**（`开启我的岛`）：未登录引导按钮「开启静屿」→「开启我的岛」（注册即得到自己的岛，呼应主推定位）。⑥ GSAP 入场动效遵循位移化铁律（只 `y` 位移）+ 移动端响应式（hero 纵排 / 指南卡紧凑）。**纯前端改动，无后端逻辑 / 无数据库迁移 / 无新依赖**（main.py 仅版本号 2.4.10 → 2.5.0）。README 首屏理念句同步（「静屿是一座海上的小岛」→「每一个情绪，都值得一座岛。静屿是一座只属于你的心灵港湾」）。浏览器端到端验证：Hero 理念卡 / 6 模块卡 reward 行 / 岛上指南手风琴展开收起（DIV 交互无跳转）/ console 无 JS 错误，全部 PASS。**第二期待办**：小岛等级系统（level/exp 字段 + level_service + 升级 toast + 花种门控，含 4 个待拍板决策点见提案 §六）。关键词 `v2.5.0` / `hero理念卡` / `模块奖励行` / `岛上指南手风琴` / `指南数据共享` / `开启我的岛` 在 6 份文档中都要出现。
 
 > 🔧 **2026-08-23 v2.4.10 图标 viewBox 裁切修复（导航栏图标只显示左上角方块）**：用户报告「部分导航栏图标显示不全——只显示 emoji 左上角正方形范围」。根因：v2.4.9 生成的 [twemoji-icons.js](frontend/src/assets/twemoji-icons.js) 图标条目只有 `body` 字段——`@iconify-json/twemoji` 的 icons.json 顶层才有 `width:36, height:36`（条目继承全局），`addIcon` 注册缺 width/height 时按 Iconify 默认 16×16 渲染 → `viewBox="0 0 16 16"` 与 twemoji 36×36 坐标的 path 不匹配 → 图形溢出视口，只露出左上角 16/36≈44% 区域。修复（`viewBox尺寸合并`）：[extract_twemoji.mjs](scripts/extract_twemoji.mjs) 生成时显式合并顶层尺寸 `{width: src.width, height: src.height, ...data}`，28 个图标全部带 36×36，重新生成 + 构建。浏览器实测：导航 10 个图标 viewBox 全部恢复 `0 0 36 36`，铃铛/书本/水滴等完整彩色图形显示。详见 [HANDOFF §4 Phase 18](HANDOFF.md)。关键词 `v2.4.10` / `viewBox尺寸合并` / `图标左上角裁切` 在 6 份文档中都要出现。
 

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { gsap } from 'gsap'
 import { prefersReducedMotion } from '@/utils/visual'
+import { GUIDE_SECTIONS } from '@/data/islandGuide'
 
 // 异步加载 Three.js 浮岛雾海场景（按需加载，减小首屏包）
 const HeroScene = defineAsyncComponent(() =>
@@ -13,13 +14,18 @@ const HeroScene = defineAsyncComponent(() =>
 const router = useRouter()
 const userStore = useUserStore()
 
+// 岛上指南手风琴展开状态（v2.5.0：复用共享指南数据，与个人主页一致）
+const guideOpen = ref(null)
+
 // 六个功能板块入口（v2.3：四字文艺命名 + 岛屿图标）
 // v2.4.2：花坊 → 落叶花坊；漂流日记 🍶 → 🏺
 // 名字已确认：琴音疗心 / 漂流日记 / 情绪日历 / 心语树洞 / 落叶花坊 / 屿上花田
+// v2.5.0：reward「怎么玩」一行 —— 与 islandGuide.js 的 reward 字段保持同步
 const modules = [
   {
     label: '琴音疗心',
     desc: '宫商角徵羽 · 古琴五音调情志',
+    reward: '每听一曲 +1 露水 · 听满 10 首解锁「琴音知音」徽章',
     icon: '🎵',
     to: '/music',
     color: 'linear-gradient(135deg, #E8D5A8 0%, #D4C18A 100%)',
@@ -27,6 +33,7 @@ const modules = [
   {
     label: '漂流日记',
     desc: '把心事写进瓶子 · 让它漂向远方',
+    reward: '每写一篇 +2 露水 · 拾瓶与留鼓励亦有露水',
     icon: '🏺',
     to: '/diary',
     color: 'linear-gradient(135deg, #A8C5E8 0%, #C5D5E8 100%)',
@@ -34,6 +41,7 @@ const modules = [
   {
     label: '情绪日历',
     desc: '记录每天的心情轨迹',
+    reward: '每次打卡 +1 露水 · 连续 7 天解锁「七日静心」徽章',
     icon: '🌙',
     to: '/calendar',
     color: 'linear-gradient(135deg, #C5C5E8 0%, #E8D5E8 100%)',
@@ -41,6 +49,7 @@ const modules = [
   {
     label: '心语树洞',
     desc: '说给一棵树听 · 它不会告诉任何人',
+    reward: '倾诉心事 · 对话满 20 次解锁「树洞倾心」徽章',
     icon: '🌳',
     to: '/ai-chat',
     color: 'linear-gradient(135deg, #B8C5E8 0%, #A8D5BA 100%)',
@@ -48,6 +57,7 @@ const modules = [
   {
     label: '落叶花坊',
     desc: '落叶归根 · 化作春泥换花种',
+    reward: '落叶换花种 · 露水换装扮与小动物',
     icon: '🍂',
     to: '/shop',
     color: 'linear-gradient(135deg, #E8C5A8 0%, #D5A875 100%)',
@@ -55,6 +65,7 @@ const modules = [
   {
     label: '屿上花田',
     desc: '在静屿种下你的花朵',
+    reward: '露水浇灌至花开 · 枯花拾取化作落叶',
     icon: '🌸',
     to: '/garden',
     color: 'linear-gradient(135deg, #E8B8C5 0%, #F5D5C5 100%)',
@@ -89,8 +100,12 @@ onMounted(() => {
   const tl = gsap.timeline({ delay: 0.2 })
   tl.from('.hero-verse', { y: 20, duration: 1, ease: 'power3.out' })
     .from('.hero-title', { y: 30, duration: 1.2, ease: 'power4.out' }, '-=0.6')
+    .from('.hero__intro', { y: 26, duration: 1, ease: 'power3.out' }, '-=0.9')
     .from('.module-card', {
       y: 30, duration: 0.7, stagger: 0.08, ease: 'power3.out'
+    }, '-=0.4')
+    .from('.guide-card', {
+      y: 24, duration: 0.6, stagger: 0.06, ease: 'power3.out'
     }, '-=0.4')
 
   // 岛屿图标持续呼吸
@@ -102,14 +117,26 @@ onMounted(() => {
 
 <template>
   <div class="home">
-    <!-- Hero 区：3D 浮岛雾海 + 静屿名称与介绍 -->
+    <!-- Hero 区：3D 浮岛雾海 + 静屿名称与理念（v2.5.0：左品牌 / 右理念卡） -->
     <section class="hero">
       <HeroScene class="hero__scene" height="520px" />
       <div class="hero__content">
         <!-- v2.4.2：海浪图标（替代原沙滩🏝️，更贴合"静屿"海意） -->
-        <div class="hero-icon">🌊</div>
-        <p class="hero-verse">"潮声不止，心安自屿。"</p>
-        <h1 class="hero-title">静屿</h1>
+        <div class="hero__brand">
+          <div class="hero-icon">🌊</div>
+          <p class="hero-verse">"潮声不止，心安自屿。"</p>
+          <h1 class="hero-title">静屿</h1>
+        </div>
+        <!-- v2.5.0：心灵港湾理念卡（私密 · 疗愈 · 生长三句 + 信任点） -->
+        <div class="hero__intro">
+          <p class="hero__intro-lead">每一个情绪，都值得一座岛。</p>
+          <p class="hero__intro-body">
+            静屿是一座只属于你的心灵港湾——<br>
+            听一曲古琴，写一封漂流的信，<br>
+            把说不出口的，种成一朵会开的花。
+          </p>
+          <p class="hero__intro-trust">🔒 日记端到端加密 · 无广告 · 无算法推荐</p>
+        </div>
       </div>
       <button
         type="button"
@@ -122,7 +149,7 @@ onMounted(() => {
       </button>
     </section>
 
-    <!-- v2.3：六个功能板块入口（四字文艺命名） -->
+    <!-- v2.3：六个功能板块入口（四字文艺命名；v2.5.0：卡内加「怎么玩」奖励行） -->
     <section class="module-section">
       <h2 class="section-title">岛上各处</h2>
       <p class="section-subtitle">六个去处 · 任选一处歇脚</p>
@@ -139,9 +166,33 @@ onMounted(() => {
           <div class="module-card__body">
             <div class="module-card__title">{{ m.label }}</div>
             <div class="module-card__desc">{{ m.desc }}</div>
+            <div class="module-card__reward">✦ {{ m.reward }}</div>
           </div>
           <div class="module-card__arrow">→</div>
         </router-link>
+      </div>
+    </section>
+
+    <!-- v2.5.0：岛上指南（复用个人主页的静屿使用指南数据，手风琴折叠） -->
+    <section class="guide-section">
+      <h2 class="section-title">岛上指南</h2>
+      <p class="section-subtitle">每个去处怎么玩 · 一目了然</p>
+      <div class="guide-list">
+        <div v-for="(s, i) in GUIDE_SECTIONS" :key="i" class="guide-card card">
+          <div class="guide-card__head" @click="guideOpen = guideOpen === i ? null : i">
+            <span class="guide-card__icon">{{ s.icon }}</span>
+            <div class="guide-card__body">
+              <div class="guide-card__title">{{ s.title }}</div>
+              <div class="guide-card__desc">{{ s.desc }}</div>
+            </div>
+            <span class="guide-card__arrow" :class="{ 'guide-card__arrow--open': guideOpen === i }">›</span>
+          </div>
+          <transition name="guide-expand">
+            <div v-if="guideOpen === i" class="guide-card__details">
+              <p v-for="(d, j) in s.details" :key="j" class="guide-card__detail">{{ d }}</p>
+            </div>
+          </transition>
+        </div>
       </div>
     </section>
 
@@ -150,7 +201,7 @@ onMounted(() => {
       <h3 class="guest-cta__title">第一次来静屿？</h3>
       <p class="guest-cta__desc">注册一个只属于你的小岛空间</p>
       <div class="guest-cta__btns">
-        <router-link to="/register" class="btn btn--primary">开启静屿</router-link>
+        <router-link to="/register" class="btn btn--primary">开启我的岛</router-link>
         <router-link to="/login" class="btn btn--ghost">已有账号</router-link>
       </div>
     </section>
@@ -185,10 +236,52 @@ onMounted(() => {
 .hero__content {
   position: relative;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 56px;
+  width: 100%;
+  padding: 60px 48px;
+}
+/* 左侧品牌（🌊 + slogan + 大字），保留原文字投影保证雾海上可读 */
+.hero__brand {
   text-align: center;
-  padding: 60px 24px;
   text-shadow: 0 2px 12px rgba(249, 246, 240, 0.6),
                0 0 32px rgba(249, 246, 240, 0.4);
+}
+/* v2.5.0：右侧理念卡（毛玻璃半透明，心灵港湾定位 + 信任点） */
+.hero__intro {
+  max-width: 320px;
+  padding: 26px 28px;
+  border-radius: var(--radius-lg, 20px);
+  background: rgba(249, 246, 240, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 8px 32px rgba(139, 123, 94, 0.12);
+  text-align: left;
+}
+.hero__intro-lead {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: 0.08em;
+  margin: 0 0 12px;
+}
+.hero__intro-body {
+  font-size: 13.5px;
+  line-height: 2;
+  color: var(--color-text-secondary);
+  margin: 0 0 14px;
+}
+.hero__intro-trust {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(139, 123, 94, 0.25);
 }
 .hero-icon {
   font-size: 56px;
@@ -318,6 +411,19 @@ onMounted(() => {
   color: var(--color-text-muted);
   line-height: 1.5;
 }
+/* v2.5.0：「怎么玩」奖励行 */
+.module-card__reward {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  opacity: 0.85;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+.module-card:hover .module-card__reward {
+  color: var(--color-accent-dark);
+  opacity: 1;
+}
 .module-card__arrow {
   color: var(--color-text-muted);
   font-size: 18px;
@@ -353,6 +459,96 @@ onMounted(() => {
   justify-content: center;
 }
 
+/* ── 岛上指南（v2.5.0：与个人主页同款手风琴）── */
+.guide-section {
+  margin: 60px 0 0;
+}
+.guide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.guide-card {
+  padding: 0;
+  overflow: hidden;
+}
+.guide-card__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.guide-card__head:hover {
+  background: rgba(184, 165, 144, 0.06);
+}
+.guide-card__icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.guide-card__body {
+  flex: 1;
+  min-width: 0;
+}
+.guide-card__title {
+  font-family: var(--font-serif, serif);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+  letter-spacing: 0.05em;
+}
+.guide-card__desc {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+.guide-card__arrow {
+  font-size: 20px;
+  color: var(--color-text-muted);
+  transition: transform 0.3s var(--ease-soft, ease);
+  flex-shrink: 0;
+}
+.guide-card__arrow--open {
+  transform: rotate(90deg);
+}
+.guide-card__details {
+  padding: 0 20px 18px 62px;
+}
+.guide-card__detail {
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--color-text-secondary);
+  margin: 0 0 4px;
+  position: relative;
+  padding-left: 14px;
+}
+.guide-card__detail::before {
+  content: '·';
+  position: absolute;
+  left: 0;
+  color: var(--color-text-muted);
+}
+.guide-expand-enter-active,
+.guide-expand-leave-active {
+  transition: all 0.3s var(--ease-soft, ease);
+  overflow: hidden;
+}
+.guide-expand-enter-from,
+.guide-expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.guide-expand-enter-to,
+.guide-expand-leave-from {
+  max-height: 500px;
+}
+
 /* 响应式：三档断点（手机 ≤768 / 平板 769-1024 / 桌面 ≥1025） */
 
 /* ── 平板（769-1024px）：紧凑布局 ── */
@@ -366,6 +562,11 @@ onMounted(() => {
   }
   .hero__content {
     padding: 48px 20px;
+    gap: 32px;
+  }
+  .hero__intro {
+    max-width: 280px;
+    padding: 22px 24px;
   }
   .hero-icon {
     font-size: 48px;
@@ -398,7 +599,26 @@ onMounted(() => {
     border-radius: var(--radius-lg, 20px);
   }
   .hero__content {
+    flex-direction: column;
+    gap: 22px;
     padding: 32px 16px;
+  }
+  .hero__intro {
+    max-width: 100%;
+    width: 100%;
+    padding: 20px 22px;
+    text-align: center;
+  }
+  .hero__intro-lead {
+    font-size: 15px;
+  }
+  .hero__intro-body {
+    font-size: 12.5px;
+    line-height: 1.9;
+  }
+  .hero__intro-trust {
+    font-size: 10.5px;
+    padding-top: 10px;
   }
   .hero-icon {
     font-size: 40px;
@@ -454,6 +674,24 @@ onMounted(() => {
   .guest-cta {
     padding: 28px 20px;
     margin: 32px 0;
+  }
+
+  /* 岛上指南：紧凑，明细缩进改平铺 */
+  .guide-section {
+    margin: 32px 0 0;
+  }
+  .guide-list {
+    gap: 10px;
+  }
+  .guide-card__head {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  .guide-card__icon {
+    font-size: 24px;
+  }
+  .guide-card__details {
+    padding: 0 16px 14px 16px;
   }
   .guest-cta__title {
     font-size: 19px;

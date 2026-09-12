@@ -3,6 +3,10 @@
 > 写给接手这个项目的下一个 AI（Cursor / Copilot / Devin / 任何 Agent）。
 > 读这一份文件 ≈ 读完整套文档。它是项目元信息 + 关键决策 + 踩坑清单的汇总。
 
+> 🏝️ **2026-09-12 v2.5.0 首页动线与理念呈现重构（第一期：纯前端）**：用户读完 README 反馈两点——① 网站需向初访者清晰介绍理念/关怀系统及模块间关系；② 首页使用动线不清晰、缺主推核心体验。经设计提案讨论拍板（[docs/HOME_REDESIGN_PROPOSAL.md](docs/HOME_REDESIGN_PROPOSAL.md) v2）：**主推 = 经营自己的小岛**（六模块并行同级，不设单一主推按钮），等级系统留第二期。① **[FEATURE] Hero 理念文案卡**（`hero理念卡`）：[HomeView.vue](frontend/src/views/HomeView.vue) hero 布局改左品牌（🌊 + 潮声不止 + 静屿）/右理念卡——主文案「每一个情绪，都值得一座岛。」+ 心灵港湾三句 + 信任标记「🔒 日记端到端加密 · 无广告 · 无算法推荐」；移动端上下堆叠。② **[FEATURE] 模块卡奖励行**（`模块奖励行`）：六张模块卡 desc 下新增「✦ 怎么玩」一行（如「每听一曲 +1 露水 · 听满 10 首解锁「琴音知音」徽章」）。③ **[FEATURE] 岛上指南手风琴**（`岛上指南手风琴`）：首页新增「岛上指南」区块，六个手风琴折叠面板（`guideOpen` 展开收起），使用指南从「我的」页面前置到首页。④ **[ARCH] 指南数据共享化**（`指南数据共享`）：ProfileView.vue 本地 `GUIDE_SECTIONS` 提取至新文件 [frontend/src/data/islandGuide.js](frontend/src/data/islandGuide.js)——导出 `GUIDE_SECTIONS`（六模块）+ `PROFILE_GUIDE_SECTIONS`（追加「我的」项），各条目新增 `reward` 字段，文案改一处两页同步。⑤ **[COPY] guest-cta 文案**（`开启我的岛`）：「开启静屿」→「开启我的岛」（注册即得到自己的岛）。⑥ GSAP 位移化 + 移动端响应式。**纯前端改动，无后端逻辑 / 无数据库迁移 / 无新依赖**（main.py 仅版本号 2.4.10 → 2.5.0）。README 首屏理念句同步（「每一个情绪，都值得一座岛。」）。浏览器端到端验证全部 PASS。**第二期待办**：小岛等级系统（island_level/island_exp + level_service + 升级 toast + 花种门控，4 个待拍板决策点见提案 §六：曲子门控 / 宠物形态 / 经验数值 / 分期节奏）。关键词 `v2.5.0` / `hero理念卡` / `模块奖励行` / `岛上指南手风琴` / `指南数据共享` / `开启我的岛` 在 6 份文档中都要出现。
+
+---
+
 > 📜 **2026-09-04 README 产品化重构 + 版本日志迁移 CHANGELOG.md（文档结构变更，版本号不变 v2.4.10）**：README 首屏重构为「用户视角」——slogan（潮声不止，心安自屿）+ **「你可能需要它的 3 个瞬间」**（深夜听琴 / 加密日记与树洞 / 情绪日历）+ 6 张截图改 **GitHub raw 直链**（`https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/...`，未克隆仓库也能显示）+ 启动命令压缩为 4 行（`git clone` → `pip install` → `python start.py`）；原 README 顶部 **16 个版本日志块（v2.2.2 → v2.4.10）整体剪切至新建 [CHANGELOG.md](CHANGELOG.md)**（按版本倒序，含 v2.4.3 补丁）；技术细节（目录树 / 数据库表 / 架构 / API 速查）归入 `# 以下为开发者参考，普通用户可跳过` 一级标题之后；原 §1「跑起来」的服务管理命令表移入 §1.1「开发模式速查」+ [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) 末尾新增「附：start.py 命令速查」表；§1.3 过时的「v2.2.2 起默认应用模式」表述修正为「v2.3.2 起默认生产模式，开发需显式 `--dev`」。**注意**：此后版本的变更记录写 CHANGELOG.md，README 不再堆版本日志；6 份文档（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）的同步铁律不变，CHANGELOG.md 为第 7 份需维护的文档。关键词 `README 产品化重构` / `CHANGELOG.md` / `raw 直链` / `开发者参考`。
 
 > 🔒 **2026-07-28 v2.3.2 start.py 默认生产模式 + 自动构建简化**：`python start.py` 默认行为再次变更——**默认走生产模式**（FastAPI :5000 单进程，前后端不再一起起），需 `static/dist/` 已构建（不存在则自动 `npm install + npm run build`）。**自动构建仅检测 `static/dist/index.html` 存在性**（`dist 存在检测`），不再比较 `frontend/src/` 与 `static/dist/` 文件修改时间。**开发需显式 `python start.py --dev`**（Vite :5000 HMR + FastAPI :5001 API，前后端一起起的「应用模式」）。`--prod` 改为兼容别名（默认就是生产模式，加不加效果一样）。**服务器部署 2 步**：① 上传代码 ② `python start.py`（首次自动构建，之后秒启，FastAPI 单进程 :5000）。本次回滚 v2.2.2「默认应用模式」决策，理由：服务器端口代理已配好 :5000 不能动，应用模式会让 Vite 占 :5000 破坏代理。关键词 `默认生产模式` / `dist 存在检测` / `自动构建` / `--dev` / `应用模式` / `v2.3.2` 在 6 份文档中都要出现。
@@ -53,7 +57,7 @@
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 强隐私 / 轻运营
 **代码体量**：约 2 500 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.4.10 — 2026-08-23 图标 viewBox 裁切修复（导航栏图标只显示左上角方块：v2.4.9 的 twemoji-icons.js 图标条目缺 width/height，addIcon 按 Iconify 默认 16×16 渲染，viewBox 与 twemoji 36×36 坐标不匹配；extract_twemoji.mjs 生成时显式合并顶层尺寸，28 图标全部带 36×36，详见 §4 Phase 18）。前一阶段 v2.4.9（2026-08-17 全站稳定性大修：回归测试发现 6 个真实 bug 全部修复：GSAP `opacity:0` 永久不可见 11 视图根治 / EmojiIcon 离线注册（twemoji-icons.js 28 图标 0 运行时 HTTP）/ 3 个错误图标名 / AudioVisualizer wavePhases 作用域 / 五音详情 `GET /api/music/yin/{yin}` 端点补回 / axios 双重解包 2 处 + cookie.txt 结构清理，详见 §4 Phase 17）+ v2.4.8（2026-08-16 曲目独立音频架构：22 首曲目一曲一文件 `static/audio/tracks/{曲名}.mp3`，**待接入真实曲库**：同名覆盖即可零代码，详见 §4 Phase 16）+ v2.4.7（2026-08-16 音频方案回退：v2.4.6 Karplus-Strong 合成试听否决，删脚本恢复 mp3 占位，详见 §4 Phase 15）+ v2.4.6（2026-08-16 五音音频真实化尝试，**已被 v2.4.7 回退**，详见 §4 Phase 14）+ v2.4.5（2026-08-16 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一，详见 §4 Phase 13）+ v2.4.4（2026-08-15 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨，详见 §4 Phase 12）+ v2.4.3（2026-08-14 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复，详见 §4 Phase 11）+ v2.4.2（2026-08-13 整体架构优化与冗余清理，维护性清理版本，详见 §4 Phase 10 后段）+ v2.4.1（2026-08-10 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图，详见 §4 Phase 10）+ v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊改名 + 露水累加修复，详见 §4 Phase 9）+ v2.3.3（2026-07-30 Safari 兼容性修复：3D 上下文恢复 + emoji 跨浏览器一致，详见 §4 Phase 8）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱，详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
+**当前阶段**：v2.5.0 — 2026-09-12 首页动线与理念呈现重构第一期（纯前端：hero 理念文案卡「每一个情绪，都值得一座岛」+ 六模块卡「怎么玩」奖励行 + 首页「岛上指南」手风琴 + 指南数据共享化 islandGuide.js + guest-cta「开启我的岛」；主推定位 = 经营自己的小岛，六模块并行同级；第二期小岛等级系统待拍板，详见 §4 Phase 19 与 docs/HOME_REDESIGN_PROPOSAL.md）。前一阶段 v2.4.10（2026-08-23 图标 viewBox 裁切修复：导航栏图标只显示左上角方块：v2.4.9 的 twemoji-icons.js 图标条目缺 width/height，addIcon 按 Iconify 默认 16×16 渲染，viewBox 与 twemoji 36×36 坐标不匹配；extract_twemoji.mjs 生成时显式合并顶层尺寸，28 图标全部带 36×36，详见 §4 Phase 18）。前一阶段 v2.4.9（2026-08-17 全站稳定性大修：回归测试发现 6 个真实 bug 全部修复：GSAP `opacity:0` 永久不可见 11 视图根治 / EmojiIcon 离线注册（twemoji-icons.js 28 图标 0 运行时 HTTP）/ 3 个错误图标名 / AudioVisualizer wavePhases 作用域 / 五音详情 `GET /api/music/yin/{yin}` 端点补回 / axios 双重解包 2 处 + cookie.txt 结构清理，详见 §4 Phase 17）+ v2.4.8（2026-08-16 曲目独立音频架构：22 首曲目一曲一文件 `static/audio/tracks/{曲名}.mp3`，**待接入真实曲库**：同名覆盖即可零代码，详见 §4 Phase 16）+ v2.4.7（2026-08-16 音频方案回退：v2.4.6 Karplus-Strong 合成试听否决，删脚本恢复 mp3 占位，详见 §4 Phase 15）+ v2.4.6（2026-08-16 五音音频真实化尝试，**已被 v2.4.7 回退**，详见 §4 Phase 14）+ v2.4.5（2026-08-16 情绪日历 30 天趋势柱状图恢复 + 罗素情绪环显示修复 + 头像相册选择 + 通知空状态 emoji 统一，详见 §4 Phase 13）+ v2.4.4（2026-08-15 情绪日历透明修复 + 旧版日记迁移 + mood_checkins 主键重建 + 头像图片上传 + 落叶花坊文案打磨，详见 §4 Phase 12）+ v2.4.3（2026-08-14 花语文案焕新 + emoji 名称对齐 + 徽章奖励落叶 + 树洞三层回复 + 情绪日历空 bug 修复，详见 §4 Phase 11）+ v2.4.2（2026-08-13 整体架构优化与冗余清理，维护性清理版本，详见 §4 Phase 10 后段）+ v2.4.1（2026-08-10 情绪日历改用罗素情绪环模型四象限图表，替换原 30 天趋势柱状图，详见 §4 Phase 10）+ v2.4.0（2026-08-10 文案焕新 + 一天多条心情 + 头像/昵称编辑 + 花坊改名 + 露水累加修复，详见 §4 Phase 9）+ v2.3.3（2026-07-30 Safari 兼容性修复：3D 上下文恢复 + emoji 跨浏览器一致，详见 §4 Phase 8）+ v2.3.2（2026-07-28 start.py 默认生产模式 + 自动构建简化）+ v2.3（2026-07-25 六大四字名模块重构 + 双资源系统 + 花朵生命周期 + 通知 + 个人主页 + 古琴弹西洋曲谱，详见 §4 Phase 7）。v2.0 全站 Vue 3 重构基础保留（4 个 Phase + 秘密后台 + AI 全面接入 + Vue 3 SPA 前端）。
 
 ---
 
@@ -714,6 +718,32 @@ webwrold/
 **改动文件**：scripts/extract_twemoji.mjs（+尺寸合并）+ frontend/src/assets/twemoji-icons.js（重新生成）+ app/main.py 版本号 2.4.9 → 2.4.10（`版本号对齐`）。无新依赖 / 无迁移。
 
 **6 份文档同步**（Iron Rule）：README 状态徽章 v2.4.9→v2.4.10 + 顶部 v2.4.10 提示块 / HANDOFF §0 当前阶段 + 顶部提示块 + §4 Phase 18（本节）/ PROJECT_STATE §1（新增 v2.4.10 行）+ §2（新增 2026-08-23 v2.4.10 节）+ 顶部提示块 + 「最后更新」v2.4.10 / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。**6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT）。
+
+---
+
+### Phase 19 — v2.5.0 首页动线与理念呈现重构第一期（2026-09-12 加）
+
+> 起因：用户读完 README 反馈两点——① 网站需向初访者清晰介绍这套理念/关怀系统及模块之间的关系；② 首页使用动线不清晰，缺一个能吸引人立刻开始的核心体验。经 [HOME_REDESIGN_PROPOSAL.md](docs/HOME_REDESIGN_PROPOSAL.md)（v1 四步循环方案否决 → v2 按产品意图重写）讨论拍板：**主推 = 经营自己的小岛**，六个疗愈模块 = 并行同级的「岛上活动」，不设单一主推按钮；小岛等级系统（粘性层）留第二期。
+
+**改动 1：Hero 理念文案卡**（`hero理念卡`）：[HomeView.vue](frontend/src/views/HomeView.vue) hero 布局改左右分栏——左侧品牌（🌊 + 「潮声不止，心安自屿。」+ 静屿大字），右侧理念卡：主文案「每一个情绪，都值得一座岛。」+ 心灵港湾三句（听一曲古琴，写一封漂流的信，把说不出口的，种成一朵会开的花）+ 信任标记「🔒 日记端到端加密 · 无广告 · 无算法推荐」（直接回应「私密港湾」定位）；移动端上下堆叠（`.hero__content` 纵排 + 理念卡全宽）。
+
+**改动 2：模块卡奖励行**（`模块奖励行`）：六张模块卡 desc 下新增 `.module-card__reward`「✦ 怎么玩」一行（如「每听一曲 +1 露水 · 听满 10 首解锁「琴音知音」徽章」），首屏即传达玩法与激励，与露水/徽章资源闭环呼应。
+
+**改动 3：岛上指南手风琴**（`岛上指南手风琴`）：首页新增「岛上指南」区块（模块区下方，副标题「每个去处怎么玩 · 一目了然」），六个手风琴折叠面板——`guideOpen` ref 控制展开/收起，`v-if` + `guide-expand` transition，点击卡头切换、再点收起，不跳页不打断。使用指南从「我的」页面（v2.4.0 的静屿使用指南）前置到首页，新用户零成本看懂每个去处。
+
+**改动 4：指南数据共享化**（`指南数据共享`）：ProfileView.vue 本地 `GUIDE_SECTIONS`（约 79 行）提取至新文件 [frontend/src/data/islandGuide.js](frontend/src/data/islandGuide.js)——导出 `GUIDE_SECTIONS`（六模块：琴音疗心/日记海岸/情绪日历/心语树洞/落叶花坊/屿上花田，各含 icon/title/desc/reward/details）+ `PROFILE_GUIDE_SECTIONS`（追加「我的」项，个人主页用）；各条目**新增 `reward` 字段**（首页模块卡「怎么玩」一行与指南数据同源）。文案修改只需改这一处，两个页面同步。ProfileView 改用 `import { PROFILE_GUIDE_SECTIONS } from '@/data/islandGuide'`。
+
+**改动 5：guest-cta 文案**（`开启我的岛`）：未登录引导按钮「开启静屿」→「开启我的岛」——注册即得到自己的岛，呼应「经营小岛」主推定位。
+
+**改动 6：动效与响应式**：GSAP 入场动效遵循位移化铁律（hero-verse / hero-title / hero__intro / module-card / guide-card 全部只 `y` 位移）；移动端 hero 纵排 + 指南卡紧凑（icon 缩小 / 明细平铺）。
+
+**验证**（2026-09-12 浏览器端到端）：Hero 理念卡文案齐全（主文案 / 三句 / 信任标记）✅ / 六模块卡 reward 行显示 ✅ / 岛上指南 6 张卡 DIV 手风琴交互（点击展开 4 条 details / 再点收起 / URL 不跳转）✅ / console 无 JS 错误 ✅。
+
+**改动文件**：frontend/src/views/HomeView.vue（+252/-3）+ frontend/src/views/profile/ProfileView.vue（-79 改用共享源）+ frontend/src/data/islandGuide.js（新增 93 行）+ docs/HOME_REDESIGN_PROPOSAL.md（新增设计稿）+ app/main.py 版本号 2.4.10 → 2.5.0（`版本号对齐`）+ README（badge / 理念句 / CHANGELOG 链接范围）。**纯前端改动，无后端逻辑 / 无数据库迁移 / 无新依赖**；已 `npm run build`。
+
+**第二期待办**（提案 §四，需先拍板 §六 4 个决策点）：小岛等级系统——User 表加 `island_level`/`island_exp`（`_migrate_legacy_columns` 加列 + 老用户按现有统计回溯补算）+ 新建 `app/services/level_service.py`（`add_exp_and_check_level()` 在各活动入口与露水同事务埋点）+ 升级 toast + 花种四档门控（五音古曲建议永不锁定——疗愈是底线）。
+
+**6 份文档同步**（Iron Rule）：README badge v2.5.0 + 理念句 / HANDOFF §0 当前阶段 + 顶部提示块 + §4 Phase 19（本节）/ PROJECT_STATE §1 新增行 + 顶部提示块 + 「最后更新」/ ARCHITECTURE / DEPLOYMENT / DEVELOPMENT + CHANGELOG v2.5.0 条目（第 7 份文档）。
 
 ---
 

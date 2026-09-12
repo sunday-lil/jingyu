@@ -48,6 +48,10 @@
 
 ---
 
+> 🏝️ **2026-09-12 v2.5.0 首页动线与理念呈现重构（前端表现层重组，无后端架构变化）**：本次为纯前端改动，后端分层 / 数据库均无变化，但前端数据层新增一个**共享内容数据模块**：[frontend/src/data/islandGuide.js](../../frontend/src/data/islandGuide.js)（`指南数据共享`）——从 ProfileView.vue 视图内提取 `GUIDE_SECTIONS` / `PROFILE_GUIDE_SECTIONS`（含新增 `reward` 字段），首页「岛上指南」手风琴、首页模块卡「怎么玩」奖励行、个人主页静屿使用指南**三处消费同一数据源**（文案改一处全站同步）——**架构模式：跨视图共享的内容型数据（指南 / 文案 / 配置）放 `frontend/src/data/` 独立模块，不散落在单个视图组件内**。首页结构重组（`hero理念卡` / `模块奖励行` / `岛上指南手风琴` / `开启我的岛`）遵循既有模式：GSAP 位移化入场动效 + 移动端响应式断点 + router-link 模块卡。产品定位架构决策：**主推 = 经营自己的小岛，六模块并行同级**（不设单一主推按钮），动线 = 理念卡（你是谁）→ 模块卡+奖励行（能做什么）→ 岛上指南（怎么玩）→ CTA「开启我的岛」（开始行动）；第二期小岛等级系统（island_level/island_exp + level_service 埋点）待拍板，见 [HOME_REDESIGN_PROPOSAL.md](HOME_REDESIGN_PROPOSAL.md) §四。关键词 `v2.5.0` / `hero理念卡` / `模块奖励行` / `岛上指南手风琴` / `指南数据共享` / `开启我的岛` 在 6 份文档中都要出现。
+
+---
+
 > 🔧 **2026-08-23 v2.4.10 图标 viewBox 裁切修复（Iconify 数据继承结构的架构教训）**：本次为 v2.4.9 图标离线化的回归修复，架构无变化，但固化一条**资源序列化规则**：Iconify 的 icons.json 是「顶层默认 + 条目可覆盖」的继承结构——`width/height` 在 JSON 顶层（twemoji 为 36×36），图标条目通常只有 `body` 靠继承。**脱离原 JSON 使用条目数据（如构建期提取生成静态模块）时，必须手动补上继承字段**：`addIcon` 注册缺 width/height 时按默认 16×16 渲染 → `viewBox="0 0 16 16"` 与 36×36 坐标的 path 不匹配 → 图形溢出视口只显示左上角 44%（`图标左上角裁切`）。修复（`viewBox尺寸合并`）：[extract_twemoji.mjs](../../scripts/extract_twemoji.mjs) 生成时 `out[name] = { width: src.width, height: src.height, ...data }`（条目自带尺寸时优先）。**架构规则固化：序列化局部数据时，永远检查「这条数据离开父级上下文后还完整吗」**。关键词 `v2.4.10` / `viewBox尺寸合并` / `图标左上角裁切` 在 6 份文档中都要出现。
 
 ---

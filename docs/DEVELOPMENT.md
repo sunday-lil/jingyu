@@ -44,6 +44,10 @@
 
 ---
 
+> 🏝️ **2026-09-12 v2.5.0 开发规则（跨页面共享文案数据的铁律）**：在 v2.4.10 规则之上补充：**两个以上页面共用的内容型数据必须提取到 `frontend/src/data/` 独立模块**（`指南数据共享`）——本次把 ProfileView.vue 本地 `GUIDE_SECTIONS`（约 79 行）提取为 [frontend/src/data/islandGuide.js](../../frontend/src/data/islandGuide.js)，导出 `GUIDE_SECTIONS`（六模块）+ `PROFILE_GUIDE_SECTIONS`（追加「我的」项），首页「岛上指南」手风琴、首页模块卡 `reward` 行、个人主页使用指南三处消费同一份数据——**文案改一处，全部页面同步**，避免 v2.4.3 时代「改名要同步 3 个文件」的散弹式修改。配套规则：① **reward 字段与模块卡注释同步**——HomeView `modules` 数组的 reward 行与 islandGuide.js 同源（注释已标注，改文案两处一起改）；② **GSAP 入场动效仍只允许位移**（本版新增的 hero__intro / guide-card 动画全部只 `y` 位移，延续 v2.4.9 铁律）；③ **指南类长文案的详情用 details 数组**（每条一段，手风琴 v-for 渲染），不要塞进一个大字符串。关键词 `v2.5.0` / `hero理念卡` / `模块奖励行` / `岛上指南手风琴` / `指南数据共享` / `开启我的岛` 在 6 份文档中都要出现。
+
+---
+
 > 🔧 **2026-08-23 v2.4.10 开发规则（图标数据生成第 2 条铁律）**：在 v2.4.9 规则之上补充：**生成 twemoji-icons.js 必须合并顶层尺寸**（`viewBox尺寸合并`）——Iconify 的 icons.json 是「顶层默认 + 条目可覆盖」继承结构，图标条目通常只有 `body`，`width/height` 在 JSON 顶层（twemoji 36×36）；[extract_twemoji.mjs](../../scripts/extract_twemoji.mjs) 生成时必须 `out[name] = { width: src.width, height: src.height, ...data }`——缺了 width/height，`addIcon` 按 Iconify 默认 16×16 渲染，viewBox 与 36×36 坐标 path 不匹配，图标只显示左上角 44% 方块（`图标左上角裁切`，v2.4.10 修复的 v2.4.9 回归）。**通用教训：序列化局部数据时，永远检查「这条数据离开父级上下文后还完整吗」**。关键词 `v2.4.10` / `viewBox尺寸合并` / `图标左上角裁切` 在 6 份文档中都要出现。
 
 ---
