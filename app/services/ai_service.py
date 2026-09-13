@@ -19,6 +19,7 @@ NVIDIA NIM 免费层：
 from __future__ import annotations
 
 import logging
+import time
 from typing import List, Optional
 
 import httpx
@@ -174,24 +175,45 @@ def _call_nvidia(
         "stream": False,
     }
 
-    try:
-        # 同步调用，超时 60s（NVIDIA NIM 70B 冷启动可能 30-60s，后续会快）
-        with httpx.Client(timeout=60.0) as client:
-            resp = client.post(url, headers=headers, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
-    except httpx.TimeoutException:
-        logger.warning("AI 调用超时")
-        raise AIServiceUnavailable("AI 现在有点慢，稍后再来")
-    except httpx.HTTPStatusError as e:
-        logger.warning("AI 调用 HTTP %s: %s", e.response.status_code, e.response.text[:200])
-        raise AIServiceUnavailable("AI 暂时不在")
-    except Exception as e:
-        logger.warning("AI 调用失败: %s", e)
-        raise AIServiceUnavailable("AI 暂时不在")
+    # v2.5.3：免费层偶发 RemoteDisconnected / 超时 / 5xx / 429，
+    # 自动重试最多 2 次（间隔 1s → 2s），全部失败才抛"AI 暂时不在"。
+    max_attempts = 3
+    data = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            # 同步调用，超时 60s（冷启动可能 30-60s，后续会快）
+            with httpx.Client(timeout=60.0) as client:
+                resp = client.post(url, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            break
+        except httpx.TimeoutException:
+            logger.warning("AI 调用超时（第 %s 次）", attempt)
+            last_err = "AI 现在有点慢，稍后再来"
+        except httpx.HTTPStatusError as e:
+            code = e.response.status_code
+            logger.warning("AI 调用 HTTP %s（第 %s 次）: %s", code, attempt, e.response.text[:200])
+            # 429/5xx 属瞬时错误可重试；4xx（如 401/404）重试无意义
+            last_err = "AI 暂时不在"
+            if code not in (429, 500, 502, 503, 504):
+                raise AIServiceUnavailable(last_err)
+        except Exception as e:
+            logger.warning("AI 调用失败（第 %s 次）: %s", attempt, e)
+            last_err = "AI 暂时不在"
+        if attempt < max_attempts:
+            time.sleep(1.0 * attempt)  # 1s → 2s 线性退避
+
+    if data is None:
+        raise AIServiceUnavailable(last_err)
 
     try:
-        return data["choices"][0]["message"]["content"].strip()
+        # v2.5.3：glm 系 reasoning 模型偶发 content=None（思考内容挤占 token 配额），
+        # 容错成空串统一走"迷路"提示
+        content = (data["choices"][0]["message"].get("content") or "").strip()
+        if not content:
+            logger.warning("AI 返回空 content: %s", str(data)[:200])
+            raise AIServiceUnavailable("AI 迷路了，稍后再来")
+        return content
     except (KeyError, IndexError):
         logger.warning("AI 返回格式异常: %s", str(data)[:200])
         raise AIServiceUnavailable("AI 迷路了，稍后再来")
@@ -234,7 +256,8 @@ def chat(
     return _call_nvidia(
         system_prompt,
         user_content,
-        max_tokens=400,
+        # v2.5.3：glm reasoning 模型思考内容也计入 max_tokens，需预留充足额度
+        max_tokens=1200,
         temperature=0.75,
         history=history,
     )
@@ -256,7 +279,7 @@ def generate_encouragement(
     return _call_nvidia(
         SYSTEM_PROMPT_ENCOURAGEMENT,
         user_content,
-        max_tokens=120,
+        max_tokens=900,  # v2.5.3：预留 reasoning token 空间
         temperature=0.8,
     )
 
@@ -267,7 +290,7 @@ def generate_healing_message(mood_label: str) -> str:
     return _call_nvidia(
         SYSTEM_PROMPT_HEALING,
         user_content,
-        max_tokens=80,
+        max_tokens=900,  # v2.5.3：预留 reasoning token 空间
         temperature=0.85,
     )
 
@@ -285,7 +308,7 @@ def recommend_music(user_state: Optional[str] = None) -> dict:
     raw = _call_nvidia(
         SYSTEM_PROMPT_MUSIC,
         user_content,
-        max_tokens=120,
+        max_tokens=900,  # v2.5.3：预留 reasoning token 空间
         temperature=0.5,
     )
     # 容错解析：模型偶尔会包 ```json 或多说话

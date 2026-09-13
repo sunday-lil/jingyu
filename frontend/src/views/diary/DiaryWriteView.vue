@@ -137,7 +137,7 @@ onBeforeUnmount(() => {
               value="bottle"
               class="publish-option__radio"
             >
-            <span class="publish-option__icon">🏺</span>
+            <span class="publish-option__icon">🍾</span>
             <span class="publish-option__body">
               <span class="publish-option__title">放入漂流瓶</span>
               <span class="publish-option__desc">公开可见 · 陌生人可拾取并留鼓励</span>

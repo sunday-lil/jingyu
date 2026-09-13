@@ -93,11 +93,10 @@ const toggleMood = (key) => {
 // 数据
 const checkins = ref([])         // 后端 items: [{check_date, mood_emojis, moods, ...}]
 const calendarLoading = ref(false)
-const trend = ref([])            // 后端 items: [{date, mood_emoji, label, color, note, mood_count, avg_score}]
 const currentStreak = ref(0)
 const submitting = ref(false)
 
-// 今日已记录的心情列表
+// 今日已记录的心情列表（v2.5.3：存完整记录对象，含 id 供删除）
 const todayMoods = ref([])
 
 // 简易 toast
@@ -258,7 +257,7 @@ const fetchTodayMoods = async () => {
   try {
     const res = await api.get('/mood/today')
     if (res?.checked_in && res?.moods) {
-      todayMoods.value = res.moods.map(m => m.mood_emoji).filter(Boolean)
+      todayMoods.value = res.moods.filter(m => m.mood_emoji)
     } else {
       todayMoods.value = []
     }
@@ -267,14 +266,31 @@ const fetchTodayMoods = async () => {
   }
 }
 
-// 拉取 30 天趋势
-const fetchTrend = async () => {
+// 拉取连续打卡天数（v2.5.3：30 天趋势模块已下线，仅保留 streak 展示）
+const fetchStreak = async () => {
   try {
-    const res = await api.get('/mood/trend', { params: { days: 30 } })
-    trend.value = res?.items || res?.trend || []
+    const res = await api.get('/mood/trend', { params: { days: 7 } })
     currentStreak.value = res?.current_streak || 0
+  } catch {
+    // 静默
+  }
+}
+
+// 删除一条今日打卡记录（v2.5.3：选错 emoji 可撤销）
+const deletingMood = ref(false)
+const deleteTodayMood = async (m) => {
+  if (deletingMood.value) return
+  deletingMood.value = true
+  try {
+    await api.delete(`/mood/checkin/${m.id}`)
+    const label = MOOD_INFO[m.mood_emoji]?.label || m.mood_emoji
+    showToast(`已删除「${label}」这条记录`, 2000)
+    await fetchCalendar()
+    await fetchTodayMoods()
   } catch (e) {
-    // 趋势失败静默
+    showToast(e.message || '删除失败，请稍后再试', 2200)
+  } finally {
+    deletingMood.value = false
   }
 }
 
@@ -306,13 +322,13 @@ const doCheckin = async () => {
       // 徽章 toast 优先，跳过治愈语
       selectedMoods.value = []
       await fetchCalendar()
-      await fetchTrend()
+      await fetchStreak()
       await fetchTodayMoods()
       return
     }
     // 刷新数据
     await fetchCalendar()
-    await fetchTrend()
+    await fetchStreak()
     // 清空选择
     selectedMoods.value = []
     // 更新今日心情列表
@@ -346,7 +362,7 @@ const doCheckin = async () => {
 
 onMounted(() => {
   fetchCalendar()
-  fetchTrend()
+  fetchStreak()
   nextTick(() => {
     // 注意：不要在 from 里写 opacity:0 / scale:0 —— 动画被中断（如切后台、路由切换）
     // 时元素会永久卡在不可见状态（v2.4.4 的「透明 bug」同类根因），只保留位移动画
@@ -401,15 +417,23 @@ onBeforeUnmount(() => {
           <span class="mood-picker__btn-label">{{ m.label }}</span>
         </button>
       </div>
-      <!-- 今日已记录的心情 -->
+      <!-- 今日已记录的心情（v2.5.3：每条可删除——选错 emoji 可撤销） -->
       <div v-if="todayMoods.length > 0" class="mood-picker__today">
         <span class="mood-picker__today-label">今日已记：</span>
         <span
-          v-for="key in todayMoods"
-          :key="key"
-          class="mood-picker__today-emoji"
-          :title="MOOD_INFO[key]?.label"
-        >{{ MOOD_INFO[key]?.emoji }}</span>
+          v-for="m in todayMoods"
+          :key="m.id"
+          class="mood-picker__today-item"
+        >
+          <span class="mood-picker__today-emoji" :title="MOOD_INFO[m.mood_emoji]?.label">{{ MOOD_INFO[m.mood_emoji]?.emoji }}</span>
+          <button
+            class="mood-picker__del"
+            :disabled="deletingMood"
+            title="删除这条记录"
+            :aria-label="`删除${MOOD_INFO[m.mood_emoji]?.label || ''}记录`"
+            @click="deleteTodayMood(m)"
+          >×</button>
+        </span>
       </div>
       <button
         class="btn btn--primary mood-picker__submit"
@@ -468,40 +492,6 @@ onBeforeUnmount(() => {
           <span class="calendar__legend-emoji">{{ m.emoji }}</span>
           <span class="calendar__legend-label">{{ m.label }}</span>
         </span>
-      </div>
-    </section>
-
-    <!-- 近 30 天心情趋势柱状图 -->
-    <section class="trend-section card" v-if="trend.length">
-      <h2 class="trend-section__title">近 30 天心情趋势</h2>
-      <p class="trend-section__subtitle">
-        柱子越高，代表那天整体心情越好 · 一天多条记录取平均分
-      </p>
-      <div class="trend-chart">
-        <div
-          v-for="t in trend"
-          :key="t.date"
-          class="trend-bar-col"
-          :title="t.label ? `${t.date} · ${t.label}${t.mood_count > 1 ? ` ×${t.mood_count}` : ''}` : `${t.date} · 未记录`"
-        >
-          <!-- 当日主心情 emoji 悬浮柱顶 -->
-          <div
-            v-if="t.mood_emoji && MOOD_INFO[t.mood_emoji]"
-            class="trend-bar__emoji"
-          >{{ MOOD_INFO[t.mood_emoji].emoji }}</div>
-          <div
-            class="trend-bar"
-            :class="{ 'trend-bar--empty': !t.avg_score }"
-            :style="t.avg_score ? {
-              height: `${(t.avg_score / 5) * 100}%`,
-              background: `linear-gradient(180deg, ${t.color || '#B8A590'} 0%, ${(t.color || '#B8A590')}CC 100%)`,
-            } : {}"
-          ></div>
-        </div>
-      </div>
-      <div class="trend-axis">
-        <span>{{ trend[0]?.date?.slice(5) }}</span>
-        <span>今天</span>
       </div>
     </section>
 
@@ -713,9 +703,38 @@ onBeforeUnmount(() => {
 .mood-picker__today-label {
   margin-right: 4px;
 }
+.mood-picker__today-item {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+}
 .mood-picker__today-emoji {
   font-size: 18px;
   margin-right: 2px;
+}
+/* v2.5.3：删除单条今日记录的小圆钮 */
+.mood-picker__del {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(139, 123, 94, 0.18);
+  color: var(--color-text-muted, #8B7B5E);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  transition: all 0.2s;
+}
+.mood-picker__del:hover {
+  background: rgba(232, 154, 154, 0.35);
+  color: #A05A5A;
+}
+.mood-picker__del:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .mood-picker__submit {
   min-width: 140px;
@@ -852,67 +871,6 @@ onBeforeUnmount(() => {
 }
 .calendar__legend-label {
   font-family: var(--font-serif, serif);
-}
-
-/* 近 30 天趋势柱状图 */
-.trend-section {
-  padding: 24px;
-  margin-bottom: 40px;
-}
-.trend-section__title {
-  font-family: var(--font-serif, serif);
-  font-size: 18px;
-  font-weight: 500;
-  color: var(--color-text-primary, #3D3327);
-  margin: 0 0 6px;
-  letter-spacing: 0.05em;
-}
-.trend-section__subtitle {
-  font-size: 13px;
-  color: var(--color-text-muted, #8B7B5E);
-  margin: 0 0 18px;
-  letter-spacing: 0.03em;
-}
-.trend-chart {
-  display: flex;
-  align-items: stretch;
-  gap: 3px;
-  height: 150px;
-  padding: 20px 2px 0; /* 顶部留出 emoji 空间 */
-}
-.trend-bar-col {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 3px;
-}
-.trend-bar {
-  width: 100%;
-  max-width: 18px;
-  min-height: 4px;
-  border-radius: 4px 4px 2px 2px;
-  transition: height 0.4s var(--ease-soft, ease);
-}
-.trend-bar--empty {
-  height: 3px !important;
-  min-height: 3px;
-  background: rgba(139, 123, 94, 0.15);
-}
-.trend-bar__emoji {
-  font-size: 11px;
-  line-height: 1;
-  filter: saturate(0.9);
-}
-.trend-axis {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-  font-size: 11px;
-  color: var(--color-text-muted, #8B7B5E);
-  letter-spacing: 0.05em;
 }
 
 /* 情绪环状图（Russell's Circumplex Model） */
@@ -1241,22 +1199,6 @@ onBeforeUnmount(() => {
   }
   .calendar__legend-emoji {
     font-size: 16px;
-  }
-  .trend-section {
-    padding: 18px 14px;
-    margin-bottom: 28px;
-  }
-  .trend-chart {
-    gap: 2px;
-    height: 110px;
-    padding-top: 16px;
-  }
-  .trend-bar {
-    max-width: 12px;
-    border-radius: 3px 3px 2px 2px;
-  }
-  .trend-bar__emoji {
-    font-size: 9px;
   }
   .calendar-nav__title {
     font-size: 17px;

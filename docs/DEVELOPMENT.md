@@ -48,6 +48,10 @@
 
 ---
 
+> 🏝️ **2026-09-13 v2.5.3 开发规则（AI 调用三原则 + 板块-查询对齐）**：在 v2.5.1 规则之上补充：① **外部 AI 模是有生命周期的**（`AI模型下架`）——供应商会下架模型（410 Gone），依赖它的功能静默全灭；模型名必须保持配置化（.env `QI_AI_MODEL` + config.py 默认值），**换模型两处同步改**（.env 显式配置覆盖默认值，只改 config.py = 白改）；② **AI 调用层必须带重试 + 空值容错**（`AI重试` / `reasoning模型适配`）——重试只对瞬时错误（超时/断连/429/5xx，线性退避 1s/2s，3 次），4xx 快速失败；reasoning 模型（glm 系）思考内容计入 max_tokens，**小配额（<300）会静默返回 content=None 而非报错**——配额给足（900-1200）+ content 空值检查；③ **展示层板块划分变更必须同步数据层查询过滤**（`西洋曲谱并入网格`）——西洋曲谱并入六宫格后 `/api/music/yin/{yin}` 加 `category=="classic"`，否则西洋曲以五音归类漏进五音页；④ **删除类端点的权限三约束**（`打卡可删除`）——资源属主 + 时间窗（当天）+ 不可恢复资源（露水/徽章）不回收靠每日上限自然约束；⑤ **改名类需求先 grep 全站**（`日记海岸改名`）——「漂流日记→日记海岸」横跨 HomeView/AppLayout/islandGuide 三处 + 文档注释，grep `漂流日记` 确认清零（版本注释里的历史记录除外）。关键词 `v2.5.3` / `AI模型下架` / `glm-5.3-flash` / `AI重试` / `reasoning模型适配` / `西洋曲谱并入网格` / `打卡可删除` / `日记海岸改名` 在 6 份文档中都要出现。
+
+---
+
 > 🔧 **2026-09-12 v2.5.1 开发规则（GSAP 列表动画第 3 条铁律）**：在 v2.4.9「GSAP 位移化」规则之上补充：**列表类入场动画必须在 fetch 成功后播 + querySelector 守卫**（`列表动画时机`）——`onMounted + nextTick` 时机 fetch 的 API 数据尚未返回（或列表为空），选择器无匹配元素，GSAP 报 "target not found" 警告且动画实际没播出。**正确写法模板：`fetch 成功 → 数据赋值 → await nextTick() → if (document.querySelector(sel)) gsap.from(sel, {...})`**（GardenView / NotificationsView / ShopView.setCurrency 为先例，v2.5.1 补齐 DiaryListView `.diary-item` / ShopView `.shop-group`+`.shop-card` / AIChatView `.msg-row` 三处）。**验证动画类修复时要用新标签页看 console**——旧标签页的 console 是跨导航累积的历史消息，勿被旧警告误导。纯前端修复，需重新 `npm run build`。关键词 `v2.5.1` / `列表动画时机` / `GSAP空目标` 在 6 份文档中都要出现。
 
 ---

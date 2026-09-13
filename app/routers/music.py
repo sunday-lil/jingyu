@@ -56,10 +56,12 @@ def list_music_by_yin(yin: str, db: Session = Depends(get_db)):
 
     v2.4.9 修复：前端 MusicDetailView 调用 /api/music/yin/{yin}，
     该端点在重构中丢失导致五音详情页「曲目加载失败」。
+    v2.5.3：只返回 classic 古曲——西洋曲虽带五音归类（yin_type 分散在
+    五音里），但统一归入「西洋曲谱」板块展示，不再混进五音页。
     """
     rows = (
         db.query(Music)
-        .filter(Music.yin_type == yin)
+        .filter(Music.yin_type == yin, Music.category == "classic")
         .order_by(Music.id.asc())
         .all()
     )

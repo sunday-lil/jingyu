@@ -236,9 +236,9 @@ onBeforeUnmount(() => {
     <header class="western-header">
       <button class="back-btn" @click="goBack">← 回琴音疗心</button>
       <div class="western-header__inner">
-        <div class="western-header__glyph">🎻</div>
+        <div class="western-header__glyph">🎼</div>
         <div class="western-header__text">
-          <h1 class="western-header__title">古琴弹西洋</h1>
+          <h1 class="western-header__title">西洋曲谱</h1>
           <p class="western-header__desc">用古琴演绎西洋旋律 · 中西合璧</p>
           <div class="western-header__meta">
             <span>共 {{ musics.length }} 首改编曲目</span>
@@ -261,7 +261,7 @@ onBeforeUnmount(() => {
     <!-- 加载/错误/空 -->
     <div v-if="loading && !musics.length" class="empty-state">曲目加载中…</div>
     <div v-else-if="errorMsg" class="empty-state">{{ errorMsg }}</div>
-    <div v-else-if="!musics.length" class="empty-state">还没有古琴弹西洋曲目</div>
+    <div v-else-if="!musics.length" class="empty-state">还没有西洋曲谱曲目</div>
 
     <!-- 按五音分组展示 -->
     <section v-else class="groups">

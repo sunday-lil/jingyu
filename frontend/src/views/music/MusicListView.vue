@@ -16,7 +16,19 @@ const YIN_INFO = {
 }
 
 // 转为数组便于渲染
-const yinList = Object.entries(YIN_INFO).map(([key, info]) => ({ key, ...info }))
+// v2.5.3：西洋曲谱并入网格成为第六张卡（与五音卡同款外形）；
+// 西洋曲虽各带五音归类，但只在「西洋曲谱」板块展示，不再混进五音页
+const yinList = [
+  ...Object.entries(YIN_INFO).map(([key, info]) => ({ key, ...info })),
+  {
+    key: 'western',
+    name: '🎼',
+    element: '西', organ: '洋',
+    color: '#C5D8E8',
+    description: '古琴演绎的西洋经典旋律',
+    isWestern: true,
+  },
+]
 
 // AI 推荐相关
 const userInput = ref('')
@@ -27,7 +39,7 @@ const goToDetail = (key) => {
   router.push(`/music/${key}`)
 }
 
-// v2.3：跳转古琴弹西洋曲谱子板块
+// v2.3：跳转西洋曲谱子板块（v2.5.3：古琴弹西洋 → 西洋曲谱）
 const goWestern = () => {
   router.push('/music/western')
 }
@@ -71,9 +83,6 @@ onMounted(() => {
       stagger: 0.12,
       ease: 'power3.out',
     })
-    gsap.from('.western-card', {
-      y: 24, duration: 0.7, ease: 'power3.out', delay: 0.4,
-    })
   })
 })
 </script>
@@ -104,39 +113,29 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- 五音卡片 -->
+    <!-- 五音 + 西洋曲谱六宫格（v2.5.3：西洋卡与五音卡同款外形） -->
     <section class="yin-grid">
       <div
         v-for="item in yinList"
         :key="item.key"
         class="yin-card"
+        :class="{ 'yin-card--western': item.isWestern }"
         :style="{ '--card-color': item.color }"
-        @click="goToDetail(item.key)"
+        @click="item.isWestern ? goWestern() : goToDetail(item.key)"
       >
         <div class="yin-card__glyph">{{ item.name }}</div>
         <div class="yin-card__meta">
-          <span class="yin-card__element">{{ item.element }}</span>
-          <span class="yin-card__divider">·</span>
-          <span class="yin-card__organ">入{{ item.organ }}</span>
+          <template v-if="item.isWestern">
+            <span>中西合璧 · 古琴新声</span>
+          </template>
+          <template v-else>
+            <span class="yin-card__element">{{ item.element }}</span>
+            <span class="yin-card__divider">·</span>
+            <span class="yin-card__organ">入{{ item.organ }}</span>
+          </template>
         </div>
         <p class="yin-card__desc">{{ item.description }}</p>
         <div class="yin-card__enter">进入 →</div>
-      </div>
-    </section>
-
-    <!-- v2.3 新增：古琴弹西洋曲谱子板块入口 -->
-    <section class="western-section">
-      <h2 class="western-section__title">古琴弹西洋</h2>
-      <p class="western-section__subtitle">用古琴演绎西洋旋律 · 中西合璧</p>
-      <div class="western-card" @click="goWestern">
-        <div class="western-card__left">
-          <div class="western-card__emoji">🎻</div>
-          <div class="western-card__body">
-            <div class="western-card__name">古琴弹西洋曲谱</div>
-            <div class="western-card__desc">绿袖子 · 卡农 · 致爱丽丝 · 月光奏鸣曲 · 天鹅湖 · 昨日重现</div>
-          </div>
-        </div>
-        <div class="western-card__arrow">进入 →</div>
       </div>
     </section>
   </div>
@@ -223,11 +222,16 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-/* 五音网格：桌面 5 列，移动 2 列 */
+/* 五音网格：桌面 6 列（五音 + 西洋曲谱），平板 3 列，移动 2 列 */
 .yin-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 20px;
+}
+@media (min-width: 769px) and (max-width: 1024px) {
+  .yin-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 @media (max-width: 768px) {
   .yin-grid {
@@ -293,76 +297,12 @@ onMounted(() => {
   letter-spacing: 1px;
   position: relative;
 }
+/* 西洋曲谱卡：glyph 是乐谱 emoji，与五音汉字视觉对齐 */
+.yin-card--western .yin-card__glyph {
+  font-size: 48px;
+  margin-bottom: 24px;
+}
 
-/* 古琴弹西洋入口 */
-.western-section {
-  margin-top: 56px;
-  text-align: center;
-}
-.western-section__title {
-  font-family: var(--font-serif, serif);
-  font-size: 22px;
-  font-weight: 500;
-  color: var(--color-text-primary, #5a4a3a);
-  margin: 0 0 6px;
-  letter-spacing: 0.15em;
-}
-.western-section__subtitle {
-  font-size: 13px;
-  color: var(--color-text-secondary, #8a7a6a);
-  margin: 0 0 22px;
-  letter-spacing: 0.05em;
-}
-.western-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 24px 28px;
-  background: linear-gradient(135deg, rgba(168, 197, 232, 0.25) 0%, rgba(232, 184, 168, 0.2) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 28px;
-  cursor: pointer;
-  box-shadow: 0 10px 30px rgba(150, 130, 110, 0.15);
-  transition: transform 0.35s ease, box-shadow 0.35s ease;
-  text-align: left;
-}
-.western-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(150, 130, 110, 0.22);
-}
-.western-card__left {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  flex: 1;
-  min-width: 0;
-}
-.western-card__emoji {
-  font-size: 44px;
-  line-height: 1;
-  flex-shrink: 0;
-  filter: drop-shadow(0 4px 12px rgba(168, 197, 232, 0.4));
-}
-.western-card__name {
-  font-family: var(--font-serif, serif);
-  font-size: 19px;
-  font-weight: 500;
-  color: var(--color-text-primary, #5a4a3a);
-  margin-bottom: 4px;
-  letter-spacing: 0.05em;
-}
-.western-card__desc {
-  font-size: 12.5px;
-  color: var(--color-text-secondary, #8a7a6a);
-  line-height: 1.5;
-}
-.western-card__arrow {
-  font-size: 14px;
-  color: var(--color-text-muted, #8a7a6a);
-  flex-shrink: 0;
-  letter-spacing: 0.05em;
-}
 @media (max-width: 768px) {
   .yin-card__glyph {
     font-size: 44px;
@@ -385,27 +325,9 @@ onMounted(() => {
   .ai-section__btn {
     padding: 12px;
   }
-  /* 古琴弹西洋入口移动端紧凑 */
-  .western-section {
-    margin-top: 36px;
-  }
-  .western-section__title {
-    font-size: 18px;
-  }
-  .western-card {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 18px 18px;
-    gap: 10px;
-  }
-  .western-card__emoji {
-    font-size: 36px;
-  }
-  .western-card__name {
-    font-size: 17px;
-  }
-  .western-card__arrow {
-    align-self: flex-end;
+  .yin-card--western .yin-card__glyph {
+    font-size: 38px;
+    margin-bottom: 18px;
   }
 }
 </style>

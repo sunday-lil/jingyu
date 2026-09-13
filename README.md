@@ -6,16 +6,16 @@
 [![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Status](https://img.shields.io/badge/status-v2.5.2-success)]()
+[![Status](https://img.shields.io/badge/status-v2.5.3-success)]()
 
 **English** — Jingyu (静屿, "Quiet Isle") is a non-commercial, privacy-first healing web app: guqin five-tone music therapy, end-to-end encrypted drifting diary bottles, a humanized AI tree-hole chat, a Russell-circumplex mood calendar, and a garden that grows with your daily check-ins. Built with FastAPI + Vue 3 + Three.js. Self-host in two commands.
 
-**每一个情绪，都值得一座岛。** 静屿是一座只属于你的心灵港湾：古琴五音疗愈、加密漂流日记、AI 树洞、情绪日历，还有一座随你心情慢慢生长的花田。无广告、无内购、无算法推荐——日记加密存储，即便数据库泄露也读不到明文。
+**每一种情绪，都值得温柔安放。** 静屿是一座只属于你的心灵港湾：古琴五音疗愈、日记海岸、AI 树洞、情绪日历，还有一座随你心情慢慢生长的花田。无广告、无内购、无算法推荐——日记加密存储，即便数据库泄露也读不到明文。
 
 ## 你可能需要它的 3 个瞬间
 
 - 🌙 **深夜睡不着** —— 打开「琴音疗心」，听一曲《流水》，让古琴的余音把呼吸带慢
-- 🏺 **有句话不想告诉任何人** —— 写进漂流日记，加密后扔进海里；或者倒给 AI 树洞，它只听，不评判
+- 🍾 **有句话不想告诉任何人** —— 写进日记海岸，让它漂向远方；或者倒给 AI 树洞，它只听，不评判
 - 📅 **说不清这个月过得怎么样** —— 情绪日历把你每天随手一记的心情，画成一张看得懂的图
 
 ## 一览
@@ -24,7 +24,7 @@
 |:---:|:---:|
 | ![home](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_01_home.png) | ![music](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_02_music.png) |
 
-| 漂流日记 · 日记海岸 | 情绪日历 · 罗素情绪环 |
+| 日记海岸 · 漂流瓶 | 情绪日历 · 罗素情绪环 |
 |:---:|:---:|
 | ![diary](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_03_diary.png) | ![calendar](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_04_calendar.png) |
 
@@ -48,11 +48,11 @@ python start.py    # 浏览器打开 http://127.0.0.1:5000
 # 以下为开发者参考，普通用户可跳过
 
 > 🤖 **AI 接手请先看 [HANDOFF.md](docs/HANDOFF.md)** —— 元信息 + 关键决策 + 踩坑清单的汇总。
-> 📜 **版本更新历史见 [CHANGELOG.md](docs/CHANGELOG.md)**（v2.2.2 → v2.5.2 全部变更记录）。
+> 📜 **版本更新历史见 [CHANGELOG.md](docs/CHANGELOG.md)**（v2.2.2 → v2.5.3 全部变更记录）。
 
 ## 0. 一句话速览
 
-**FastAPI（纯 API 后端）+ Vue 3 SPA + SQLite** 的中文治愈系 Web 应用。完整 4 阶段功能：琴音疗心、漂流日记、情绪日历、屿上花田。前端 Vue 3 `<script setup>` + Vite 5 + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios，后端约 2 000 行 Python。无商业元素、无广告、无内购。
+**FastAPI（纯 API 后端）+ Vue 3 SPA + SQLite** 的中文治愈系 Web 应用。完整 4 阶段功能：琴音疗心、日记海岸、情绪日历、屿上花田。前端 Vue 3 `<script setup>` + Vite 5 + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios，后端约 2 000 行 Python。无商业元素、无广告、无内购。
 
 > 📌 **2026-07-19 全站 Vue 3 重构**：前端从「Jinja2 SSR + 原生 HTML/CSS/JS」迁移到「Vue 3 SPA + Vite 工程化」。FastAPI 后端简化为纯 API + SPA fallback，所有页面逻辑迁入 `frontend/src/views/` 13 个 .vue 视图。详见 [HANDOFF.md](docs/HANDOFF.md) 元信息。
 

@@ -35,11 +35,12 @@ onBeforeUnmount(() => {
 
 // 导航项（v2.3：四字文艺命名 + 岛屿图标 + 商店/Profile 入口）
 // v2.4.2：静屿 🏝️ → 🌊；花坊 → 落叶花坊
+// v2.5.3：漂流日记 → 日记海岸；情绪日历 🌙 → 🗓
 const navItems = [
   { name: 'home', label: '静屿', path: '/', icon: '🌊' },
   { name: 'music-list', label: '琴音疗心', path: '/music', icon: '🎵' },
-  { name: 'diary-list', label: '漂流日记', path: '/diary', icon: '📖' },
-  { name: 'calendar', label: '情绪日历', path: '/calendar', icon: '🌙' },
+  { name: 'diary-list', label: '日记海岸', path: '/diary', icon: '📖' },
+  { name: 'calendar', label: '情绪日历', path: '/calendar', icon: '🗓' },
   { name: 'ai-chat', label: '心语树洞', path: '/ai-chat', icon: '🌳' },
   { name: 'shop', label: '落叶花坊', path: '/shop', icon: '🍂' },
   { name: 'garden', label: '屿上花田', path: '/garden', icon: '🌸' },
@@ -53,11 +54,11 @@ const activeNav = computed(() => route.name)
 const isFullscreen = computed(() => !!route.meta?.fullscreen)
 
 // 移动端 tabbar：4 个固定核心 + 中央「更多」按钮
-// v2.3 调整：固定 静屿 / 漂流日记 / [更多] / 情绪日历 / 我的
+// v2.3 调整：固定 静屿 / 日记海岸 / [更多] / 情绪日历 / 我的
 // 「更多」展开后访问：琴音疗心 / 心语树洞 / 落叶花坊 / 屿上花田
 const tabbarFixed = computed(() => [
   navItems[0],  // 静屿
-  navItems[2],  // 漂流日记
+  navItems[2],  // 日记海岸
   navItems[3],  // 情绪日历
   navItems[7],  // 我的
 ])

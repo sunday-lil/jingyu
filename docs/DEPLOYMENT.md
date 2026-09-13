@@ -56,6 +56,10 @@
 
 ---
 
+> 🏝️ **2026-09-13 v2.5.3 部署须知（前后端均有改动：必须重新构建前端 + 更新 .env + 重启）**：本次前后端都有改动（改名/emoji/六宫格/删除打卡等前端 + AI 模型切换/删除打卡端点/五音过滤后端）。部署步骤：① `python start.py build`（或 `cd frontend && npm run build`）——新前端包含日记海岸改名 / 🍾 瓶子 emoji / 西洋曲谱六宫格 / 情绪日历删除按钮等；② **更新 .env 的 `QI_AI_MODEL` 为 `z-ai/glm-5.3-flash`**（原 `meta/llama-3.1-8b-instruct` 已从 NVIDIA NIM 下架返回 410 Gone——不换模型 AI 选音/树洞/鼓励语/治愈语全部「AI 暂时不在」；config.py 默认值已同步修改，.env 里显式配置会覆盖默认值，两边都要改）；③ `python start.py restart`——新后端含 `DELETE /api/mood/checkin/{id}` 端点 + `/api/music/yin/{yin}` 的 `category=="classic"` 过滤；④ **无数据库 schema 迁移 / 无新依赖**。验证：AI 选音输入「心里有点乱」返回五音推荐（非「AI 暂时不在」）；树洞发消息有回复；/music 六宫格（宫商角徵羽+西洋曲谱）顶部对齐；情绪日历打卡后「今日已记」出现 × 删除按钮可删除。关键词 `v2.5.3` / `日记海岸改名` / `西洋曲谱并入网格` / `打卡可删除` / `AI模型下架` / `glm-5.3-flash` 在 6 份文档中都要出现。
+
+---
+
 > 🎵 **2026-09-12 v2.5.2 部署须知（真实曲库入库 + 时长自动校准：重启即生效，无需构建）**：本次为内容接入（16 首真实音频入 git，约 280MB）+ [seed.py](../app/seed.py) 新增时长校准，**纯后端改动，无需 npm run build**。部署步骤：① `git pull`（首次拉取后仓库约 +280MB，单文件最大 28MB，GitHub 硬限 100MB 内）；② `pip install -r requirements.txt`（若尚未同步 v2.5.1 的 `passlib[bcrypt]` → `bcrypt` 变更）；③ `python start.py restart`——启动日志可见 `[SYNC] 已按真实音频校准 N 首曲目时长`（老库 musics.duration 从种子估值自动对齐真实时长；已对齐则为 0 条）；④ **无数据库 schema 迁移 / 无 .env 变更 / 无新 Python 依赖**。验证：打开 `/music/jue`，列表应显示 `流水 08:48`（528s）等真实时长；点播放实际出声。**用户后续接入剩余 6 首西洋改编音频**：同名覆盖放入 `static/audio/tracks/` → 重启 → 时长自动校准，零手工。关键词 `v2.5.2` / `真实曲库接入` / `时长自动校准` / `sync_durations_from_audio` 在 6 份文档中都要出现。
 
 ---

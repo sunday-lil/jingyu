@@ -18,8 +18,8 @@ const userStore = useUserStore()
 const guideOpen = ref(null)
 
 // 六个功能板块入口（v2.3：四字文艺命名 + 岛屿图标）
-// v2.4.2：花坊 → 落叶花坊；漂流日记 🍶 → 🏺
-// 名字已确认：琴音疗心 / 漂流日记 / 情绪日历 / 心语树洞 / 落叶花坊 / 屿上花田
+// v2.4.2：花坊 → 落叶花坊
+// v2.5.3：漂流日记 → 日记海岸（入口统一 📖）；情绪日历 🌙 → 🗓；新增「我的」入口
 // v2.5.0：reward「怎么玩」一行 —— 与 islandGuide.js 的 reward 字段保持同步
 const modules = [
   {
@@ -31,10 +31,10 @@ const modules = [
     color: 'linear-gradient(135deg, #E8D5A8 0%, #D4C18A 100%)',
   },
   {
-    label: '漂流日记',
+    label: '日记海岸',
     desc: '把心事写进瓶子 · 让它漂向远方',
     reward: '每写一篇 +2 露水 · 拾瓶与留鼓励亦有露水',
-    icon: '🏺',
+    icon: '📖',
     to: '/diary',
     color: 'linear-gradient(135deg, #A8C5E8 0%, #C5D5E8 100%)',
   },
@@ -42,7 +42,7 @@ const modules = [
     label: '情绪日历',
     desc: '记录每天的心情轨迹',
     reward: '每次打卡 +1 露水 · 连续 7 天解锁「七日静心」徽章',
-    icon: '🌙',
+    icon: '🗓',
     to: '/calendar',
     color: 'linear-gradient(135deg, #C5C5E8 0%, #E8D5E8 100%)',
   },
@@ -52,7 +52,7 @@ const modules = [
     reward: '倾诉心事 · 对话满 20 次解锁「树洞倾心」徽章',
     icon: '🌳',
     to: '/ai-chat',
-    color: 'linear-gradient(135deg, #B8C5E8 0%, #A8D5BA 100%)',
+    color: 'linear-gradient(135deg, #B8C5E8 0%, #A8D8BA 100%)',
   },
   {
     label: '落叶花坊',
@@ -69,6 +69,14 @@ const modules = [
     icon: '🌸',
     to: '/garden',
     color: 'linear-gradient(135deg, #E8B8C5 0%, #F5D5C5 100%)',
+  },
+  {
+    label: '我的',
+    desc: '岛上足迹 · 资源与物件一览',
+    reward: '日记/打卡/听曲/花朵数据 · 头像昵称可在此修改',
+    icon: '👤',
+    to: '/profile',
+    color: 'linear-gradient(135deg, #D5D8E8 0%, #E8E0D5 100%)',
   },
 ]
 
@@ -127,15 +135,14 @@ onMounted(() => {
           <p class="hero-verse">"潮声不止，心安自屿。"</p>
           <h1 class="hero-title">静屿</h1>
         </div>
-        <!-- v2.5.0：心灵港湾理念卡（私密 · 疗愈 · 生长三句 + 信任点） -->
+        <!-- v2.5.0：心灵港湾理念卡（私密 · 疗愈 · 生长三句） -->
         <div class="hero__intro">
-          <p class="hero__intro-lead">每一个情绪，都值得一座岛。</p>
+          <p class="hero__intro-lead">每一种情绪，都值得温柔安放。</p>
           <p class="hero__intro-body">
             静屿是一座只属于你的心灵港湾——<br>
             听一曲古琴，写一封漂流的信，<br>
             把说不出口的，种成一朵会开的花。
           </p>
-          <p class="hero__intro-trust">🔒 日记端到端加密 · 无广告 · 无算法推荐</p>
         </div>
       </div>
       <button
@@ -149,10 +156,10 @@ onMounted(() => {
       </button>
     </section>
 
-    <!-- v2.3：六个功能板块入口（四字文艺命名；v2.5.0：卡内加「怎么玩」奖励行） -->
+    <!-- v2.3：功能板块入口（v2.5.3：七张卡，含「我的」） -->
     <section class="module-section">
       <h2 class="section-title">岛上各处</h2>
-      <p class="section-subtitle">六个去处 · 任选一处歇脚</p>
+      <p class="section-subtitle">七个去处 · 任选一处歇脚</p>
       <div class="module-grid">
         <router-link
           v-for="m in modules"
@@ -273,15 +280,7 @@ onMounted(() => {
   font-size: 13.5px;
   line-height: 2;
   color: var(--color-text-secondary);
-  margin: 0 0 14px;
-}
-.hero__intro-trust {
-  font-size: 11.5px;
-  color: var(--color-text-muted);
-  letter-spacing: 0.05em;
   margin: 0;
-  padding-top: 12px;
-  border-top: 1px dashed rgba(139, 123, 94, 0.25);
 }
 .hero-icon {
   font-size: 56px;
@@ -615,10 +614,6 @@ onMounted(() => {
   .hero__intro-body {
     font-size: 12.5px;
     line-height: 1.9;
-  }
-  .hero__intro-trust {
-    font-size: 10.5px;
-    padding-top: 10px;
   }
   .hero-icon {
     font-size: 40px;

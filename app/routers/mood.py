@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -144,6 +144,33 @@ def today_checkin(
             for r in records
         ],
     }
+
+
+@router.delete("/checkin/{checkin_id}")
+def delete_checkin(
+    checkin_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """删除一条今日心情记录（v2.5.3：选错 emoji 可撤销）。
+
+    仅允许删除当天自己的记录；已发放的露水/徽章不回收
+    （误删可重新打卡，露水靠每日上限自然约束）。
+    """
+    record = (
+        db.query(MoodCheckin)
+        .filter(
+            MoodCheckin.id == checkin_id,
+            MoodCheckin.user_id == user.id,
+            MoodCheckin.check_date == date.today(),
+        )
+        .first()
+    )
+    if record is None:
+        raise HTTPException(status_code=404, detail="找不到这条打卡记录（只能删除今天的）")
+    db.delete(record)
+    db.commit()
+    return {"success": True, "deleted": checkin_id}
 
 
 @router.get("/calendar")

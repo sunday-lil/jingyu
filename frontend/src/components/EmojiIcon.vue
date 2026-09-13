@@ -48,6 +48,7 @@ const props = defineProps({
 // v2.4.2：🏝️ 沙滩已下线（改用 🌊 海浪）；🍶 清酒瓶已下线（改用 🏺 双耳瓶）
 // v2.4.9：修正 3 个不存在的图标名（wave→water-wave / gift→wrapped-gift /
 //         magnifying-glass-left→left-pointing-magnifying-glass）
+// v2.5.3：新增 🗓 螺旋日历（情绪日历）与 🎼 乐谱（西洋曲谱）
 const EMOJI_MAP = {
   '🌊': 'twemoji:water-wave',
   '🌿': 'twemoji:herb',
@@ -66,6 +67,7 @@ const EMOJI_MAP = {
   '🎁': 'twemoji:wrapped-gift',
   '✨': 'twemoji:sparkles',
   '🎶': 'twemoji:musical-notes',
+  '🎼': 'twemoji:musical-score',
   '🌳': 'twemoji:deciduous-tree',
   '🌲': 'twemoji:evergreen-tree',
   '🐚': 'twemoji:spiral-shell',
@@ -78,6 +80,7 @@ const EMOJI_MAP = {
   '⚙': 'twemoji:gear',
   '🏺': 'twemoji:amphora',
   '👤': 'twemoji:bust-in-silhouette',
+  '🗓': 'twemoji:spiral-calendar',
 }
 
 const iconName = computed(() => EMOJI_MAP[props.emoji] || null)

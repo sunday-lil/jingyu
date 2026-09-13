@@ -417,14 +417,13 @@ onBeforeUnmount(() => {
         </button>
       </section>
 
-      <!-- 空岛提示 -->
+      <!-- 空岛提示（v2.5.3：按需求移除「写一篇日记」按钮，保留引导文案） -->
       <section v-if="!myItems.length && !flowers.length && !profile.stats.diary_count" class="empty-island card">
         <div class="empty-island__emoji"><EmojiIcon emoji="🏝️" /></div>
         <p class="empty-island__text">
           你的小岛还很安静，<br>
           去写一篇日记、听一曲古琴，或种下一朵花吧。
         </p>
-        <button class="btn btn--primary" @click="goDiary">写一篇日记</button>
       </section>
     </template>
 

@@ -207,7 +207,7 @@ onBeforeUnmount(() => {
 
     <!-- 拾瓶入口 -->
     <section v-if="!bottle" class="pick-hero card">
-      <div class="pick-hero__emoji">🏺</div>
+      <div class="pick-hero__emoji">🍾</div>
       <p class="pick-hero__text">点击下方按钮，从海里拾起一只漂流瓶</p>
       <button class="btn btn--primary pick-hero__btn" :disabled="picking" @click="pickBottle">
         {{ picking ? '正在拾起…' : '🌊 拾一个' }}

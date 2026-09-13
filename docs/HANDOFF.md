@@ -3,6 +3,8 @@
 > 写给接手这个项目的下一个 AI（Cursor / Copilot / Devin / 任何 Agent）。
 > 读这一份文件 ≈ 读完整套文档。它是项目元信息 + 关键决策 + 踩坑清单的汇总。
 
+> 🏝️ **2026-09-13 v2.5.3 九项体验修正 + AI 模型切换（glm-5.3-flash）**：用户反馈集中修正（详见 §4 Phase 22）。核心：① 首页删「🔒 日记端到端加密」信任行，主文案改「每一种情绪，都值得温柔安放」；② 全站「漂流日记」→「日记海岸」（📖 入口 / 🍾 内部瓶子）；③ 「古琴弹西洋」→「西洋曲谱」（🎼）并入五音六宫格 + 后端 yin 端点 `category=="classic"` 过滤；④ 首页新增「我的」卡 / 「我的」页删写日记按钮；⑤ 情绪日历 🗓 + 打卡可删除（`DELETE /api/mood/checkin/{id}`，仅当天本人）+ 30 天趋势移除；⑥ **AI 全灭修复**：NVIDIA NIM `meta/llama-3.1-8b-instruct` 已 2026-08-26 EOL 下架（410 Gone）——换 `z-ai/glm-5.3-flash`（.env + config.py **两处都要改**，.env 覆盖默认值）+ `_call_nvidia` 3 次线性退避重试 + reasoning 模型适配（思考内容计入 max_tokens，治愈语原 80 tokens 全被吃掉返回 content=None；全部提至 900-1200 + 空值容错）。**踩坑**：换模型只改 config.py 不改 .env = 白改（pydantic-settings 环境变量优先）；glm 是 reasoning 模型，小 max_tokens 会静默返回 content=None 而非报错。关键词 `v2.5.3` / `日记海岸改名` / `西洋曲谱并入网格` / `打卡可删除` / `AI模型下架` / `glm-5.3-flash` / `AI重试` / `reasoning模型适配` 在 6 份文档中都要出现。
+
 > 🎵 **2026-09-12 v2.5.2 真实曲库接入（16/22）+ 曲目时长自动校准**：用户从 Bilibili 下载 16 首古琴曲真实音频（10–28MB/首）同名覆盖进 `static/audio/tracks/`，音乐疗愈模块从占位音频变真实曲库（剩 6 首西洋改编仍占位）。两个关键处理：① **《高山流水》→《流水》**：用户按俗名下载了《高山流水》（同源传本异名），DB 曲名为《流水》——文件改名对齐曲名（曲名为准，不反向改 DB，否则破坏 v2.4.8 的 title 幂等迁移链）；② **时长自动校准**（[seed.py](../app/seed.py) `sync_durations_from_audio`，启动幂等链新成员）：16 首种子估值全不准（如大胡笳 706s 实际 vs 360s 估值）——启动时解析真实音频 MP3 时长（纯 stdlib 手写解析器 `_mp3_duration_seconds`，VBR 读 Xing 帧数 / CBR 按比特率估算，跳过 <100KB 占位文件，差值 ≥1s 才 UPDATE），覆盖 DB 估值。**从此用户放音频 = 文件同名覆盖 + 重启，时长自动对齐零手工**（对剩余 6 首西洋曲同样生效）。破坏性验证：DB 故意改错流水 999s → 重启 → `[SYNC] 已按真实音频校准 1 首` → API 528.0 ✓；浏览器播放实测 00:14/08:48 实时走秒 ✓。SEED_MUSIC classic 16 首时长同步改实测值。无前端改动 / 无新依赖 / 无 schema 迁移。
 
 > 🔧 **2026-09-12 v2.5.1 日常维护：GSAP 空目标警告清理（3 视图 4 处）**：全站质量巡检（后端日志零 ERROR + 浏览器逐页扫描 11 页，写日记/打卡/AI 对话交互全通）发现唯一遗留——数据依赖型列表动画在 `onMounted + nextTick` 时机跑，API 数据未到选择器为空，GSAP 报 "target not found" 警告且动画实际没播。修复对齐 GardenView/NotificationsView 既有守卫模式：[DiaryListView.vue](../frontend/src/views/diary/DiaryListView.vue) `.diary-item`、[ShopView.vue](../frontend/src/views/garden/ShopView.vue) `.shop-group`/`.shop-card` 动画移至 fetch 成功后 `nextTick + querySelector` 守卫播；[AIChatView.vue](../frontend/src/views/ai/AIChatView.vue) `.msg-row`（新对话挂载必无消息行）加守卫。新标签页复验三页 console **零消息**；已 `npm run build`。**动画规范沉淀（DEVELOPMENT §GSAP 已更新）：列表类入场动画必须在 fetch 成功后播 + querySelector 守卫——onMounted 时数据未到，动画不播还报警告**。
@@ -767,6 +769,23 @@ webwrold/
 **教训**：**展示型元数据（duration）与物理资源（音频文件）的失真，用启动时反向校准自愈，而不是让用户手工对齐**——这是「内容接入零代码」约定的最后一块拼图（v2.4.8 解决了文件放置，本次解决元数据对齐）。另：环境注意——本机 `python` 命令是 Microsoft Store 占位符（exit 9009），要用 `py -3.15` 启动；DB 文件是 `data/healing.db`（不是 qi.db）。
 
 **改动文件**：static/audio/tracks/ 16 个真实 mp3（~280MB 入库）+ app/seed.py（解析器 + 校准 + SEED_MUSIC 时长）+ app/main.py 版本号 2.5.1 → 2.5.2 + docs/曲目清单.md 状态 + 6 文档同步。
+
+### Phase 22 — v2.5.3 九项体验修正 + AI 模型切换（2026-09-13 加）
+
+**背景**：用户一批反馈：首页文案调整（删加密信任行 / 主文案改写）、「漂流日记」全部改名「日记海岸」、日记海岸 emoji 换瓶子（不要陶罐）、琴音疗心 AI 选音不能用 + 宫商角徵羽板块不平行（「宫」高一截）+ 「古琴弹西洋」改名「西洋曲谱」换乐谱 emoji + 西洋曲归拢、首页加「我的」板块、「我的」页删「写一篇日记」按钮、情绪日历加删除打卡 + 删 30 天趋势 + 换 🗓、心语树洞用不了。
+
+**处理**：
+1. **AI 全灭根因**：`meta/llama-3.1-8b-instruct` 已从 NVIDIA NIM 下架（410 Gone，EOL 2026-08-26）——AI 选音/树洞/鼓励语/治愈语全降级「AI 暂时不在」。换 `z-ai/glm-5.3-flash`（测过可用的 NIM 在线模型）。**踩坑 1**：只改 config.py 默认值不够——.env 里 `QI_AI_MODEL` 显式配置会覆盖默认值，两处都要改。
+2. **AI 稳定性**：`_call_nvidia` 加重试（3 次线性退避 1s/2s；超时/断连/429/5xx 重试，其余 4xx 快速失败）。**踩坑 2（reasoning 模型适配）**：glm 是 reasoning 模型，思考内容（reasoning_content）计入 max_tokens——治愈语原 80 tokens 全被思考吃掉，返回 `content: null` **且不报错**；小配额调用 = 静默空回复。全部调用 max_tokens 提至 900-1200 + content 空值容错（空 content 统一走「AI 迷路了」提示）。
+3. **西洋曲谱归拢**：西洋曲的 yin_type 分散在五音里（种子数据如此），五音详情页 `/api/music/yin/{yin}` 加 `Music.category == "classic"` 过滤——西洋曲只在 `/music/western` 展示；MusicListView 西洋卡并入六宫格（与五音同款卡片样式，修复原「宫」高出一截 = 原独立西洋板块样式不一致）。
+4. **打卡删除**：后端 `DELETE /api/mood/checkin/{id}`（权限 = 本人 + 当天，已发露水/徽章不回收）；前端「今日已记」存完整记录对象（含 id），每条带 × 按钮。
+5. **改名/emoji 批量替换**：漂流日记→日记海岸（HomeView/AppLayout/islandGuide）；🏺→🍾（日记三视图）；🌙→🗓、新增 🎼→EmojiIcon EMOJI_MAP + extract_twemoji.mjs NEEDED 重新生成。
+
+**验证**：浏览器端到端 9 项全 PASS——首页（无加密行/新文案/📖🗓👤/无漂流日记）、六宫格对齐、宫板块无西洋曲、西洋曲谱页、AI 选音（弹窗「AI 为你推荐：羽音」）、打卡+删除、树洞（「你好」→ 真实回复）、我的页无写日记按钮、日记海岸 🍾。AI 三函数（chat/recommend_music/healing）直测通过。
+
+**教训**：① 外部 AI 模型有生命周期，供应商下架 = 功能静默全灭——模型名保持配置化 + 换模型时 .env 与 config.py 两处同步；② reasoning 模型（glm/DeepSeek-R1 等）思考内容计入 max_tokens，小配额会静默返回空 content，调用层必须空值容错；③ 展示层板块划分变更时必须同步检查数据层查询过滤（西洋曲混进五音页 = 展示维度变了查询没变）。
+
+**改动文件**：app/config.py + .env（AI 模型）+ app/services/ai_service.py（重试 + reasoning 适配）+ app/routers/music.py（classic 过滤）+ app/routers/mood.py（删除端点）+ app/main.py 版本号 2.5.2 → 2.5.3 + 前端 HomeView / AppLayout / islandGuide / MusicListView / MusicWesternView / MoodCalendarView / ProfileView / DiaryListView / DiaryWriteView / PickBottleView / EmojiIcon + scripts/extract_twemoji.mjs（🗓 🎼 图标）+ static/dist 重新构建 + 6 文档同步。
 
 ---
 
