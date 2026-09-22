@@ -25,6 +25,7 @@ logs/
 # 编辑器
 .vscode/
 .idea/
+.trae/
 *.swp
 .DS_Store
 
