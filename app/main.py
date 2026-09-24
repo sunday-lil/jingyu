@@ -54,6 +54,9 @@ async def lifespan(app: FastAPI):
     """启动 / 关闭事件。"""
     # 启动
     logger.info("[HEAL] 静屿 — 正在初始化 ...")
+    if settings.secret_key == "dev-secret-key-please-change-in-production-12345":
+        logger.warning("[SECURITY] 正在使用默认 secret_key（会话可被伪造），"
+                       "生产环境请在 .env 中设置 QI_SECRET_KEY")
     init_db()
     db = SessionLocal()
     try:
