@@ -1,7 +1,11 @@
 # 静屿 · 更新日志（CHANGELOG）
 
-> 全部版本变更记录（v2.2.2 → v2.5.3），按版本倒序排列。
-> 各版本部署须知见 [DEPLOYMENT.md](DEPLOYMENT.md) 顶部版本块；决策背景与踩坑见 [HANDOFF.md](HANDOFF.md)。
+> 全部版本变更记录（v2.2.2 → v2.5.3；另含 2026-10-18 文档结构整理），按版本倒序排列。
+> 各版本部署须知见 [DEPLOYMENT.md](DEPLOYMENT.md)；决策背景与踩坑见 [HANDOFF.md](HANDOFF.md)。
+
+---
+
+> 🗂️ **2026-10-18 文档结构整理（版本号不变 v2.5.3）**：按「历史归 CHANGELOG、现状归 PROJECT_STATE、交接归 HANDOFF、为什么归 ARCHITECTURE、怎么做归 DEVELOPMENT / DEPLOYMENT」重组文档，并逐项对照代码修正事实。① **新增** [docs/README.md](README.md) 文档地图（各文档职责 / 阅读顺序 / 事实优先级）；根 README 重写为「产品首页 + 开发者速查」。② **去重**：删除 HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT 顶部的历史版本块与底部「末次更新」流水账，统一指向本文件；PROJECT_STATE 重写为当前状态快照（模块矩阵 / 数据快照 / 已知问题 / TODO）。③ **修正事实**：日记改为明文（删除「端到端加密」表述）、AI 模型 `z-ai/glm-5.3-flash`、22 首曲目 / 29 件商品 / 15 条业务路由 / 16 个视图 / 10 张表、`/admin/login` 入口、曲目音频 `static/audio/tracks/`、树洞历史 `data/chat_history/`、能量规则（日记 +2 / 鼓励 +1 / 徽章赠落叶）。④ **删除过时内容**：旧 Jinja2 前台 SSR 流程、`/api/energy/grant`、`content_encrypted` 入参、`users.dew` / `resource_type` / `cost_resource` 等未落地设计、`static/css/05-animations.css` 前台动效说明。⑤ 新增「6 首西洋曲 0 字节占位」已知问题与 `/admin` 无尾斜杠 404 记录。纯文档改动，无代码 / 数据库 / 依赖变化。
 
 ---
 

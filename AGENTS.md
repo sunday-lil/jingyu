@@ -30,7 +30,7 @@
 - 默认 6 份：README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT。
 - 按 [HANDOFF §12.2](docs/HANDOFF.md) 的触发表判断哪些章节必须改；不确定就全量检查一遍。
 - 禁止「代码先 commit，稍后补 docs」；文档与代码矛盾时**以代码为准，并立即修文档**。
-- 提交前过一遍 [HANDOFF §12.4](docs/HANDOFF.md) 与 [README §9.3](README.md) 的自检清单。
+- 提交前过一遍 [HANDOFF §12.4](docs/HANDOFF.md) 与 [README §9](README.md) 的自检清单。
 
 ### 铁律 2：完成后必须推送 GitHub（使用 gh）
 
