@@ -1,6 +1,6 @@
 # 项目现状快照
 
-> 当前版本：**v2.6.0**（2026-10-18）
+> 当前版本：**v2.6.1**（2026-10-18）
 > 本文件只回答「现在是什么状态、能不能跑、还剩什么问题」。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 1. 总体状态
@@ -25,7 +25,7 @@
 |---|---|---|---|---|
 | 首页 | `/` | [HomeView.vue](../frontend/src/views/HomeView.vue) | SPA fallback | ✅ |
 | 琴音疗心 | `/music`、`/music/western`、`/music/:yin` | `views/music/MusicListView / MusicWesternView / MusicDetailView` | [music.py](../app/routers/music.py) | ✅ 22 首（16 真实 + 6 静音占位） |
-| 身心调理 | `/music/therapy` | [TherapyView.vue](../frontend/src/views/music/TherapyView.vue) | [therapy.py](../app/routers/therapy.py) / [therapy_service.py](../app/services/therapy_service.py) | ✅ 推荐 + 八段锦打卡 + 好物橱窗 |
+| 身心调理 | `/music/therapy` | [TherapyView.vue](../frontend/src/views/music/TherapyView.vue) | [therapy.py](../app/routers/therapy.py) / [therapy_service.py](../app/services/therapy_service.py) | ✅ 推荐 + 八段锦打卡 + B 站跟练视频 + 好物橱窗 |
 | 日记海岸 | `/diary`、`/diary/write`、`/diary/pick` | `views/diary/*` | [diary.py](../app/routers/diary.py) | ✅ 明文日记 + 漂流瓶 |
 | 静屿角落 | `/corner` | [CornerView.vue](../frontend/src/views/diary/CornerView.vue) | [diary.py](../app/routers/diary.py) `/api/diary/corner` | ✅ 私密碎碎念（is_public=False） |
 | 情绪日历 | `/calendar` | [MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue) | [mood.py](../app/routers/mood.py) | ✅ 一天多条 + 罗素环 + 今日可删 |
@@ -54,7 +54,7 @@
 1. **6 首西洋曲仍是静音占位**：每个 5338 字节（ID3 + 静音帧），播放无声。需要真实音频；用户同名覆盖 `static/audio/tracks/{曲名}.mp3` 后重启即可自动校准时长。
 2. **`/admin` 无尾斜杠返回 404**：SPA fallback 把 `admin` 判 404；入口请用 `/admin/login` 或 `/admin/`。
 3. **商品未接支付/发货**：当前只有橱窗 + 预约意向，不产生订单；购买赠露水也尚未实现（等真正交易闭环后再定）。
-4. **八段锦未接视频验证**：当前是跟练打卡（每天一次 +1 露水），没有视频上传/审核/防作弊。
+4. **八段锦未接视频验证**：当前是跟练打卡（每天一次 +1 露水）+ 内嵌 B 站演示视频，没有用户视频上传/审核/防作弊。
 5. **无自动化测试**：没有 `tests/`；新增的 therapy / 日记 / 能量规则靠手工冒烟。
 6. **AI 依赖外部模型**：NVIDIA NIM 模型可能下架（v2.5.3 已从 llama 切到 glm）；换模型需同时改 `.env` 与 [app/config.py](../app/config.py)。
 7. **健康/食品合规**：香囊、手串、食疗目前只做展示与预约；真正售卖前需资质、标签、过敏原、售后与广告合规。

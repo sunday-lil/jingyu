@@ -2,7 +2,7 @@
 
 > 改代码前**必读**。这里汇总了当前仍然有效的开发铁律 + 踩坑复现与修法；逐版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **当前版本：v2.6.0（2026-10-18）**。逐版本变更见 [CHANGELOG.md](CHANGELOG.md)；本文只保留仍然有效的开发约定与踩坑。
+> **当前版本：v2.6.1（2026-10-18）**。逐版本变更见 [CHANGELOG.md](CHANGELOG.md)；本文只保留仍然有效的开发约定与踩坑。
 
 ---
 
@@ -767,13 +767,14 @@ text.value = res.text
 #### 第 5 步：测试降级（必做）
 **先不配 `QI_NVIDIA_API_KEY`**，确认端点返回 `available:false` + 友好提示；**再配 key** 跑一遍，确认 `available:true` + AI 文案。详见 [§3.14](#314-ai-端点降级测试方法)。
 
-### 2.8 加一条身心调理规则（v2.6.0）
+### 2.8 加一条身心调理规则（v2.6.1）
 
 1. 在 [app/services/therapy_service.py](../app/services/therapy_service.py) 的 `PROBLEM_RULES` 加一条：关键词、`yin`、两式 `moves`、`sachet`、`bracelet`、`food`。
 2. 若新增香囊/手串/食疗，分别加到 `SACHETS` / `BRACELETS` / `FOODS`，必须写 `price`、`purchase_url`、`available` 与过敏原/材质/成分。
 3. 新增八段锦招式加到 `BADUANJIN`（名称、focus、steps）。
 4. 若新增每日奖励来源，同步 [app/utils/constants.py](../app/utils/constants.py) 的 `DAILY_ENERGY_LIMITS` 与 [README §3.4](../README.md)。
 5. 重启后跑 `POST /api/therapy/recommend` 与 `POST /api/therapy/baduanjin/checkin`；前端 `npm run build`。
+6. **B 站视频**：`TherapyView.vue` 的八段锦结果卡内嵌 `player.bilibili.com` iframe；修改视频只改 `src` 的 `bvid` / `aid` / `cid`。CSP 的 `frame-src` 已在 [app/main.py](../app/main.py) 放行 B 站域名。
 
 ---
 

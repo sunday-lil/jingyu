@@ -3,7 +3,7 @@
 > 写给接手这个项目的下一个 AI（Cursor / Copilot / Devin / 任何 Agent）。
 > 本文 = 项目元信息 + 关键决策 + 踩坑清单；完整文档地图见 [README.md](README.md)。
 
-> **当前版本：v2.6.0（2026-10-18）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
+> **当前版本：v2.6.1（2026-10-18）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
 
 ---
 
@@ -13,7 +13,7 @@
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 隐私边界清晰 / 轻运营
 **代码体量**：约 2 500 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.6.0（2026-10-18）——移除 AI 树洞、新增静屿角落、身心调理推荐、八段锦跟练打卡、好物橱窗。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
+**当前阶段**：v2.6.1（2026-10-18）——移除 AI 树洞、新增静屿角落、身心调理推荐、八段锦跟练打卡 + B 站跟练视频、好物橱窗。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
 
 ---
 
@@ -231,7 +231,7 @@ webwrold/
 
 ## 4. 实现阶段（摘要）
 
-> 逐版本细节（v2.2.2 → v2.6.0）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
+> 逐版本细节（v2.2.2 → v2.6.1）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
 
 | 阶段 | 主要内容 | 代码落点 |
 |---|---|---|
@@ -245,6 +245,7 @@ webwrold/
 | v2.5.2（09-12） | 16 首真实音频入库 + 启动时按 MP3 实际时长自动校准 `musics.duration` | [seed.py](../app/seed.py) |
 | v2.5.3（09-13） | 日记海岸改名 + 西洋曲谱并入六宫格 + 打卡可删除 + AI 模型切 `z-ai/glm-5.3-flash` | [music.py](../app/routers/music.py) / [mood.py](../app/routers/mood.py) / [ai_service.py](../app/services/ai_service.py) |
 | v2.6.0（10-18） | 删除 AI 树洞 + 静屿角落 + 身心调理推荐 + 八段锦打卡 + 好物橱窗 | [therapy_service.py](../app/services/therapy_service.py) / [therapy.py](../app/routers/therapy.py) / [CornerView.vue](../frontend/src/views/diary/CornerView.vue) |
+| v2.6.1（10-18） | 八段锦结果卡嵌入 B 站跟练视频 + CSP `frame-src` | [TherapyView.vue](../frontend/src/views/music/TherapyView.vue) / [app/main.py](../app/main.py) |
 
 **当前代码规模**：Python 约 3k 行；Vue/JS 约 3k 行；12 张表；约 70 个 API 端点（含后台 13 个）。
 
@@ -1281,4 +1282,4 @@ Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yello
 ---
 
 > 最后更新：2026-10-18（文档结构整理：去重版本块、按代码修正事实、历史细节归入 [CHANGELOG.md](CHANGELOG.md)）。
-> 代码版本：v2.6.0（2026-10-18）。
+> 代码版本：v2.6.1（2026-10-18）。

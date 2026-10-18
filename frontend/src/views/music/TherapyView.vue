@@ -238,6 +238,24 @@ onBeforeUnmount(() => {
               <p class="result-card__sub">动作缓慢、配合呼吸，不舒服就停。</p>
             </div>
           </div>
+
+          <!-- 八段锦跟练视频（Bilibili 嵌入） -->
+          <div class="video-frame">
+            <iframe
+              src="https://player.bilibili.com/player.html?isOutside=true&aid=46964958&bvid=BV1Nb41177h8&cid=82258764&p=1"
+              title="八段锦跟练视频"
+              scrolling="no"
+              frameborder="0"
+              allowfullscreen="true"
+              allow="autoplay; fullscreen"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+          <p class="video-hint">
+            视频来自 Bilibili · <a href="https://www.bilibili.com/video/BV1Nb41177h8" target="_blank" rel="noopener">在 B 站打开</a>
+          </p>
+
           <div class="moves">
             <div v-for="move in result.baduanjin" :key="move.key" class="move">
               <div class="move__name">{{ move.name }}</div>
@@ -447,6 +465,31 @@ onBeforeUnmount(() => {
 .moves {
   display: grid;
   gap: 14px;
+}
+.video-frame {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  margin: 4px 0 10px;
+}
+.video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.video-hint {
+  font-size: 0.76rem;
+  color: #A89C8B;
+  margin: 0 0 14px;
+}
+.video-hint a {
+  color: #8FAE88;
+  text-decoration: none;
 }
 .move {
   background: #FBF7EF;

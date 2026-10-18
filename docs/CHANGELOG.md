@@ -1,7 +1,11 @@
 # 静屿 · 更新日志（CHANGELOG）
 
-> 全部版本变更记录（v2.2.2 → v2.6.0），按版本倒序排列。
+> 全部版本变更记录（v2.2.2 → v2.6.1），按版本倒序排列。
 > 各版本部署须知见 [DEPLOYMENT.md](DEPLOYMENT.md)；决策背景与踩坑见 [HANDOFF.md](HANDOFF.md)。
+
+---
+
+> 🎬 **2026-10-18 v2.6.1 八段锦跟练视频嵌入**：在 `/music/therapy` 的「配一式八段锦」卡片内嵌入 Bilibili 播放器（BV1Nb41177h8，16:9 响应式），并保留「在 B 站打开」外链。为允许播放器 iframe，[app/main.py](../app/main.py) 的安全响应头新增 `frame-src 'self' https://player.bilibili.com https://www.bilibili.com`；其余 CSP 不变。版本号 2.6.1。**自测**：`npm run build` ✅ / 生产模式 `/music/therapy` 200 / CSP 响应头含 `frame-src` ✅。
 
 ---
 

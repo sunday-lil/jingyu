@@ -73,7 +73,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="静屿 — 治愈系身心疗愈平台",
         description="古琴五音 · 漂流瓶日记 · 心情手帐 · 精神花园",
-        version="2.6.0",
+        version="2.6.1",
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url=None,
@@ -118,6 +118,7 @@ def create_app() -> FastAPI:
                 "font-src 'self' data:; "
                 "connect-src 'self' https: ws: wss:; "
                 "media-src 'self' https: blob:; "
+                "frame-src 'self' https://player.bilibili.com https://www.bilibili.com; "
                 "frame-ancestors 'none'; "
                 "base-uri 'self'; "
                 "form-action 'self'"

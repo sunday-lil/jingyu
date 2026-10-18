@@ -1,6 +1,6 @@
 # 静屿 · 文档地图
 
-> 当前版本：**v2.6.0**（2026-10-18）
+> 当前版本：**v2.6.1**（2026-10-18）
 > 本目录只放项目文档；根目录的**文档**只保留 [README.md](../README.md)（产品首页 + 开发者速查）和 [AGENTS.md](../AGENTS.md)（工作规则），其余为代码 / 配置 / 启动脚本。
 
 ## 一、按角色读
@@ -25,7 +25,7 @@
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 为什么这样分层、数据流、鉴权、AI、后台、安全的架构解释 | 操作步骤（→ DEVELOPMENT / DEPLOYMENT） |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | 开发铁律、前端开发模式、常见改动流程、踩坑复现与修法 | 产品介绍、部署上线 |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | 宝塔 / systemd / nohup 部署、Nginx、HTTPS、备份、验证 | 功能设计、版本历史 |
-| [CHANGELOG.md](CHANGELOG.md) | **全部版本变更历史**（v2.2.2 → v2.6.0） | 当前状态、操作指南 |
+| [CHANGELOG.md](CHANGELOG.md) | **全部版本变更历史**（v2.2.2 → v2.6.1） | 当前状态、操作指南 |
 | [曲目清单.md](曲目清单.md) | 22 首曲目清单、音频放置方式、当前接入状态 | 音频架构决策（→ ARCHITECTURE） |
 | [HOME_REDESIGN_PROPOSAL.md](HOME_REDESIGN_PROPOSAL.md) | 首页重构设计提案（第一期已落地，第二期待拍板） | 已上线功能说明 |
 | [AGENTS.md](../AGENTS.md) | AI/自动化开发者的硬性工作规则（自测、文档、推送） | 技术细节 |

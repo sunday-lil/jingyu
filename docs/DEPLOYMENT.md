@@ -4,7 +4,7 @@
 
 > 🔒 **改了本文件涉及的部署配置（端口 / Nginx / systemd / HTTPS / 反代 / 前端构建），必须同步更新**：[README §1](../README.md) / [HANDOFF §1](HANDOFF.md) / [AGENTS.md](../AGENTS.md)。详见 [HANDOFF §12](HANDOFF.md) 文档自动同步铁律。
 
-> **当前版本：v2.6.0（2026-10-18）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留当前部署步骤。
+> **当前版本：v2.6.1（2026-10-18）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留当前部署步骤。
 >
 > **部署三件事**：① 拉代码 ② 配置 `.env` ③ `python start.py`（默认生产模式；`static/dist/index.html` 不存在会自动 `npm install + npm run build`）。
 >
@@ -533,7 +533,7 @@ curl -I http://127.0.0.1:5000/static/audio/tracks/流水.mp3   # 200（已接入
 curl http://127.0.0.1:5000/api/music | head           # 22 首（16 classic + 6 western）
 curl http://127.0.0.1:5000/api/music?category=western | head   # v2.3 加：仅 6 首西方改编
 curl http://127.0.0.1:5000/api/garden/shop | head     # 28 件商品（含 cost_currency 字段）
-curl http://127.0.0.1:5000/api/therapy/catalog | head # v2.6.0：八段锦 + 好物目录
+curl http://127.0.0.1:5000/api/therapy/catalog | head # v2.6.1：八段锦 + 好物目录
 
 # 3b. v2.3 新路由（无需登录也能拿 200 / 302）
 curl -I http://127.0.0.1:5000/music                  # 200（琴音疗心顶级路由）

@@ -4,7 +4,7 @@
 
 > 🔒 **改了本文件涉及的代码，必须同步更新**：[HANDOFF §12](HANDOFF.md) / [AGENTS.md](../AGENTS.md) / [DEVELOPMENT §1.8](DEVELOPMENT.md) 列出的对应文档。改代码不改文档 = 改了一半。
 
-> **当前版本：v2.6.0（2026-10-18）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
+> **当前版本：v2.6.1（2026-10-18）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
 
 ---
 
@@ -1077,7 +1077,7 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 
 ---
 
-## 6.7 身心调理架构（v2.6.0）
+## 6.7 身心调理架构（v2.6.1）
 
 > 设计原则：**规则可解释、结果可测试、不做医疗诊断**。问题 → 五类建议的映射写在 [app/services/therapy_service.py](../app/services/therapy_service.py)，不依赖 AI。
 
@@ -1092,7 +1092,8 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 **边界**：
 - 香囊/手串/食疗只做传统养生与生活方式参考，不承诺疗效；食疗必须展示过敏原。
 - 商品当前是「橱窗 + 预约/外链」，不是商城；购买赠露水等交易闭环未实现。
-- 八段锦当前是跟练打卡，没有视频上传/审核/防作弊。
+- 八段锦当前是跟练打卡 + Bilibili 跟练视频嵌入（16:9 iframe，`frame-src` 放行 `player.bilibili.com`）；**没有**视频上传/审核/防作弊。
+- 视频仅在 `TherapyView` 的八段锦结果卡内展示，不落库；外链可跳转 B 站原视频。
 
 ---
 
