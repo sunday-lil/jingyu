@@ -113,13 +113,31 @@ routers/  →  services/  →  models/  →  database
 - 上限在 [app/utils/constants.py](../app/utils/constants.py) `DAILY_LIMITS` 里
 - 改上限要同步更新文档
 
-### 1.7 改完跑验证
-每次改完代码**必须**：
+### 1.7 改完必须自测（未自测 = 未完成）
+
+**任何代码改动，commit 前必须自测通过；自测不通过不得 commit。** 完整标准见 [AGENTS.md](../AGENTS.md)。
+
+| 改动范围 | 最低验证 |
+|---|---|
+| 后端 API / service / model | `python start.py restart` 无报错 → 请求受影响接口 → `logs/healing.log` 无 ERROR → 字段变更确认老库迁移生效 |
+| 前端 Vue / 路由 / 样式 | `cd frontend && npm run build` 通过 → 生产模式启动 → 浏览器验证页面功能 + console 无报错 |
+| 前后端联动 | 至少走通一次完整用户动作（登录 → 操作 → 数据落库/刷新后仍在） |
+| 仅文档 | 检查 Markdown 链接与命令可执行，无需启动服务 |
+
 ```bash
 python start.py restart
-sleep 1
-python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5000/').status)"  # 200
+python start.py status
+curl -I http://127.0.0.1:5000/                       # 200
+curl -I http://127.0.0.1:5000/api/<affected>         # 2xx / 预期 4xx
+
+# 前端改动额外执行
+cd frontend && npm run build
+
+# 临时验证完记得停掉，不要留后台进程
+python start.py stop
 ```
+
+> 修 Bug 必须复验「原复现步骤不再复现」；UI 改动必须重新构建 `static/dist/`，否则生产入口仍是旧代码。
 
 ### 1.8 改完代码**必须**同步更新文档（自动同步铁律）
 > 🔒 **本节优先级最高。** 完整版见 [HANDOFF §12](HANDOFF.md) / [PROJECT_STATE §8](PROJECT_STATE.md)。
@@ -146,10 +164,12 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1
 > 同步点速查：[README §9](../README.md) / [HANDOFF §12](HANDOFF.md) / [PROJECT_STATE §8](PROJECT_STATE.md) / [ARCHITECTURE §7.7](ARCHITECTURE.md) / [DEPLOYMENT 顶部](DEPLOYMENT.md) / 本节。
 > 完整规则 + 5 项 pre-commit checklist：[HANDOFF §12](HANDOFF.md) / [PROJECT_STATE §8.1](PROJECT_STATE.md) v2.0 特殊说明。
 
-#### 1.8.1 改完自动 push（不延迟）
+#### 1.8.1 改完自动 push（不延迟，使用 gh）
+- 推送前 `gh auth status` 必须通过；token 失效先 `gh auth refresh -h github.com`（或 `gh auth login`），再 `gh auth setup-git`
 - `git commit` 完**立即** `git push origin main`
 - 不允许「先 commit 一会儿一起推」/「明天推」/「攒一周推一次」
-- 完整规则：[HANDOFF §12.6](HANDOFF.md)
+- 推送后验证 `git status --short` 为空，且远端 `main` 的 SHA == 本地 `HEAD`
+- 完整规则：[HANDOFF §12.6](HANDOFF.md) / [AGENTS.md](../AGENTS.md)
 
 #### 1.8.2 Commit 标题 / 脚本进度用 Conventional Commits
 - 格式：`<type>(<scope>): <subject>`（subject ≤ 50 字符）

@@ -1019,7 +1019,7 @@ curl -b c.txt http://127.0.0.1:5000/api/admin/stats     # 200 + {"is_admin":true
 
 ### 8.1 一句话铁律
 
-**改代码 + 改对应文档 = 同一个 commit，**绝不允许**「代码先上，文档之后补」。**
+**改代码 + 自测 + 改对应文档 + 推送 = 一次完成。** 绝不允许「代码先上，文档之后补」，也不允许「本地 commit 完不 push」。完整工作规则（自测标准 + gh 推送流程）见根目录 [AGENTS.md](../AGENTS.md)。
 
 > 🔒 **2026-07-19 v2.0 Vue 3 重构特别约定**：本次涉及 **6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档中都要出现。
 
@@ -1051,6 +1051,8 @@ curl -b c.txt http://127.0.0.1:5000/api/admin/stats     # 200 + {"is_admin":true
 - [ ] 改的常量在 README 表格里**也更新了**（业务规则可见性）
 - [ ] 改的 .env 配置在 `.env.example` 里**也加了**（部署可见性）
 - [ ] 新增页面 / API 在 README §2 / §3 速查表里**也加了**（可发现性）
+- [ ] **已自测**：`python start.py restart` 无报错 + 受影响接口/页面验证通过；前端改动已 `npm run build`
+- [ ] **已推送**：`gh auth status` 正常，`git push origin main` 成功，远端 HEAD 与本地一致
 
 ### 8.4 时序
 
@@ -1067,11 +1069,13 @@ curl -b c.txt http://127.0.0.1:5000/api/admin/stats     # 200 + {"is_admin":true
 
 文档 ≠ 摆设。改完代码随手更新，让下一个 AI / 开发者接手时一眼能懂。**不更新 = 给后人埋雷。**
 
-### 8.6 改完自动 push（不延迟）
+### 8.6 改完自动 push（不延迟，使用 gh）
 - 跟 §8.1 同优先级
+- 推送前 `gh auth status` 必须通过；token 失效先 `gh auth refresh -h github.com`（或 `gh auth login`），再 `gh auth setup-git`
 - `git commit` 完**立即** `git push origin main`
 - 不允许「先 commit 一会儿一起推」/「明天推」/「攒一周」
-- 详细规则见 [HANDOFF §12.6](HANDOFF.md)
+- 推送后验证：`git status --short` 为空 + `git ls-remote origin refs/heads/main` 与 `git rev-parse HEAD` 一致（或 `gh api repos/sunday-lil/jingyu/commits/main --jq .sha`）
+- 详细规则见 [HANDOFF §12.6](HANDOFF.md) / [AGENTS.md](../AGENTS.md)
 
 ### 8.7 Commit 标题 / 脚本进度用 Conventional Commits
 - 格式：`<type>(<scope>): <subject>`（subject ≤ 50 字符）

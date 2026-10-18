@@ -48,6 +48,7 @@ python start.py    # 浏览器打开 http://127.0.0.1:5000
 # 以下为开发者参考，普通用户可跳过
 
 > 🤖 **AI 接手请先看 [HANDOFF.md](docs/HANDOFF.md)** —— 元信息 + 关键决策 + 踩坑清单的汇总。
+> 📌 **工作规则（硬性）**：[AGENTS.md](AGENTS.md) —— 改代码必须自测 + 同一 commit 更新全部文档，完成后用 `gh` 推送 GitHub。
 > 📜 **版本更新历史见 [CHANGELOG.md](docs/CHANGELOG.md)**（v2.2.2 → v2.5.3 全部变更记录）。
 
 ## 0. 一句话速览
@@ -658,7 +659,8 @@ v2.3 改动后跑的冒烟测试结果（详见 [PROJECT_STATE §2 v2.3 条目](
 
 ### 9.1 一句话铁律
 
-**改代码 + 改文档 = 同一个 commit。** 不允许「代码先上，文档之后补」。
+**改代码 + 自测 + 改文档 + 推送 = 一次完成。** 不允许「代码先上，文档之后补」，也不允许「本地 commit 完不 push」。
+完整工作规则（含自测标准与 gh 推送流程）见 [AGENTS.md](AGENTS.md)。
 
 ### 9.2 同步表（简化版，完整版见 [PROJECT_STATE §8.2](docs/PROJECT_STATE.md)）
 
@@ -684,6 +686,8 @@ v2.3 改动后跑的冒烟测试结果（详见 [PROJECT_STATE §2 v2.3 条目](
 - [ ] 改的常量在 `constants.py` / §3.4 表格里**也更新了**（→ 业务规则可见性）
 - [ ] 改的 .env 配置在 [.env.example](.env.example) 里**也加了**（→ 部署可见性）
 - [ ] 新增页面 / API 在 README+HANDOFF 速查表里**也加了**（→ 可发现性）
+- [ ] **已自测**：`python start.py restart` 无报错 + 受影响接口/页面验证通过；前端改动已 `npm run build`
+- [ ] **已推送**：`gh auth status` 正常，`git push origin main` 成功，远端 HEAD 与本地一致
 
 如果发现这份文档和实际代码矛盾：**以代码为准，然后更新这份文档**。
 

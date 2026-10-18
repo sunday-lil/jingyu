@@ -1629,6 +1629,8 @@ assert r.status_code == 200
 
 > 改代码不改文档 = 改了一半。下一任接手的人会被你的旧文档带进沟里。
 
+> 🔒 **自测铁律（2026-10-18 立）**：任何代码改动在 commit 前**必须自测通过**——后端 `python start.py restart` 无报错 + 受影响接口返回符合预期 + `logs/healing.log` 无 ERROR；前端必须 `cd frontend && npm run build` 通过并在浏览器验证受影响页面功能与 console；修 Bug 必须复验原复现步骤。**未自测 = 未完成，不得 commit。** 按改动范围执行的最小自测表见根目录 [AGENTS.md](../AGENTS.md)。
+
 > 🔒 **2026-07-19 全站 Vue 3 重构特别约定**：本次重构涉及 **6 份文档同步**（README / HANDOFF / PROJECT_STATE / ARCHITECTURE / DEPLOYMENT / DEVELOPMENT），必须**同一个 commit** 一起更新。互链保持一致，关键词 `Vue 3` / `Vite` / `SPA fallback` / `frontend/` 在 6 份文档中都要出现。
 
 ### 12.2 触发条件：什么时候必须改文档
@@ -1685,9 +1687,11 @@ assert r.status_code == 200
 2. **当天**至少把对应的「改了」表里那一行填上
 3. 下一条 commit 之前必须把文档补完
 
-### 12.6 自动推送铁律（commit 完必须立即 push）
+### 12.6 自动推送铁律（commit 完必须立即 push，使用 gh）
 
-> 🔒 跟 §12.1 同一优先级。
+> 🔒 跟 §12.1 同一优先级。**任务完成的定义包含「远端已同步」，本地 commit 不算完成。**
+
+**认证前置**：推送前先跑 `gh auth status`；token 失效时执行 `gh auth refresh -h github.com`（或 `gh auth login`），并用 `gh auth setup-git` 让 git 复用 gh 凭据。认证修不好就如实报告并停止，不得声称完成。
 
 **铁律**：`git commit` 完之后**立刻** `git push origin main`，**不允许**：
 - ❌ 「先 commit 完，一会儿一起推」→ 仓库永远落后本地
@@ -1697,15 +1701,20 @@ assert r.status_code == 200
 
 **正确做法**：
 ```bash
+gh auth status                 # 认证前置：必须通过
+gh auth setup-git              # 让 git 复用 gh 凭据（首次/换机时）
 git add -A
 git commit -m "fix(auth): add is_admin field to AuthOut schema"
 git push origin main           # ← 必须紧跟 commit
+git status --short             # 应为空
+git ls-remote origin refs/heads/main   # 与 git rev-parse HEAD 一致
+# 或 gh api repos/sunday-lil/jingyu/commits/main --jq .sha
 ```
 
 **push 失败的应急**：
 - 网络问题：retry 一次；再失败 → 截图报错，留 `WIP: push pending` 标记
 - 远端冲突：`git pull --rebase` → 解决 → `git push`（**不要** `git push --force`，除非你 100% 确定）
-- 权限问题：检查 `gh auth status`，重新 `gh auth login`
+- 权限问题：`gh auth status` 确认账号；token 失效 → `gh auth refresh -h github.com` / `gh auth login` → `gh auth setup-git` → 重试
 
 **特殊场景**（可以延迟 push）：
 - 多文件多模块大改（> 5 个文件）：允许攒一个原子 commit 一起推
