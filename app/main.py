@@ -28,7 +28,7 @@ from app.config import settings
 from app.database import SessionLocal, init_db
 from app.routers import (
     auth, music, diary, mood, energy, garden, pages,
-    admin, admin_pages, ai, notification, profile,
+    admin, admin_pages, ai, notification, profile, therapy,
 )
 from app.seed import run_seed
 
@@ -73,7 +73,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="静屿 — 治愈系身心疗愈平台",
         description="古琴五音 · 漂流瓶日记 · 心情手帐 · 精神花园",
-        version="2.5.3",
+        version="2.6.0",
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url=None,
@@ -139,8 +139,10 @@ def create_app() -> FastAPI:
     app.include_router(energy.router)
     app.include_router(garden.router)
     app.include_router(pages.router)
-    # AI（NVIDIA NIM 接入：树洞对话 / 漂流瓶鼓励语 / 情绪日历治愈语 / 音乐推荐）
+    # AI（NVIDIA NIM 接入：漂流瓶鼓励语 / 情绪日历治愈语 / 音乐推荐；树洞对话已移除）
     app.include_router(ai.router)
+    # 身心调理（曲 / 八段锦 / 香囊 / 手串 / 食疗）
+    app.include_router(therapy.router)
     # 站内通知（v2.3：漂流瓶评论返回提醒）
     app.include_router(notification.router)
     # 个人主页（v2.3）

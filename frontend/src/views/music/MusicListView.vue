@@ -138,6 +138,19 @@ onMounted(() => {
         <div class="yin-card__enter">进入 →</div>
       </div>
     </section>
+
+    <!-- 身心调理入口：问题 → 曲 / 八段锦 / 香囊 / 手串 / 食疗 -->
+    <section class="therapy-entry">
+      <div class="therapy-entry__inner">
+        <div>
+          <h2 class="therapy-entry__title">🌿 身心调理</h2>
+          <p class="therapy-entry__desc">
+            说说此刻的身体或情绪，让静屿为你配一曲、一式八段锦、一枚香囊、一串手串和一份温和食疗。
+          </p>
+        </div>
+        <router-link class="therapy-entry__btn" to="/music/therapy">去调理 →</router-link>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -220,6 +233,50 @@ onMounted(() => {
 .ai-section__btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* 身心调理入口 */
+.therapy-entry {
+  margin-top: 28px;
+}
+.therapy-entry__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: linear-gradient(135deg, rgba(232, 213, 168, 0.35), rgba(168, 197, 160, 0.28));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 24px;
+  padding: 24px 28px;
+  backdrop-filter: blur(12px);
+}
+.therapy-entry__title {
+  font-family: var(--font-serif, serif);
+  font-size: 20px;
+  color: var(--color-text-primary, #5a4a3a);
+  margin: 0 0 6px;
+}
+.therapy-entry__desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-text-secondary, #8a7a6a);
+  margin: 0;
+}
+.therapy-entry__btn {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #a8c5a0, #8fae88);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 999px;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+@media (max-width: 768px) {
+  .therapy-entry__inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* 五音网格：桌面 6 列（五音 + 西洋曲谱），平板 3 列，移动 2 列 */

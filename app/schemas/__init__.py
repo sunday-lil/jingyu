@@ -13,7 +13,6 @@ from app.schemas.admin import (
     PyCacheCleanResult, SystemInfo,
 )
 from app.schemas.ai import (
-    ChatMessage, AIChatIn, AIChatOut,
     AIEncouragementIn,
     AIHealingIn,
     AIMusicRecommendIn, AIMusicRecommendOut,
@@ -32,7 +31,6 @@ for _m in (
     UserListItem, UserListOut, UserDetailOut,
     ResetPasswordIn, CreateUserIn, AdjustEnergyIn,
     PyCacheCleanResult, SystemInfo,
-    ChatMessage, AIChatIn, AIChatOut,
     AIEncouragementIn,
     AIHealingIn,
     AIMusicRecommendIn, AIMusicRecommendOut,
@@ -53,7 +51,6 @@ __all__ = [
     "UserListItem", "UserListOut", "UserDetailOut",
     "ResetPasswordIn", "CreateUserIn", "AdjustEnergyIn",
     "PyCacheCleanResult", "SystemInfo",
-    "ChatMessage", "AIChatIn", "AIChatOut",
     "AIEncouragementIn",
     "AIHealingIn",
     "AIMusicRecommendIn", "AIMusicRecommendOut",

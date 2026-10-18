@@ -1,9 +1,7 @@
-"""漂流瓶日记 API。
+"""漂流瓶日记 / 静屿角落 API。
 
-v2.3 调整：
-- 移除密码加密，日记改明文存储。
-- 新增发布选项：is_public（放入漂流瓶）/ send_to_ai_hole（同步树洞）。
-- 拾取漂流瓶直接返回明文 content。
+v2.3 调整：移除密码加密，日记改明文存储。
+v2.6.0 调整：移除 AI 树洞同步；is_public=False 的日记统一留在「静屿角落」。
 """
 
 from __future__ import annotations
@@ -41,14 +39,13 @@ def create_my_diary(
     """写一篇日记。
 
     - is_public=True：放入漂流瓶，公开可见，允许评论。
-    - send_to_ai_hole=True：同步至树洞（仅自己可见 + AI 对话依据）。
+    - is_public=False：留在静屿角落，仅自己可见。
     """
     diary = create_diary(
         db, user,
         content=body.content,
         mood_type=body.mood_type,
         is_public=body.is_public,
-        send_to_ai_hole=body.send_to_ai_hole,
     )
 
     # 写日记发 +2 露水
@@ -88,7 +85,34 @@ def list_mine(
                 "content": d.content,
                 "mood_type": d.mood_type,
                 "is_public": d.is_public,
-                "send_to_ai_hole": d.send_to_ai_hole,
+                "created_at": d.created_at.isoformat() if d.created_at else None,
+                "encouragement_count": len(list_diary_encouragements(db, d.id)),
+            }
+            for d in diaries
+        ],
+    }
+
+
+@router.get("/corner")
+def list_corner(
+    page: int = 1,
+    per_page: int = 50,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """静屿角落：所有不放入漂流瓶的私密日记/碎碎念。"""
+    diaries, total = list_my_diaries(
+        db, user.id, page=page, per_page=per_page, is_public=False
+    )
+    return {
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "items": [
+            {
+                "id": d.id,
+                "content": d.content,
+                "mood_type": d.mood_type,
                 "created_at": d.created_at.isoformat() if d.created_at else None,
                 "encouragement_count": len(list_diary_encouragements(db, d.id)),
             }
@@ -111,7 +135,6 @@ def get_diary(
         "content": diary.content,
         "mood_type": diary.mood_type,
         "is_public": diary.is_public,
-        "send_to_ai_hole": diary.send_to_ai_hole,
         "created_at": diary.created_at.isoformat() if diary.created_at else None,
         "encouragements": [
             {"id": e.id, "content": e.content, "created_at": e.created_at.isoformat()}

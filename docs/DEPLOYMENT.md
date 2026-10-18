@@ -4,13 +4,13 @@
 
 > 🔒 **改了本文件涉及的部署配置（端口 / Nginx / systemd / HTTPS / 反代 / 前端构建），必须同步更新**：[README §1](../README.md) / [HANDOFF §1](HANDOFF.md) / [AGENTS.md](../AGENTS.md)。详见 [HANDOFF §12](HANDOFF.md) 文档自动同步铁律。
 
-> **当前版本：v2.5.3（2026-09-13）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留当前部署步骤。
+> **当前版本：v2.6.0（2026-10-18）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留当前部署步骤。
 >
 > **部署三件事**：① 拉代码 ② 配置 `.env` ③ `python start.py`（默认生产模式；`static/dist/index.html` 不存在会自动 `npm install + npm run build`）。
 >
 > - 前端源码有改动 → 必须重新构建（`python start.py build` 或 `cd frontend && npm run build`），再重启。
 > - 数据库迁移在启动时自动执行（`_migrate_legacy_columns()` + `Base.metadata.create_all`），不需要手动 ALTER。
-> - AI 可选：`.env` 的 `QI_NVIDIA_API_KEY` 留空也能跑，4 个端点会优雅降级。
+> - AI 可选：`.env` 的 `QI_NVIDIA_API_KEY` 留空也能跑，3 个端点会优雅降级。
 > - 后台入口是 `/admin/login`（`/admin` 无尾斜杠会被 SPA fallback 判 404）。
 
 ---
@@ -197,7 +197,7 @@ QI_SECRET_KEY=<用 python -c "import secrets; print(secrets.token_hex(32))" 生�
 QI_HOST=0.0.0.0
 QI_PORT=5000
 QI_DEBUG=false
-# AI 接入（可选）：不配置也能跑，4 个 AI 端点会优雅降级返回治愈系提示
+# AI 接入（可选）：不配置也能跑，3 个 AI 端点会优雅降级返回治愈系提示
 # QI_NVIDIA_API_KEY=nvapi-xxxxx
 # QI_AI_MODEL=z-ai/glm-5.3-flash
 # QI_AI_BASE_URL=https://integrate.api.nvidia.com/v1
@@ -358,7 +358,7 @@ python start.py fg --dev    # Vite :5000（用户入口）+ FastAPI :5001（API�
 cp .env.example .env
 vi .env
 # 修改 QI_SECRET_KEY, QI_HOST=0.0.0.0, QI_DEBUG=false
-# 可选：AI 接入（不配置也能跑，4 个端点会优雅降级）
+# 可选：AI 接入（不配置也能跑，3 个端点会优雅降级）
 #   QI_NVIDIA_API_KEY=nvapi-xxxxx
 #   QI_AI_MODEL=z-ai/glm-5.3-flash
 #   QI_AI_BASE_URL=https://integrate.api.nvidia.com/v1
@@ -532,7 +532,8 @@ curl -I http://127.0.0.1:5000/static/audio/tracks/流水.mp3   # 200（已接入
 # 3. 公开 API
 curl http://127.0.0.1:5000/api/music | head           # 22 首（16 classic + 6 western）
 curl http://127.0.0.1:5000/api/music?category=western | head   # v2.3 加：仅 6 首西方改编
-curl http://127.0.0.1:5000/api/garden/shop | head     # 29 件商品（含 cost_currency 字段）
+curl http://127.0.0.1:5000/api/garden/shop | head     # 28 件商品（含 cost_currency 字段）
+curl http://127.0.0.1:5000/api/therapy/catalog | head # v2.6.0：八段锦 + 好物目录
 
 # 3b. v2.3 新路由（无需登录也能拿 200 / 302）
 curl -I http://127.0.0.1:5000/music                  # 200（琴音疗心顶级路由）
@@ -542,6 +543,8 @@ curl -I http://127.0.0.1:5000/notifications          # 302（未登录跳 /login
 curl -I http://127.0.0.1:5000/api/notifications      # 401 或 200（需登录后访问）
 curl -I http://127.0.0.1:5000/api/admin/stats        # 401（未登录拒绝，符合预期）
 curl -I http://127.0.0.1:5000/admin/login            # 200（后台登录页）
+curl -I http://127.0.0.1:5000/corner                 # 200（静屿角落 SPA）
+curl -I http://127.0.0.1:5000/music/therapy          # 200（身心调理 SPA）
 
 # 4. 注册一个测试账号
 curl -X POST http://127.0.0.1:5000/api/auth/register \
@@ -567,7 +570,7 @@ curl -X POST http://127.0.0.1:5000/api/auth/register \
 ```bash
 sqlite3 data/healing.db
 sqlite> .schema users | grep leaves                  # 应看到 leaves INTEGER DEFAULT 0 NOT NULL
-sqlite> .schema diaries | grep -E "content|send_to_ai_hole"
+sqlite> .schema diaries | grep -E "content|is_public"
 sqlite> .schema shop_items | grep cost_currency      # 应看到 cost_currency VARCHAR(20) DEFAULT 'dew'
 sqlite> .schema musics | grep category               # 应看到 category VARCHAR(20) DEFAULT 'classic'
 sqlite> .tables                                       # 应看到 user_flowers + notifications 新表
@@ -586,15 +589,14 @@ sqlite> .quit
 
 ## AI 接入（可选，2026-07-17 加）
 
-> **本节是可选功能**。不配置 AI 也能跑，4 个 AI 端点会优雅降级返回治愈系友好提示，业务不中断。详见 [ARCHITECTURE §6.6](ARCHITECTURE.md) / [HANDOFF §5.7](HANDOFF.md)。
+> **本节是可选功能**。不配置 AI 也能跑，3 个 AI 端点会优雅降级返回治愈系友好提示，业务不中断。详见 [ARCHITECTURE §6.6](ARCHITECTURE.md) / [HANDOFF §5.7](HANDOFF.md)。
 
 ### 是什么
 
-静屿 4 个场景接入 NVIDIA NIM API（OpenAI 兼容格式），当前模型 `z-ai/glm-5.3-flash`（reasoning 模型；旧的 `meta/llama-3.1-8b-instruct` 已于 2026-08-26 下架，详见 [HANDOFF §5.7](HANDOFF.md)）：
+静屿 3 个场景接入 NVIDIA NIM API（OpenAI 兼容格式），当前模型 `z-ai/glm-5.3-flash`（reasoning 模型；旧的 `meta/llama-3.1-8b-instruct` 已于 2026-08-26 下架，详见 [HANDOFF §5.7](HANDOFF.md)）：
 
 | 场景 | 端点 | 入口 |
 |---|---|---|
-| AI 树洞对话 | `POST /api/ai/chat` | `/ai-chat`（需登录） |
 | 漂流瓶 AI 鼓励语 | `POST /api/ai/encouragement` | `/diary/pick` 拾瓶后 |
 | 情绪日历 AI 治愈语 | `POST /api/ai/healing` | `/calendar` 打卡后 |
 | 音乐 AI 心情推荐 | `POST /api/ai/recommend-music` | `/music` 或首页「AI 帮我选音」 |
@@ -616,7 +618,7 @@ QI_AI_BASE_URL=https://integrate.api.nvidia.com/v1
 
 | 变量 | 必填？ | 默认值 | 说明 |
 |---|---|---|---|
-| `QI_NVIDIA_API_KEY` | 否 | 空 | NVIDIA NIM API 的 key，`nvapi-` 开头；**留空时 4 个 AI 端点自动降级**返回 `available:false` + 治愈系提示 |
+| `QI_NVIDIA_API_KEY` | 否 | 空 | NVIDIA NIM API 的 key，`nvapi-` 开头；**留空时 3 个 AI 端点自动降级**返回 `available:false` + 治愈系提示 |
 | `QI_AI_MODEL` | 否 | `z-ai/glm-5.3-flash` | 模型名，OpenAI 兼容格式。换其他 NVIDIA NIM 模型只改这里 |
 | `QI_AI_BASE_URL` | 否 | `https://integrate.api.nvidia.com/v1` | API base URL，换其他厂商（DeepSeek / 智谱 / 自部署 vLLM）只改这里 |
 
@@ -654,14 +656,13 @@ curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
 
 | 场景 | 发给 NVIDIA 的内容 | 入库？ |
 |---|---|---|
-| AI 树洞对话 | 用户对话文本 + 多轮历史 | ❌ 不入库；历史在 `data/chat_history/` 文件，用户可删 |
 | 漂流瓶 AI 鼓励语 | 作者日记**前 120 字**预览 | ❌ 文案不入库，明文不留存 |
 | 情绪日历 AI 治愈语 | 心情 emoji + 可选 note | ❌ 不入库 |
 | 音乐 AI 心情推荐 | 用户描述的状态文本 | ❌ 不入库 |
 
 **API key 不入仓**：`.env` 已在 `.gitignore` 里，[.env.example](../.env.example) 只放注释掉的占位。
 
-**完全离线方案**：不配 `QI_NVIDIA_API_KEY` → 4 个端点自动降级 → 业务正常跑（仅少 AI 文案）。适合内网部署 / 不允许数据出站的环境。
+**完全离线方案**：不配 `QI_NVIDIA_API_KEY` → 3 个端点自动降级 → 业务正常跑（仅少 AI 文案）。适合内网部署 / 不允许数据出站的环境。
 
 ---
 

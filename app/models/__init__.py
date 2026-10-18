@@ -8,6 +8,7 @@ from app.models.energy import EnergyRecord
 from app.models.garden import ShopItem, GardenItem, UserFlower
 from app.models.encouragement import Encouragement
 from app.models.notification import Notification
+from app.models.therapy import BaduanjinCheckin, TherapyInterest
 
 __all__ = [
     "User",
@@ -20,4 +21,6 @@ __all__ = [
     "UserFlower",
     "Encouragement",
     "Notification",
+    "BaduanjinCheckin",
+    "TherapyInterest",
 ]

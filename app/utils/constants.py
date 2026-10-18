@@ -107,6 +107,7 @@ class EnergySource(str, Enum):
     EXCHANGE = "exchange"           # 兑换物品
     DAILY_BONUS = "daily_bonus"     # 每日登录
     ENCOURAGE = "encourage"         # 给别人的漂流瓶留言鼓励
+    BADUANJIN = "baduanjin"         # 八段锦跟练打卡
 
 
 # 单日能量获取上限（防刷）
@@ -115,6 +116,7 @@ DAILY_ENERGY_LIMITS: Final[dict[str, int]] = {
     "write_diary": 10,     # 阳光
     "checkin": 5,          # 养分
     "encourage": 10,       # 留言鼓励
+    "baduanjin": 1,        # 八段锦跟练打卡
 }
 
 
@@ -164,7 +166,6 @@ DEFAULT_SHOP_ITEMS: Final[list[dict]] = [
     {"name": "日记达人",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "📖", "description": "写满 30 篇日记自动获得 · 赠 20 落叶", "trigger": "diary_30"},
     {"name": "七日静心",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "✨", "description": "连续 7 天打卡自动获得 · 赠 7 落叶", "trigger": "streak_7"},
     {"name": "拾瓶旅人",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🏺", "description": "拾满 10 个漂流瓶自动获得 · 赠 10 落叶", "trigger": "pick_10"},
-    {"name": "树洞倾心",   "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🌳", "description": "与树洞对话满 20 次自动获得 · 赠 15 落叶", "trigger": "chat_20"},
     {"name": "花间客",     "item_type": "badge", "cost": 0, "cost_currency": "dew", "image": "🌷", "description": "种满 10 朵花自动获得 · 赠 10 落叶", "trigger": "flower_10"},
 ]
 
@@ -175,7 +176,6 @@ BADGE_LEAF_REWARDS: Final[dict[str, int]] = {
     "listen_10": 10,  # 听满 10 首曲子
     "pick_10": 10,    # 拾满 10 个漂流瓶
     "flower_10": 10,  # 种满 10 朵花
-    "chat_20": 15,    # 与树洞对话满 20 次
     "diary_30": 20,   # 写满 30 篇日记
 }
 # 默认奖励（未匹配 trigger 时的兜底）

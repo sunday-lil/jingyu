@@ -1,44 +1,15 @@
-"""AI 相关 Pydantic 模型（NVIDIA NIM API 接入）。"""
+"""AI 相关 Pydantic 模型（NVIDIA NIM API 接入）。
 
-from typing import List, Optional
+v2.6.0：AI 树洞对话移除，只保留 3 个场景。
+"""
+
+from typing import Optional
 from pydantic import BaseModel, Field
-
-
-class ChatMessage(BaseModel):
-    """单条对话消息（OpenAI 兼容格式）。"""
-    role: str = Field(..., description="user / assistant / system")
-    content: str = Field(..., max_length=4000)
-
-
-class AIChatIn(BaseModel):
-    """树洞对话请求。
-
-    v2.3 调整：
-    - 支持基于 conversation_id 的文件历史存储。
-    - 前端可传 today_mood（当日情绪日历心情）+ today_diary（今日日记内容片段），
-      后端将其作为 system 上下文注入，让树洞提供针对性陪伴。
-    """
-    messages: List[ChatMessage] = Field(..., min_length=1, max_length=20)
-    scene: Optional[str] = Field(None, description="场景标识：treehole / companion 等，预留")
-    conversation_id: Optional[str] = Field(None, description="对话 id（用于服务端文件历史）")
-    today_mood: Optional[str] = Field(None, max_length=30, description="用户今日心情标签")
-    today_diary: Optional[str] = Field(None, max_length=400, description="用户今日日记内容片段")
-
-
-class AIChatOut(BaseModel):
-    reply: str
-    model: str
-    available: bool = True
-    conversation_id: Optional[str] = None
-    # v2.4.2：附加资源变动信息（解锁徽章奖励落叶时前端用于 toast）
-    new_leaves: Optional[int] = None
-    leaves_balance: Optional[int] = None
-    new_badges: Optional[List[dict]] = None
 
 
 class AIEncouragementIn(BaseModel):
     """漂流瓶 AI 鼓励语请求。"""
-    diary_preview: Optional[str] = Field(None, max_length=200, description="日记前 20 字预览（可能为空）")
+    diary_preview: Optional[str] = Field(None, max_length=200, description="日记前 120 字预览（可能为空）")
     mood_label: Optional[str] = Field(None, max_length=20, description="作者心情标签中文")
 
 

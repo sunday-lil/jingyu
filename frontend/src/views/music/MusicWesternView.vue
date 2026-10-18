@@ -240,6 +240,7 @@ onBeforeUnmount(() => {
         <div class="western-header__text">
           <h1 class="western-header__title">西洋曲谱</h1>
           <p class="western-header__desc">用古琴演绎西洋旋律 · 中西合璧</p>
+          <p class="western-header__note">部分曲目音频仍在接入中；若播放无声，说明该曲暂为静音占位。</p>
           <div class="western-header__meta">
             <span>共 {{ musics.length }} 首改编曲目</span>
           </div>
@@ -403,6 +404,12 @@ onBeforeUnmount(() => {
 .western-header__desc {
   font-size: 14px;
   color: rgba(90, 70, 50, 0.75);
+  margin: 0 0 8px;
+  line-height: 1.6;
+}
+.western-header__note {
+  font-size: 12px;
+  color: rgba(160, 120, 90, 0.8);
   margin: 0 0 8px;
   line-height: 1.6;
 }

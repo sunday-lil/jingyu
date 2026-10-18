@@ -1,11 +1,12 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import gsap from 'gsap'
 import api from '@/api'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 // 日记内容（明文）
@@ -14,8 +15,8 @@ const submitting = ref(false)
 
 // 发布选项：默认放入漂流瓶（公开可见）
 // - bottle: 放入漂流瓶（公开可见，允许评论）
-// - secret: 不放入漂流瓶（仅自己可见，自动同步至树洞）
-const publishChoice = ref('bottle')
+// - corner: 留在静屿角落（仅自己可见）
+const publishChoice = ref(route.query.mode === 'corner' ? 'corner' : 'bottle')
 
 // 简易 toast
 const toastVisible = ref(false)
@@ -40,11 +41,9 @@ const handleSubmit = async () => {
   submitting.value = true
   try {
     const isPublic = publishChoice.value === 'bottle'
-    const sendToAi = publishChoice.value === 'secret'
     const res = await api.post('/diary', {
       content: content.value.trim(),
       is_public: isPublic,
-      send_to_ai_hole: sendToAi,
     })
     // 后端返回 { id, created_at, granted_energy, new_total_energy, new_leaves, leaves_balance, new_badges }
     if (typeof res?.new_total_energy === 'number') {
@@ -59,10 +58,10 @@ const handleSubmit = async () => {
       const badgeTexts = res.new_badges.map(b => `${b.image} 解锁徽章「${b.name}」· 赠 ${res.new_leaves} 落叶`)
       showToast(badgeTexts.join('  '))
     } else {
-      showToast(isPublic ? '日记已放入海中 🌊' : '日记已悄悄收好，并说给树洞听了 🌳')
+      showToast(isPublic ? '日记已放入海中 🌊' : '碎碎念已收进静屿角落 🏝️')
     }
     setTimeout(() => {
-      router.push('/diary')
+      router.push(isPublic ? '/diary' : '/corner')
     }, 700)
   } catch (e) {
     showToast(e.message || '提交失败，请稍后再试')
@@ -145,18 +144,18 @@ onBeforeUnmount(() => {
           </label>
           <label
             class="publish-option"
-            :class="{ 'is-active': publishChoice === 'secret' }"
+            :class="{ 'is-active': publishChoice === 'corner' }"
           >
             <input
               type="radio"
               v-model="publishChoice"
-              value="secret"
+              value="corner"
               class="publish-option__radio"
             >
-            <span class="publish-option__icon">🌳</span>
+            <span class="publish-option__icon">🏝️</span>
             <span class="publish-option__body">
-              <span class="publish-option__title">不放入漂流瓶</span>
-              <span class="publish-option__desc">仅自己可见 · 自动同步至树洞</span>
+              <span class="publish-option__title">留在静屿角落</span>
+              <span class="publish-option__desc">仅自己可见 · 碎碎念集中收好</span>
             </span>
           </label>
         </div>
@@ -164,7 +163,7 @@ onBeforeUnmount(() => {
 
       <!-- 提交 -->
       <button class="btn btn--primary submit-btn" :disabled="submitting" @click="handleSubmit">
-        {{ submitting ? '正在送出…' : (publishChoice === 'bottle' ? '🌊 放入海中' : '🌳 悄悄收好') }}
+        {{ submitting ? '正在送出…' : (publishChoice === 'bottle' ? '🌊 放入海中' : '🏝️ 收进角落') }}
       </button>
     </div>
 

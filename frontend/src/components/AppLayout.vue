@@ -41,7 +41,7 @@ const navItems = [
   { name: 'music-list', label: '琴音疗心', path: '/music', icon: '🎵' },
   { name: 'diary-list', label: '日记海岸', path: '/diary', icon: '📖' },
   { name: 'calendar', label: '情绪日历', path: '/calendar', icon: '🗓' },
-  { name: 'ai-chat', label: '心语树洞', path: '/ai-chat', icon: '🌳' },
+  { name: 'corner', label: '静屿角落', path: '/corner', icon: '🏝️' },
   { name: 'shop', label: '落叶花坊', path: '/shop', icon: '🍂' },
   { name: 'garden', label: '屿上花田', path: '/garden', icon: '🌸' },
   { name: 'profile', label: '我的', path: '/profile', icon: '👤' },
@@ -55,7 +55,7 @@ const isFullscreen = computed(() => !!route.meta?.fullscreen)
 
 // 移动端 tabbar：4 个固定核心 + 中央「更多」按钮
 // v2.3 调整：固定 静屿 / 日记海岸 / [更多] / 情绪日历 / 我的
-// 「更多」展开后访问：琴音疗心 / 心语树洞 / 落叶花坊 / 屿上花田
+// 「更多」展开后访问：琴音疗心 / 静屿角落 / 落叶花坊 / 屿上花田
 const tabbarFixed = computed(() => [
   navItems[0],  // 静屿
   navItems[2],  // 日记海岸
@@ -64,7 +64,7 @@ const tabbarFixed = computed(() => [
 ])
 const tabbarMore = computed(() => [
   navItems[1],  // 琴音疗心
-  navItems[4],  // 心语树洞
+  navItems[4],  // 静屿角落
   navItems[5],  // 落叶花坊
   navItems[6],  // 屿上花田
 ])
@@ -489,7 +489,7 @@ onBeforeUnmount(() => {
     padding-top: 48px;       /* 顶部 topbar 占位 */
     padding-bottom: calc(72px + env(safe-area-inset-bottom));  /* 底部 tabbar 占位 */
   }
-  /* fullscreen 模式（如 /ai-chat）：不显示 topbar / tabbar，main 占满视口 */
+  /* fullscreen 模式（如全屏阅读页）：不显示 topbar / tabbar，main 占满视口 */
   .main-content--fullscreen {
     min-height: 100dvh;
     padding-top: 0;

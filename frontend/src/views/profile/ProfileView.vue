@@ -225,7 +225,7 @@ const goShop = () => router.push('/shop')
 const goDiary = () => router.push('/diary')
 const goCalendar = () => router.push('/calendar')
 const goMusic = () => router.push('/music')
-const goAiChat = () => router.push('/ai-chat')
+const goCorner = () => router.push('/corner')
 
 const handleLogout = async () => {
   await userStore.logout()
@@ -363,9 +363,9 @@ onBeforeUnmount(() => {
             <span class="quick-card__emoji"><EmojiIcon emoji="🎵" /></span>
             <span class="quick-card__label">琴音疗心</span>
           </button>
-          <button class="quick-card card" @click="goAiChat">
-            <span class="quick-card__emoji"><EmojiIcon emoji="🌳" /></span>
-            <span class="quick-card__label">心语树洞</span>
+          <button class="quick-card card" @click="goCorner">
+            <span class="quick-card__emoji"><EmojiIcon emoji="🏝️" /></span>
+            <span class="quick-card__label">静屿角落</span>
           </button>
         </div>
       </section>
@@ -373,7 +373,7 @@ onBeforeUnmount(() => {
       <!-- 静屿使用指南 -->
       <section class="guide-section">
         <h2 class="section-title">静屿使用指南</h2>
-        <p class="guide-section__subtitle">六个去处 · 每一处都有它的用意</p>
+        <p class="guide-section__subtitle">七个去处 · 每一处都有它的用意</p>
         <div class="guide-list">
           <div
             v-for="(s, i) in PROFILE_GUIDE_SECTIONS"
@@ -438,7 +438,7 @@ onBeforeUnmount(() => {
           <div class="modal-card__body">
             <!-- 头像选择 -->
             <div class="edit-field">
-              <label class="edit-field__label">头像（与树洞一致）</label>
+              <label class="edit-field__label">头像</label>
               <div class="avatar-preview">
                 <img v-if="isEditAvatarImage" :src="editAvatar" class="avatar-preview-img" alt="" />
                 <span v-else>{{ editAvatar }}</span>

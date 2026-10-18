@@ -3,7 +3,7 @@
 > 写给接手这个项目的下一个 AI（Cursor / Copilot / Devin / 任何 Agent）。
 > 本文 = 项目元信息 + 关键决策 + 踩坑清单；完整文档地图见 [README.md](README.md)。
 
-> **当前版本：v2.5.3（2026-09-13）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
+> **当前版本：v2.6.0（2026-10-18）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
 
 ---
 
@@ -13,7 +13,7 @@
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 隐私边界清晰 / 轻运营
 **代码体量**：约 2 500 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.5.3（2026-09-13）——日记海岸改名、西洋曲谱并入六宫格、打卡可删除、AI 模型切到 `z-ai/glm-5.3-flash`。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
+**当前阶段**：v2.6.0（2026-10-18）——移除 AI 树洞、新增静屿角落、身心调理推荐、八段锦跟练打卡、好物橱窗。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
 
 ---
 
@@ -90,7 +90,7 @@ npm run dev         # Vite dev server :5000
 | 模板 | **Jinja2**（仅后台 `/admin/*`） | 2026-07-19 Vue 3 重构后，前台不再用 Jinja2，仅后台 SSR 保留 |
 | 静态 | **FastAPI StaticFiles** | `/static/*` 一条命令挂载；Vue 构建产物在 `/static/dist/` |
 | 前端 | **Vue 3 `<script setup>` + Vite 5** | 2026-07-19 全站重构，从原生 HTML/CSS/JS 迁移到 Vue 3 SPA |
-| 前端路由 | **Vue Router 4** | 15 条业务路由 + 404 catch-all，`requiresAuth` 守卫 |
+| 前端路由 | **Vue Router 4** | 16 条业务路由 + 404 catch-all，`requiresAuth` 守卫 |
 | 前端状态 | **Pinia** | user store（cookie session 模式，不存 token） |
 | 前端样式 | **Tailwind CSS 3.4** | 治愈系色彩 token + 动画（breathe/float/fade-up） |
 | 前端动效 | **GSAP 3.12 + @vueuse/motion 2.2** | 入场 stagger + 呼吸动效，`prefers-reduced-motion` 降级 |
@@ -130,34 +130,36 @@ webwrold/
 │   ├── security.py           ← session 签名 + cookie 读写
 │   ├── seed.py               ← 5 音曲目 + 商店物品 + 首个管理员 种子
 │   │
-│   ├── models/               ← 一张表一个文件（10 张表）
+│   ├── models/               ← 一张表一个文件（12 张表）
 │   │   ├── user.py           ← 含 is_admin / avatar / leaves
 │   │   ├── diary.py          ← 明文 content + 遗留 content_encrypted
 │   │   ├── mood.py / music.py / energy.py
 │   │   ├── garden.py         ← ShopItem / GardenItem / UserFlower
 │   │   ├── encouragement.py / notification.py
+│   │   ├── therapy.py        ← BaduanjinCheckin / TherapyInterest
 │   │   └── __init__.py       ← 统一 import（init_db 依赖这里）
 │   │
 │   ├── schemas/              ← Pydantic v2 入参/出参
 │   │   ├── auth.py / diary.py / mood.py / music.py / energy.py
 │   │   ├── admin.py          ← 后台统计/用户/系统 Pydantic
-│   │   └── ai.py             ← AI 4 场景 Pydantic（2026-07-17 加，7 个模型：ChatMessage/AIChatIn/Out/AIEncouragementIn/AIHealingIn/AIMusicRecommendIn/Out）
+│   │   └── ai.py             ← AI 3 场景 Pydantic（AIEncouragementIn / AIHealingIn / AIMusicRecommendIn/Out）
 │   │
 │   ├── routers/              ← 一个领域一个文件
 │   │   ├── pages.py          ← 4 个旧书签 302 兼容重定向（不做 SSR 页面）
 │   │   ├── auth.py / music.py / diary.py / mood.py / energy.py / garden.py
+│   │   ├── therapy.py        ← 身心调理 / 八段锦打卡 / 好物预约
 │   │   ├── notification.py   ← 站内通知（单数文件名）
 │   │   ├── profile.py        ← 个人主页 / 头像上传
 │   │   ├── admin.py          ← 后台 API（/api/admin/*）
 │   │   ├── admin_pages.py    ← 后台 SSR 页面（/admin/*）
-│   │   └── ai.py             ← /api/ai/* 4 个 AI 端点 + 树洞会话管理（全部需登录 + 全部有降级）
+│   │   └── ai.py             ← /api/ai/* 3 个 AI 端点（全部需登录 + 全部有降级）
 │   │
 │   ├── services/             ← 业务逻辑层（routers 不直接调 model）
 │   │   ├── energy_service.py ← 能量获取 + 单日上限 + 兑换 + 徽章
 │   │   ├── diary_service.py  ← 漂流瓶随机抽取 + 鼓励语 + 通知
 │   │   ├── flower_service.py ← 花朵生命周期（浇水 / 枯萎 / 拾叶）
+│   │   ├── therapy_service.py ← 问题→曲/八段锦/香囊/手串/食疗 + 打卡 + 预约
 │   │   ├── mood_service.py   ← 日历 + 趋势 + 连胜
-│   │   ├── chat_history_service.py ← 树洞文件式历史
 │   │   └── ai_service.py     ← NVIDIA NIM API 调用 + 降级处理
 │   │
 │   └── utils/
@@ -192,7 +194,7 @@ webwrold/
 │   ├── index.html
 │   └── src/
 │       ├── main.js / App.vue
-│       ├── router/index.js   ← 15 条业务路由 + 404 + requiresAuth 守卫
+│       ├── router/index.js   ← 16 条业务路由 + 404 + requiresAuth 守卫
 │       ├── stores/user.js    ← Pinia user store（cookie session 模式，不存 token）
 │       ├── api/index.js      ← axios 实例（baseURL=/api，withCredentials=true，401 自动跳登录；拦截器已解包 response.data）
 │       ├── assets/styles/main.css
@@ -209,7 +211,7 @@ webwrold/
 │       ├── utils/
 │       │   ├── visual.js      ← 视觉能力检测 + smartRAF
 │       │   └── three-helpers.js ← Three.js PBR 工具集（9 个共享函数）
-│       └── views/             ← 16 个视图（Home / auth / music / diary / mood / ai / garden / profile / notification / NotFound）
+│       └── views/             ← 17 个视图（Home / auth / music / diary / mood / garden / profile / notification / NotFound）
 │
 ├── docs/                      ← 全部项目文档（根目录仅留 README / AGENTS）
 │   ├── README.md              ← 【文档地图】各文档职责与阅读顺序
@@ -229,7 +231,7 @@ webwrold/
 
 ## 4. 实现阶段（摘要）
 
-> 逐版本细节（v2.2.2 → v2.5.3）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
+> 逐版本细节（v2.2.2 → v2.6.0）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
 
 | 阶段 | 主要内容 | 代码落点 |
 |---|---|---|
@@ -239,11 +241,12 @@ webwrold/
 | v2.3（07-25） | 六模块四字名 + 露水/落叶双资源 + 花朵生命周期 + 通知 + 个人主页 + 西洋曲谱 | [energy_service.py](../app/services/energy_service.py) / [flower_service.py](../app/services/flower_service.py) / [notification.py](../app/routers/notification.py) / [profile.py](../app/routers/profile.py) |
 | v2.4（08-10 → 08-16） | 一天多条心情 + 头像/昵称/图片上传 + 花坊扩充 + 罗素情绪环 + 徽章赠落叶 | [mood_service.py](../app/services/mood_service.py) / [profile.py](../app/routers/profile.py) / [constants.py](../app/utils/constants.py) |
 | v2.5.0（09-12） | 首页理念卡 + 模块奖励行 + 岛上指南手风琴 + `islandGuide.js` 数据共享 | [HomeView.vue](../frontend/src/views/HomeView.vue) / [islandGuide.js](../frontend/src/data/islandGuide.js) |
-| v2.5.1（09-12） | GSAP 列表动画改到 fetch 成功后 + querySelector 守卫 | [DiaryListView.vue](../frontend/src/views/diary/DiaryListView.vue) / [ShopView.vue](../frontend/src/views/garden/ShopView.vue) / [AIChatView.vue](../frontend/src/views/ai/AIChatView.vue) |
+| v2.5.1（09-12） | GSAP 列表动画改到 fetch 成功后 + querySelector 守卫 | [DiaryListView.vue](../frontend/src/views/diary/DiaryListView.vue) / [ShopView.vue](../frontend/src/views/garden/ShopView.vue) |
 | v2.5.2（09-12） | 16 首真实音频入库 + 启动时按 MP3 实际时长自动校准 `musics.duration` | [seed.py](../app/seed.py) |
 | v2.5.3（09-13） | 日记海岸改名 + 西洋曲谱并入六宫格 + 打卡可删除 + AI 模型切 `z-ai/glm-5.3-flash` | [music.py](../app/routers/music.py) / [mood.py](../app/routers/mood.py) / [ai_service.py](../app/services/ai_service.py) |
+| v2.6.0（10-18） | 删除 AI 树洞 + 静屿角落 + 身心调理推荐 + 八段锦打卡 + 好物橱窗 | [therapy_service.py](../app/services/therapy_service.py) / [therapy.py](../app/routers/therapy.py) / [CornerView.vue](../frontend/src/views/diary/CornerView.vue) |
 
-**当前代码规模**：Python 约 2.5k 行；Vue/JS 约 3k 行；10 张表；约 69 个 API 端点（含后台 13 个）。
+**当前代码规模**：Python 约 3k 行；Vue/JS 约 3k 行；12 张表；约 70 个 API 端点（含后台 13 个）。
 
 ---
 
@@ -298,14 +301,14 @@ webwrold/
 - **模型当前为 `z-ai/glm-5.3-flash`**（2026-09-13 切换）：原 `meta/llama-3.1-8b-instruct` 已于 2026-08-26 从 NVIDIA NIM 下架（410 Gone）。`.env` 的 `QI_AI_MODEL` **会覆盖** `config.py` 默认值，换模型必须两处同步改。glm 是 reasoning 模型，`max_tokens` 需给足 900–1200，否则思考内容会吃光配额并静默返回 `content=None`。
 - **OpenAI 兼容**：将来想换其他厂商（DeepSeek / 智谱 / 自部署 vLLM）只改 `QI_AI_BASE_URL` + `QI_AI_MODEL`，不动业务代码
 - **降级而非报错**：AI 是「锦上添花」不是核心功能，**未配置 key 或调用失败时返回 200 + `available:false` + 治愈系友好提示**（**不报 500**）。前端拿到 `available:false` 仍正常显示文案。这保证：① 没拿到 key 的部署方也能跑；② NVIDIA 限流时业务不中断；③ 用户感知不到「故障」，只感知「AI 在休息」
-- **树洞历史落文件**：多轮对话存 `data/chat_history/<user_id>/<conversation_id>.json`（不是浏览器内存），用户可选择「保留 / 不保留」；AI 输出本身不写数据库。
+- **AI 树洞已移除**：v2.6.0 删除对话端点、`chat_history_service`、树洞徽章与聊天历史；不公开的碎碎念改存「静屿角落」。
 - **日记预览只取前 120 字**：漂流瓶 AI 鼓励语调用时，把作者日记**截断到前 120 字**再发给 AI，避免长文本消耗 token + 减少隐私暴露面
-- **温柔语气系统提示词**：4 个场景的 system_prompt 统一约定「不诊断不开药、危机情况引导求助专业资源、温柔倾听」，与项目治愈系调性一致
+- **温柔语气系统提示词**：3 个场景的 system_prompt 统一约定「不诊断不开药、危机情况引导求助专业资源、温柔倾听」，与项目治愈系调性一致
 
 详见 [app/services/ai_service.py](../app/services/ai_service.py) 顶部的 4 个系统提示词常量。
 
 ### 5.8 为什么前端选 Vue 3 + Vite + Pinia + Tailwind + GSAP（2026-07-19 加）
-- **为什么换掉「原生 HTML/CSS/JS + Jinja2 SSR」**：项目迭代到 4 Phase + 后台 + AI 后，前端逻辑膨胀（每个页面一套 HTML + JS，最终 16 个视图），状态管理散落在各 `static/js/pages/*.js`，路由靠后端 302 + 浏览器刷新，新增页面要改 4 处（HTML + JS + pages.py + 速查表）。Vue 3 SPA 一次解决：组件化复用、Pinia 集中状态、Vue Router 客户端路由、Vite HMR 热更新
+- **为什么换掉「原生 HTML/CSS/JS + Jinja2 SSR」**：项目迭代到 4 Phase + 后台 + AI 后，前端逻辑膨胀（每个页面一套 HTML + JS，最终 17 个视图），状态管理散落在各 `static/js/pages/*.js`，路由靠后端 302 + 浏览器刷新，新增页面要改 4 处（HTML + JS + pages.py + 速查表）。Vue 3 SPA 一次解决：组件化复用、Pinia 集中状态、Vue Router 客户端路由、Vite HMR 热更新
 - **为什么选 Vue 3 而不是 React**：① Vue 3 `<script setup>` 语法对单人项目最简洁；② Tailwind + Vue 单文件组件天然契合治愈系「样式与模板同视图」的写法；③ Pinia 是 Vue 官方推荐 store，比 Redux 心智负担低；④ 国内 Vue 生态成熟，文档中文友好
 - **为什么选 Vite 5**：① dev server 启动 < 1s（vs webpack 10s+）；② HMR 真正热更新（改 .vue 即刻生效，不刷新页面）；③ build 用 Rollup，产物体积小；④ 配置极简（`vite.config.js` 不到 30 行）
 - **为什么选 Pinia 而不是 Vuex**：Pinia 是 Vue 3 官方推荐，TypeScript 友好，API 更简洁（无 mutations），tree-shaking 友好
@@ -450,9 +453,9 @@ return templates.TemplateResponse(
 **附加**：所有 logger 输出**不要**用 emoji，统一用 ASCII 标记（`[OK] [FAIL] [WARN] ...`）
 
 ### 6.6 日记 schema 的字段方向（v2.3 已反转）
-**现状**：[app/schemas/diary.py](../app/schemas/diary.py) `DiaryCreateIn` 的必填字段是 **`content: str`（明文）**，可选 `mood_type` / `is_public` / `send_to_ai_hole`；`content_encrypted` **不是**入参。
+**现状**：[app/schemas/diary.py](../app/schemas/diary.py) `DiaryCreateIn` 的必填字段是 **`content: str`（明文）**，可选 `mood_type` / `is_public`；`content_encrypted` 与 `send_to_ai_hole` 仅为老库兼容/遗留，不应再作为入参。
 - ✅ `content: str`（明文，1 字以上）
-- ✅ `is_public` / `send_to_ai_hole`
+- ✅ `is_public`（True=漂流瓶；False=静屿角落）
 - ❌ 不要再按 v2.3 之前的文档传 `content_encrypted`（会 422 或写入空内容）
 
 **历史坑**：v2.3 之前 `DiaryCreateIn` 只有 `content_encrypted`，明文 `content` 是禁止字段；如果你看到旧文档 / 旧 commit 说「不要 content」，那是历史版本，已不适用。
@@ -953,7 +956,7 @@ onBeforeUnmount(() => {
 - ⚠️ 改完**不会**自动迁移用户的书签，需要更新 [README.md](../README.md) / [HANDOFF.md §1](HANDOFF.md) 等文档
 
 ### 7.9 加一个 AI 场景（2026-07-17 起约定）
-> 现有 4 个场景在 [app/services/ai_service.py](../app/services/ai_service.py) / [app/routers/ai.py](../app/routers/ai.py) / [app/schemas/ai.py](../app/schemas/ai.py)。再加一个走同样套路：
+> 现有 3 个场景在 [app/services/ai_service.py](../app/services/ai_service.py) / [app/routers/ai.py](../app/routers/ai.py) / [app/schemas/ai.py](../app/schemas/ai.py)。再加一个走同样套路：
 
 1. **Schema**：在 [app/schemas/ai.py](../app/schemas/ai.py) 加 `AI<X>In` + `AI<X>Out` 两个 Pydantic 模型；在 [app/schemas/__init__.py](../app/schemas/__init__.py) 的 `__all__` 里加 import + 在末尾 `model_rebuild()` 区段确保新模型也被 rebuild
 2. **Service**：在 [app/services/ai_service.py](../app/services/ai_service.py) 加 ① 系统提示词常量（温柔语气、不诊断不开药、危机引导专业帮助） ② 上层方法 `generate_xxx()`，调 `_call_nvidia()`；**禁止**在 router 里直接调 `_call_nvidia()`
@@ -967,7 +970,7 @@ onBeforeUnmount(() => {
 5. **测试降级**：先**不配** `QI_NVIDIA_API_KEY` 跑一遍，确认返回 `available:false` + 友好提示；再配 key 跑一遍，确认 `available:true` + AI 文案
 
 **铁律**：
-- AI 输出**不写入数据库**（树洞历史是用户可选的本地文件记录，不是 AI 文案入库）
+- AI 输出**不写入数据库**；树洞对话已移除，不再有聊天历史
 - 系统提示词**必须**包含「不诊断不开药、危机情况引导求助专业资源」语义（治愈系调性 + 责任边界）
 - 端点**必须**有 try/except 降级（「渐进增强」原则，没 key 也能跑）
 - 改完同步更新 README §3.7、[DEVELOPMENT.md §2.7](DEVELOPMENT.md) 与 [CHANGELOG.md](CHANGELOG.md)
@@ -1031,7 +1034,7 @@ assert r.status_code == 200
 按优先级：
 
 1. **测试覆盖**（最高）— 加 `tests/`，pytest 覆盖 services + routers
-2. **音频** — 16 首真实音频已入库；剩余 6 首西洋曲是 0 字节占位，需补真实音频或静音占位
+2. **音频** — 16 首真实音频已入库；剩余 6 首西洋曲是 5338 字节静音占位，需补真实音频
 3. **真实图片** — `static/images/` 目前只有 5 张五音 SVG 封面，可补曲目封面
 4. **MySQL 迁移** — 改 `QI_DATABASE_URL` 即可，业务层不用动
 5. **WebSocket 漂流瓶实时漂动** — 现在是随机抽取，可加推送
@@ -1278,4 +1281,4 @@ Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yello
 ---
 
 > 最后更新：2026-10-18（文档结构整理：去重版本块、按代码修正事实、历史细节归入 [CHANGELOG.md](CHANGELOG.md)）。
-> 代码版本：v2.5.3（2026-09-13）。
+> 代码版本：v2.6.0（2026-10-18）。

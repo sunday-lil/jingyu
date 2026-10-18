@@ -6,18 +6,18 @@
 [![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Status](https://img.shields.io/badge/status-v2.5.3-success)]()
+[![Status](https://img.shields.io/badge/status-v2.6.0-success)]()
 
-**English** — Jingyu (静屿, "Quiet Isle") is a non-commercial healing web app: guqin five-tone music, drifting diary bottles, a humanized AI tree-hole chat, a Russell-circumplex mood calendar, and a garden that grows with your daily check-ins. Built with FastAPI + Vue 3 + Three.js. Self-host in two commands.
+**English** — Jingyu (静屿, "Quiet Isle") is a non-commercial healing web app: guqin five-tone music, a body-mind therapy recommender (Baduanjin / sachet / bracelet / food), drifting diary bottles, a private island corner, a Russell-circumplex mood calendar, and a garden that grows with your daily check-ins. Built with FastAPI + Vue 3 + Three.js. Self-host in two commands.
 
-**每一种情绪，都值得温柔安放。** 静屿是一座只属于你的心灵港湾：古琴五音疗愈、日记海岸、AI 树洞、情绪日历，还有一座随你心情慢慢生长的花田。无广告、无内购、无算法推荐。
+**每一种情绪，都值得温柔安放。** 静屿是一座只属于你的心灵港湾：古琴五音疗愈、身心调理、日记海岸、静屿角落、情绪日历，还有一座随你心情慢慢生长的花田。无广告、无内购、无算法推荐。
 
 > ⚠️ **隐私说明（重要）**：日记自 v2.3 起为**明文存储**（`diaries.content`），后台 API 不返回正文，但数据库本身没有加密。旧版 README 的「端到端加密」描述已过时；如你需要强隐私，请先阅读 [ARCHITECTURE §7.3](docs/ARCHITECTURE.md)。
 
 ## 你可能需要它的 3 个瞬间
 
 - 🌙 **深夜睡不着** —— 打开「琴音疗心」，听一曲《流水》，让古琴的余音把呼吸带慢
-- 🍾 **有句话不想告诉任何人** —— 写进日记海岸，让它漂向远方；或者倒给 AI 树洞，它只听，不评判
+- 🍾 **有句话不想告诉任何人** —— 写进日记海岸，让它漂向远方；或者收进静屿角落，只留给自己
 - 📅 **说不清这个月过得怎么样** —— 情绪日历把你每天随手一记的心情，画成一张看得懂的图
 
 ## 一览
@@ -30,9 +30,9 @@
 |:---:|:---:|
 | ![diary](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_03_diary.png) | ![calendar](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_04_calendar.png) |
 
-| 心语树洞 · AI 陪聊 | 屿上花田 · 情绪养成 |
+| 静屿角落 · 私密碎碎念 | 屿上花田 · 情绪养成 |
 |:---:|:---:|
-| ![aihole](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_05_aihole.png) | ![garden](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_06_garden.png) |
+| ![corner](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_03_diary.png) | ![garden](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_06_garden.png) |
 
 ## 跑起来
 
@@ -50,15 +50,15 @@ python start.py    # 浏览器打开 http://127.0.0.1:5000
 # 以下为开发者参考，普通用户可跳过
 
 > 🤖 **接手项目先读**：[AGENTS.md](AGENTS.md)（工作规则）→ [docs/HANDOFF.md](docs/HANDOFF.md)（交接）→ [docs/README.md](docs/README.md)（文档地图）。
-> 📜 **版本更新历史**：[docs/CHANGELOG.md](docs/CHANGELOG.md)（v2.2.2 → v2.5.3）。
+> 📜 **版本更新历史**：[docs/CHANGELOG.md](docs/CHANGELOG.md)（v2.2.2 → v2.6.0）。
 
 ## 0. 一句话速览
 
-**FastAPI（纯 API 后端）+ Vue 3 SPA + SQLite** 的中文治愈系 Web 应用。六大模块：琴音疗心、日记海岸、情绪日历、心语树洞、落叶花坊、屿上花田，另有个人主页 / 通知中心 / 秘密后台。前端 Vue 3 `<script setup>` + Vite 5 + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios；后端约 2 500 行 Python。无商业元素、无广告、无内购。
+**FastAPI（纯 API 后端）+ Vue 3 SPA + SQLite** 的中文治愈系 Web 应用。六大模块：琴音疗心（含身心调理）、日记海岸、静屿角落、情绪日历、落叶花坊、屿上花田，另有个人主页 / 通知中心 / 秘密后台。前端 Vue 3 `<script setup>` + Vite 5 + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios；后端约 3 000 行 Python。无商业元素、无广告、无内购。
 
-**当前规模**：22 首曲目（16 首真实音频 + 6 首西洋占位）、29 件商店物品、10 张表、15 条业务路由 + 404、16 个 Vue 视图。
+**当前规模**：22 首曲目（16 首真实 + 6 首静音占位）、28 件商店物品、12 张表、16 条业务路由 + 404、17 个 Vue 视图。
 
-**AI（可选）**：NVIDIA NIM API（OpenAI 兼容），当前模型 `z-ai/glm-5.3-flash`，4 个场景——树洞对话、漂流瓶鼓励语、情绪日历治愈语、音乐推荐。未配置 `QI_NVIDIA_API_KEY` 时 4 个端点返回 200 + `available:false` + 友好提示，业务不中断。AI 输出不写数据库；树洞历史是用户可选的本地文件记录。
+**AI（可选）**：NVIDIA NIM API（OpenAI 兼容），当前模型 `z-ai/glm-5.3-flash`，3 个场景——漂流瓶鼓励语、情绪日历治愈语、音乐推荐。未配置 `QI_NVIDIA_API_KEY` 时这些端点返回 200 + `available:false` + 友好提示，业务不中断。AI 输出不写数据库。
 
 ---
 
@@ -135,10 +135,10 @@ webwrold/
 │   ├── deps.py                   # current_user / current_admin / db
 │   ├── security.py               # 会话签名 + cookie
 │   ├── seed.py                   # 曲目/商店/管理员种子 + 时长校准
-│   ├── models/                   # 10 张表（user/diary/mood/music/energy/garden/...）
+│   ├── models/                   # 12 张表（user/diary/mood/music/energy/garden/therapy/...）
 │   ├── schemas/                  # Pydantic v2 入参/出参
-│   ├── routers/                  # auth/music/diary/mood/energy/garden/ai/profile/notification/admin
-│   ├── services/                 # energy/diary/mood/flower/chat_history/ai
+│   ├── routers/                  # auth/music/diary/mood/energy/garden/ai/therapy/profile/notification/admin
+│   ├── services/                 # energy/diary/mood/flower/therapy/ai
 │   └── utils/                    # constants.py / crypto.py
 ├── frontend/                     # Vue 3 SPA 源码
 │   ├── package.json / vite.config.js / tailwind.config.js
@@ -147,7 +147,7 @@ webwrold/
 │       ├── data/islandGuide.js
 │       ├── components/           # AppLayout + 4 个视觉组件 + SceneHint/SceneControls/EmojiIcon
 │       ├── utils/                # visual.js / three-helpers.js
-│       └── views/                # 16 个视图（home/auth/music/diary/mood/ai/garden/profile/notification）
+│       └── views/                # 17 个视图（home/auth/music/diary/mood/garden/profile/notification）
 ├── templates/admin/              # 后台 Jinja2 SSR（仅 /admin/*）
 ├── static/
 │   ├── dist/                     # 前端构建产物（git 忽略）
@@ -166,7 +166,7 @@ webwrold/
 
 ### 3.1 应用入口（[app/main.py](app/main.py)）
 
-`FastAPI()` 实例 → 安全响应头中间件 → 挂载 `/static` → 注册 12 个 router（auth/music/diary/mood/energy/garden/pages/ai/notification/profile/admin/admin_pages）→ `lifespan` 初始化数据库 + 种子数据 → **SPA fallback**。
+`FastAPI()` 实例 → 安全响应头中间件 → 挂载 `/static` → 注册 13 个 router（auth/music/diary/mood/energy/garden/pages/ai/therapy/notification/profile/admin/admin_pages）→ `lifespan` 初始化数据库 + 种子数据 → **SPA fallback**。
 
 - **生产态**（`static/dist/index.html` 存在）：从 `static/dist/` 读取静态文件（`EXT_TO_MIME` 映射 MIME），未命中返回 `index.html` 让 Vue Router 接管。
 - **开发态**（dist 未构建）：返回提示页，引导访问 Vite :5000。
@@ -179,20 +179,22 @@ webwrold/
 - **登录**：用 `nickname`（不是 username），登录/注册直接返回 user 对象。
 - **日记隐私**：v2.3 起 `diaries.content` 为明文；`content_encrypted` / `encryption_salt` 仅兼容老库。后台 API 只返回统计、不返回正文，但数据库无加密。
 
-### 3.3 数据表（10 张）
+### 3.3 数据表（12 张）
 
 | 表 | 关键字段 | 说明 |
 |---|---|---|
 | `users` | id, nickname, password_hash, encryption_salt（遗留）, total_energy（露水）, leaves（落叶）, is_admin, avatar | 用户 |
-| `diaries` | id, user_id, content（明文）, content_encrypted（遗留）, mood_type, is_public, send_to_ai_hole | 日记 / 漂流瓶 |
+| `diaries` | id, user_id, content（明文）, content_encrypted（遗留）, mood_type, is_public | 日记 / 漂流瓶 / 静屿角落（is_public=False） |
 | `mood_checkins` | id, user_id, check_date, mood_emoji, note | 心情打卡（一天可多条） |
 | `musics` | id, title, audio_url, cover_image, yin_type, category, duration, tags | 曲目 |
 | `energy_records` | id, user_id, amount, source, note, music_id, created_at | 能量流水 |
-| `shop_items` | id, name, item_type, cost, cost_currency, image, description, trigger | 商店物品 |
+| `shop_items` | id, name, item_type, cost, cost_currency, image, description, trigger | 商店物品（28 件） |
 | `garden_items` | id, user_id, item_id, obtained_at | 用户持有（装扮/徽章） |
 | `user_flowers` | id, user_id, flower_type, stage, watered_count, planted_at, ... | 花朵生命周期 |
 | `encouragements` | id, from_user_id, to_user_id, diary_id, content | 匿名鼓励 |
 | `notifications` | id, user_id, type, content, related_id, is_read, created_at | 站内通知 |
+| `baduanjin_checkins` | id, user_id, check_date, move_key, created_at | 八段锦跟练打卡（每天一次） |
+| `therapy_interests` | id, user_id, product_key, product_name, created_at | 好物预约/意向 |
 
 ### 3.4 能量与双资源（[app/services/energy_service.py](app/services/energy_service.py)）
 
@@ -205,6 +207,7 @@ webwrold/
 | 写一篇日记 | +2 露水 | 10 |
 | 心情打卡（每条） | +1 露水 | 5 |
 | 给他人漂流瓶留言鼓励 | +1 露水 | 10 |
+| 八段锦跟练打卡 | +1 露水 | 1 |
 | 连续 7 天打卡 | +5 露水（绕过上限） | — |
 | 解锁徽章 | +7~20 落叶（按 trigger） | — |
 | 拾取枯萎花 | +2 落叶 | — |
@@ -214,7 +217,7 @@ webwrold/
 ### 3.5 前端架构（Vue 3 SPA）
 
 - **入口**：[frontend/src/main.js](frontend/src/main.js)；根组件 [App.vue](frontend/src/App.vue) = `AppLayout` + `<router-view>` + transition。
-- **路由**：[frontend/src/router/index.js](frontend/src/router/index.js) 15 条业务路由 + 404；`meta.requiresAuth` 守卫。
+- **路由**：[frontend/src/router/index.js](frontend/src/router/index.js) 16 条业务路由 + 404；`meta.requiresAuth` 守卫。
 - **API 客户端**：[frontend/src/api/index.js](frontend/src/api/index.js) axios，`baseURL=/api` + `withCredentials=true` + 401 自动跳登录；**拦截器已解包 `response.data`**，视图里不要再取 `res.data`。
 - **状态**：[frontend/src/stores/user.js](frontend/src/stores/user.js) 只缓存 user 对象到 localStorage，不存 token。
 - **布局**：[AppLayout.vue](frontend/src/components/AppLayout.vue) 桌面顶部导航 / 平板紧凑 / 移动端 topbar + tabbar + 「更多」抽屉。
@@ -240,19 +243,20 @@ YIN_INFO = {
 
 ### 3.7 AI 接入（NVIDIA NIM，可选）
 
-4 个场景全部走 OpenAI 兼容的 `/chat/completions`，当前模型 `z-ai/glm-5.3-flash`。未配置 key 或调用失败时返回 200 + `available:false` + 治愈系提示，前端照常显示，不报错。
+3 个场景全部走 OpenAI 兼容的 `/chat/completions`，当前模型 `z-ai/glm-5.3-flash`。未配置 key 或调用失败时返回 200 + `available:false` + 治愈系提示，前端照常显示，不报错。
 
 | 场景 | 前端入口 | 后端端点 | AI 输出去向 |
 |---|---|---|---|
-| AI 树洞对话 | `/ai-chat` | `POST /api/ai/chat` | 返回回复；历史由用户选择是否保存在 `data/chat_history/` |
 | 漂流瓶 AI 鼓励语 | `/diary/pick` | `POST /api/ai/encouragement` | 现场文案，不写库 |
 | 情绪日历 AI 治愈语 | `/calendar` | `POST /api/ai/healing` | 现场文案，不写库 |
 | 音乐 AI 心情推荐 | `/music` / 首页 | `POST /api/ai/recommend-music` | 推荐五音之一 + 理由，不写库 |
 
+> AI 树洞对话、会话历史与「树洞倾心」徽章已在 v2.6.0 删除；不私密的碎碎念改存「静屿角落」。
+
 **配置**（[.env.example](.env.example) 末尾，默认注释）：
 
 ```env
-# AI 接入（可选，不配置时 4 个端点优雅降级）
+# AI 接入（可选，不配置时相关端点优雅降级）
 # QI_NVIDIA_API_KEY=nvapi-xxxxx
 # QI_AI_MODEL=z-ai/glm-5.3-flash
 # QI_AI_BASE_URL=https://integrate.api.nvidia.com/v1
@@ -264,9 +268,10 @@ YIN_INFO = {
 
 | 模块 | 路由 | 关键文件 |
 |---|---|---|
+| 身心调理 | `/music/therapy` | [therapy.py](app/routers/therapy.py) / [therapy_service.py](app/services/therapy_service.py) |
 | 日记海岸 | `/diary`、`/diary/write`、`/diary/pick` | [diary.py](app/routers/diary.py) / [diary_service.py](app/services/diary_service.py) |
+| 静屿角落 | `/corner` | [diary.py](app/routers/diary.py) `GET /api/diary/corner` / [CornerView.vue](frontend/src/views/diary/CornerView.vue) |
 | 情绪日历 | `/calendar` | [mood.py](app/routers/mood.py) / [mood_service.py](app/services/mood_service.py) |
-| 心语树洞 | `/ai-chat` | [ai.py](app/routers/ai.py) / [ai_service.py](app/services/ai_service.py) / [chat_history_service.py](app/services/chat_history_service.py) |
 | 屿上花田 | `/garden` | [garden.py](app/routers/garden.py) / [flower_service.py](app/services/flower_service.py) |
 | 落叶花坊 | `/shop` | [garden.py](app/routers/garden.py) / [energy.py](app/routers/energy.py) |
 | 个人主页 | `/profile` | [profile.py](app/routers/profile.py) |
@@ -320,10 +325,12 @@ python start.py status                         # 应显示运行中
 curl -I http://127.0.0.1:5000/                 # 200
 curl -I http://127.0.0.1:5000/docs             # 200
 curl -I http://127.0.0.1:5000/api/music        # 200（22 首）
-curl -I http://127.0.0.1:5000/api/garden/shop  # 200（29 件）
+curl -I http://127.0.0.1:5000/api/garden/shop  # 200（28 件）
+curl -I http://127.0.0.1:5000/api/therapy/catalog # 200（八段锦 + 好物目录）
 curl -I http://127.0.0.1:5000/api/auth/me      # 401（未登录）
 curl -I http://127.0.0.1:5000/admin/login      # 200
-curl -I http://127.0.0.1:5000/calendar         # 200（SPA fallback）
+curl -I http://127.0.0.1:5000/corner          # 200（SPA fallback）
+curl -I http://127.0.0.1:5000/music/therapy   # 200（SPA fallback）
 
 # 3. 前端改动必须重新构建
 cd frontend && npm run build
@@ -356,6 +363,9 @@ curl -X POST http://127.0.0.1:5000/api/auth/register \
 | 鉴权依赖 | [app/deps.py](app/deps.py) |
 | 会话签名 | [app/security.py](app/security.py) |
 | 能量规则 | [app/services/energy_service.py](app/services/energy_service.py) |
+| 身心调理推荐 / 八段锦 / 好物 | [app/services/therapy_service.py](app/services/therapy_service.py) / [app/routers/therapy.py](app/routers/therapy.py) |
+| 静屿角落页面 | [frontend/src/views/diary/CornerView.vue](frontend/src/views/diary/CornerView.vue) |
+| 身心调理页面 | [frontend/src/views/music/TherapyView.vue](frontend/src/views/music/TherapyView.vue) |
 | 花朵生命周期 | [app/services/flower_service.py](app/services/flower_service.py) |
 | 5 音 / 心情 / 商店常量 | [app/utils/constants.py](app/utils/constants.py) |
 | 种子数据 | [app/seed.py](app/seed.py) |

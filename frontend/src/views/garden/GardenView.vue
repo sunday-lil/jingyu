@@ -382,7 +382,7 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <!-- 树洞相关说明 -->
+    <!-- 花田说明 -->
     <section class="hint-section card">
       <div class="hint-section__emoji">🌸</div>
       <p class="hint-section__text">

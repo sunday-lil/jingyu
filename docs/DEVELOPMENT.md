@@ -2,7 +2,7 @@
 
 > 改代码前**必读**。这里汇总了当前仍然有效的开发铁律 + 踩坑复现与修法；逐版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **当前版本：v2.5.3（2026-09-13）**。逐版本变更见 [CHANGELOG.md](CHANGELOG.md)；本文只保留仍然有效的开发约定与踩坑。
+> **当前版本：v2.6.0（2026-10-18）**。逐版本变更见 [CHANGELOG.md](CHANGELOG.md)；本文只保留仍然有效的开发约定与踩坑。
 
 ---
 
@@ -31,7 +31,7 @@ routers/  →  services/  →  models/  →  database
 - 主色调：`#F9F6F0` 米白 / `#E3F0EA` 淡青 / `#F0E3E8` 藕粉
 ### 1.4 前端框架选型（2026-07-19 v2.0 重构后）
 
-> **2026-07-19 v2.0 全站 Vue 3 重构后**：前台页面已迁移到 Vue 3 SPA（当前 16 个 `.vue` 视图），**不再**使用原生 HTML/CSS/JS。后台 `/admin/*` 仍保留 Jinja2 SSR（有意为之的独立隔离）。
+> **2026-07-19 v2.0 全站 Vue 3 重构后**：前台页面已迁移到 Vue 3 SPA（当前 17 个 `.vue` 视图），**不再**使用原生 HTML/CSS/JS。后台 `/admin/*` 仍保留 Jinja2 SSR（有意为之的独立隔离）。
 
 **前台 Vue 3 SPA**（[`frontend/src/`](../frontend/src/)）：
 - ✅ Vue 3 `<script setup>` + Vite 5 + Vue Router 4 + Pinia + Tailwind CSS 3.4 + GSAP + @vueuse/motion + Three.js + axios
@@ -126,7 +126,7 @@ python start.py stop
 
 ## 1.9 前端开发模式（Vue 3 SPA，2026-07-19 v2.0 加，v2.0.1 端口策略调整，v2.3.2 默认生产模式）
 
-> 2026-07-19 v2.0 全站 Vue 3 重构后，前台迁移到 Vue 3 SPA（当前 16 个视图）。本节讲**怎么开发前端**，不是讲铁律。架构看 [ARCHITECTURE §1.1](ARCHITECTURE.md)，部署看 [DEPLOYMENT 前端构建](DEPLOYMENT.md)。
+> 2026-07-19 v2.0 全站 Vue 3 重构后，前台迁移到 Vue 3 SPA（当前 17 个视图）。本节讲**怎么开发前端**，不是讲铁律。架构看 [ARCHITECTURE §1.1](ARCHITECTURE.md)，部署看 [DEPLOYMENT 前端构建](DEPLOYMENT.md)。
 
 > 2026-07-19 v2.0.1 端口策略调整：开发模式 Vite 占 :5000（用户入口）+ FastAPI 退到 :5001（API），**用户始终访问 :5000**。理由见 [HANDOFF §6.16](HANDOFF.md)（FastAPI 反代 Vite 内部路径含 null 字节转义 + 冒号失败）。
 
@@ -215,7 +215,7 @@ frontend/
 └── src/
     ├── main.js               ← createApp + Pinia + Router + MotionPlugin
     ├── App.vue               ← AppLayout + router-view + transition
-    ├── router/index.js       ← 15 条业务路由 + 404 + requiresAuth 守卫
+    ├── router/index.js       ← 16 条业务路由 + 404 + requiresAuth 守卫
     ├── stores/user.js        ← Pinia user store（cookie session，不存 token）
     ├── api/index.js          ← axios 实例（baseURL=/api，withCredentials，401 拦截，已解包 response.data）
     ├── data/islandGuide.js   ← 首页指南 / 模块奖励 / 个人主页指南共享文案
@@ -226,10 +226,9 @@ frontend/
     └── views/
         ├── HomeView.vue / NotFoundView.vue
         ├── auth/ (Login / Register)
-        ├── music/ (MusicList / MusicWestern / MusicDetail)
-        ├── diary/ (DiaryList / DiaryWrite / PickBottle)
+        ├── music/ (MusicList / MusicWestern / MusicDetail / Therapy)
+        ├── diary/ (DiaryList / DiaryWrite / PickBottle / Corner)
         ├── mood/ (MoodCalendar)
-        ├── ai/ (AIChat)
         ├── garden/ (Garden / Shop)
         ├── profile/ (Profile)
         └── notification/ (Notifications)
@@ -690,7 +689,7 @@ class Xxx(Base):
 
 ### 2.7 加一个 AI 场景（2026-07-17 起）
 
-> 现有 4 个场景在 [app/services/ai_service.py](../app/services/ai_service.py) / [app/routers/ai.py](../app/routers/ai.py) / [app/schemas/ai.py](../app/schemas/ai.py)。再加一个走同样套路。完整决策见 [HANDOFF §7.9](HANDOFF.md)。
+> 现有 3 个场景在 [app/services/ai_service.py](../app/services/ai_service.py) / [app/routers/ai.py](../app/routers/ai.py) / [app/schemas/ai.py](../app/schemas/ai.py)。再加一个走同样套路。完整决策见 [HANDOFF §7.9](HANDOFF.md)。
 
 **4 步走**：
 
@@ -751,7 +750,7 @@ def xxx(body: AIXxxIn, user: User = Depends(get_current_user)):
 
 | 方式 | 做法 |
 |---|---|
-| **独立新页面**（如 AI 树洞） | 新建 `frontend/src/views/xxx/XxxView.vue` + 在 [router/index.js](../frontend/src/router/index.js) 加路由 |
+| **独立新页面**（如身心调理） | 新建 `frontend/src/views/xxx/XxxView.vue` + 在 [router/index.js](../frontend/src/router/index.js) 加路由 |
 | **已有页面加区块**（鼓励语 / 治愈语） | 在对应 `.vue` 里加区块，调 `@/api` 的 axios 实例 |
 | **首页卡片**（音乐推荐） | 改 [HomeView.vue](../frontend/src/views/HomeView.vue)，用 `userStore.isLoggedIn` 控制显示 |
 
@@ -767,6 +766,14 @@ text.value = res.text
 
 #### 第 5 步：测试降级（必做）
 **先不配 `QI_NVIDIA_API_KEY`**，确认端点返回 `available:false` + 友好提示；**再配 key** 跑一遍，确认 `available:true` + AI 文案。详见 [§3.14](#314-ai-端点降级测试方法)。
+
+### 2.8 加一条身心调理规则（v2.6.0）
+
+1. 在 [app/services/therapy_service.py](../app/services/therapy_service.py) 的 `PROBLEM_RULES` 加一条：关键词、`yin`、两式 `moves`、`sachet`、`bracelet`、`food`。
+2. 若新增香囊/手串/食疗，分别加到 `SACHETS` / `BRACELETS` / `FOODS`，必须写 `price`、`purchase_url`、`available` 与过敏原/材质/成分。
+3. 新增八段锦招式加到 `BADUANJIN`（名称、focus、steps）。
+4. 若新增每日奖励来源，同步 [app/utils/constants.py](../app/utils/constants.py) 的 `DAILY_ENERGY_LIMITS` 与 [README §3.4](../README.md)。
+5. 重启后跑 `POST /api/therapy/recommend` 与 `POST /api/therapy/baduanjin/checkin`；前端 `npm run build`。
 
 ---
 
@@ -890,14 +897,13 @@ child_env["PYTHONUTF8"] = "1"
 
 ### 3.6 日记 schema 的字段方向（v2.3 已反转）
 
-**现状**：`DiaryCreateIn` 必填 **`content: str`**（明文），可选 `mood_type` / `is_public` / `send_to_ai_hole`；`content_encrypted` 不是入参。
+**现状**：`DiaryCreateIn` 必填 **`content: str`**（明文），可选 `mood_type` / `is_public`；`send_to_ai_hole` / `content_encrypted` 是遗留字段，不是入参。
 
 ```python
 class DiaryCreateIn(BaseModel):
     content: str = Field(..., min_length=1)   # 明文
     mood_type: Optional[str] = Field(None, max_length=20)
     is_public: bool = False
-    send_to_ai_hole: bool = False
 ```
 
 **历史坑**：v2.3 之前只收 `content_encrypted`；如果你在旧文档/旧 commit 看到「不要 content」，那是历史版本。现在传 `content_encrypted` 会被忽略或 422。
@@ -1042,7 +1048,7 @@ body {
 
 ### 3.14 AI 端点降级测试方法（2026-07-17 加）
 
-**场景**：4 个 AI 端点（`/api/ai/chat` / `/api/ai/encouragement` / `/api/ai/healing` / `/api/ai/recommend-music`）必须保证「未配 key 或调用失败时返回 200 + `available:false` + 治愈系友好提示」，**不报 500**。这是 AI 接入「渐进增强」的核心保证。
+**场景**：3 个 AI 端点（`/api/ai/encouragement` / `/api/ai/healing` / `/api/ai/recommend-music`）必须保证「未配 key 或调用失败时返回 200 + `available:false` + 治愈系友好提示」，**不报 500**。这是 AI 接入「渐进增强」的核心保证。
 
 **测试 1：未配 key 降级**（默认状态）
 ```bash
@@ -1053,7 +1059,7 @@ python start.py restart
 curl -c c.txt -X POST http://127.0.0.1:5000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"nickname":"test","password":"hello123"}'
-# 4. 调 4 个 AI 端点，应该都返回 200 + available:false
+# 4. 调 3 个 AI 端点，应该都返回 200 + available:false
 curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
   -H "Content-Type: application/json" \
   -d '{"mood_emoji":"calm"}'
@@ -1081,10 +1087,10 @@ curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
 
 **测试 4：前端浏览器手动测**
 ```
-# 1. 浏览器访问 /ai-chat（需登录）→ 输入对话 → 看到回复（配 key）或治愈系提示（不配 key）
-# 2. /diary/pick 拾瓶后看 AI 鼓励语容器有内容
-# 3. /calendar 打卡后看 AI 治愈语容器有内容
-# 4. /music 或首页「AI 帮我选音」→ 描述状态 → 看推荐 + 跳转链接
+# 1. /diary/pick 拾瓶后看 AI 鼓励语容器有内容
+# 2. /calendar 打卡后看 AI 治愈语容器有内容
+# 3. /music 或首页「AI 帮我选音」→ 描述状态 → 看推荐 + 跳转链接
+# 4. AI 树洞已删除，/ai-chat 不再可用
 ```
 
 **铁律**：

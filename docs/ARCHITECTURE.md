@@ -4,7 +4,7 @@
 
 > 🔒 **改了本文件涉及的代码，必须同步更新**：[HANDOFF §12](HANDOFF.md) / [AGENTS.md](../AGENTS.md) / [DEVELOPMENT §1.8](DEVELOPMENT.md) 列出的对应文档。改代码不改文档 = 改了一半。
 
-> **当前版本：v2.5.3（2026-09-13）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
+> **当前版本：v2.6.0（2026-10-18）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
 
 ---
 
@@ -102,14 +102,14 @@
 |---|---|---|---|
 | 框架 | Vue 3 `<script setup>` | [frontend/package.json](../frontend/package.json) | ^3.4，组合式 API |
 | 构建 | Vite 5 | [frontend/vite.config.js](../frontend/vite.config.js) | dev HMR + build Rollup；dev 监听 :5000（用户入口）；dev proxy /api、/static、/admin、/docs、/openapi.json → FastAPI :5001（详见 [§1.2](#12-开发生产模式切换2026-07-19-v20-加)） |
-| 路由 | Vue Router 4 | [frontend/src/router/index.js](../frontend/src/router/index.js) | 15 条业务路由 + 404，`meta.requiresAuth` 守卫 |
+| 路由 | Vue Router 4 | [frontend/src/router/index.js](../frontend/src/router/index.js) | 16 条业务路由 + 404，`meta.requiresAuth` 守卫 |
 | 状态 | Pinia 2 | [frontend/src/stores/user.js](../frontend/src/stores/user.js) | user store；cookie session 模式，**不存 token**，只缓存 user 对象到 localStorage |
 | 样式 | Tailwind CSS 3.4 | [frontend/tailwind.config.js](../frontend/tailwind.config.js) | 治愈系色彩 token（mist/ink/五音色/accent）+ 动画（breathe/float/fade-up） |
 | 动效 | GSAP 3.12 + @vueuse/motion 2.2 | 各 .vue 视图 | 入场 stagger + 呼吸动效；`prefers-reduced-motion` 自动降级 |
 | 3D | Three.js 0.168 | [frontend/src/components/FlowerField.vue](../frontend/src/components/FlowerField.vue) | 治愈系 3D 花田场景（60 朵花 × 5 瓣 = 300 InstancedMesh），异步加载（详见 [§1.1.5](#115-3d-花田组件-flowerfieldvue2026-07-19-v201-加)） |
 | HTTP | axios 1.7 | [frontend/src/api/index.js](../frontend/src/api/index.js) | `baseURL=/api`，`withCredentials=true`，401 自动跳 `/login` |
 
-### 1.1.2 15 条业务路由 + 404（[frontend/src/router/index.js](../frontend/src/router/index.js)）
+### 1.1.2 16 条业务路由 + 404（[frontend/src/router/index.js](../frontend/src/router/index.js)）
 
 | 路径 | 视图 | requiresAuth | 说明 |
 |---|---|---|---|
@@ -117,10 +117,11 @@
 | `/login` / `/register` | auth/LoginView.vue / RegisterView.vue | 否 | 登录 / 注册 |
 | `/music` | music/MusicListView.vue | 否 | 五音 + 西洋曲谱六宫格 + AI 选音 |
 | `/music/western` | music/MusicWesternView.vue | 否 | 西洋曲谱独立列表（必须排在 `:yin` 前） |
+| `/music/therapy` | music/TherapyView.vue | 否 | 身心调理：问题 → 曲/八段锦/香囊/手串/食疗 |
 | `/music/:yin` | music/MusicDetailView.vue | 否 | 单音曲目 + 播放器 + 90% 发放露水 |
 | `/diary` / `/diary/write` / `/diary/pick` | diary/* | 是 | 时间线 / 写日记（明文）/ 拾瓶 |
 | `/calendar` | mood/MoodCalendarView.vue | 是 | 日历 + 罗素情绪环 + 今日打卡删除 |
-| `/ai-chat` | ai/AIChatView.vue | 是 | 多轮对话 + 文件式历史 |
+| `/corner` | diary/CornerView.vue | 是 | 静屿角落：不公开的私密碎碎念 |
 | `/garden` / `/shop` | garden/* | 是 | 花田 / 落叶花坊 |
 | `/profile` | profile/ProfileView.vue | 是 | 个人主页 / 头像昵称 |
 | `/notifications` | notification/NotificationsView.vue | 是 | 通知中心 |
@@ -138,8 +139,7 @@
   │ Pinia userStore + localStorage       │
   │ POST /api/diary                      │
   │ Cookie: qi_session=...               │
-  │ {content, mood_type, is_public,      │
-  │  send_to_ai_hole}                    │
+  │ {content, mood_type, is_public}      │
   ├─────────────────────────────────────→│ 1. get_current_user
   │                                      │ 2. 写 diaries.content（明文）
   │                                      │ 3. +2 露水（write_diary）
@@ -279,7 +279,7 @@ const FlowerField = defineAsyncComponent(() =>
 | 琴音疗心 | `/music` | [MusicListView.vue](../frontend/src/views/music/MusicListView.vue) | `/api/music/*` |
 | 日记海岸 | `/diary` | [DiaryListView.vue](../frontend/src/views/diary/DiaryListView.vue) | `/api/diary/*` |
 | 情绪日历 | `/calendar` | [MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue) | `/api/mood/*` |
-| 心语树洞 | `/ai-chat` | [AIChatView.vue](../frontend/src/views/ai/AIChatView.vue) | `/api/ai/*` |
+| 静屿角落 | `/corner` | [CornerView.vue](../frontend/src/views/diary/CornerView.vue) | `/api/diary/corner` |
 | 落叶花坊 | `/shop` | [ShopView.vue](../frontend/src/views/garden/ShopView.vue) | `/api/garden/shop` + `/api/energy/exchange` |
 | 屿上花田 | `/garden` | [GardenView.vue](../frontend/src/views/garden/GardenView.vue)（含花田生长网格） | `/api/garden/*` + `/api/garden/flowers/*` |
 
@@ -312,7 +312,7 @@ cost_currency: Mapped[str] = mapped_column(String(20), default="dew", nullable=F
 - `collect_wilted_leaves` 显式 `db.query(User).filter(...).update({User.leaves: User.leaves + 2})` 加 2 落叶
 
 **常量层**（[app/utils/constants.py](../app/utils/constants.py)）：
-- `DEFAULT_SHOP_ITEMS` 29 件全部带 `cost_currency`：11 件花种 = `leaves`，12 件装扮 = `dew`，6 件徽章 = `dew`（自动触发）
+- `DEFAULT_SHOP_ITEMS` 28 件全部带 `cost_currency`：11 件花种 = `leaves`，12 件装扮 = `dew`，5 件徽章 = `dew`（自动触发）
 - `DAILY_ENERGY_LIMITS`：`listen_music: 20 / write_diary: 10 / checkin: 5 / encourage: 10`（仅露水有日上限，落叶无日上限）
 
 **资源获取规则**：
@@ -404,42 +404,40 @@ category: Mapped[str] = mapped_column(String(20), default="classic", nullable=Fa
 
 **前端**：[MusicListView.vue](../frontend/src/views/music/MusicListView.vue) 把西洋曲作为第六张卡并入六宫格；[MusicWesternView.vue](../frontend/src/views/music/MusicWesternView.vue) 为独立列表页。路由 `/music/western` **必须放在 `/music/:yin` 前面**避免动态段捕获。
 
-### 1.1.7.7 日记调整（明文 + send_to_ai_hole + 发布选项）
+### 1.1.7.7 日记与静屿角落（明文 + is_public）
 
 **模型**（[app/models/diary.py](../app/models/diary.py)）：
 ```python
-content: Mapped[str] = mapped_column(Text, nullable=False, default="")  # 明文（v2.3 替代 content_encrypted）
-content_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)  # 遗留字段，仅为兼容老库
-send_to_ai_hole: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # 不放入漂流瓶时同步树洞
-# 保留：is_public, mood_type
+content: Mapped[str] = mapped_column(Text, nullable=False, default="")  # 明文
+content_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)  # 遗留字段
+is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+send_to_ai_hole: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # 遗留列，固定 False
 ```
 `User.encryption_salt` 保留仅为兼容老库（v2.3 起日记改明文，不再使用）。
 
 **发布选项**（前端 radio）：
-- 放入漂流瓶：`is_public=True`，公开可见 + 允许评论
-- 不放入漂流瓶：`is_public=False`，仅自己可见 + 可选 `send_to_ai_hole=True` 同步至心语树洞
+- 放入漂流瓶：`is_public=True`，公开可见 + 允许评论。
+- 留在静屿角落：`is_public=False`，仅自己可见，集中显示在 `/corner`。
 
-**前端**：[DiaryWriteView.vue](../frontend/src/views/diary/DiaryWriteView.vue) 移除 emoji 选择器 + 移除密码 UI + 加发布选项 radio + 加 SVG 海浪动画（日记海岸主题）。
+**前端**：[DiaryWriteView.vue](../frontend/src/views/diary/DiaryWriteView.vue) 两个选项；[CornerView.vue](../frontend/src/views/diary/CornerView.vue) 读取 `GET /api/diary/corner`，可删除。
 
 ### 1.1.7.8 情绪日历对齐修复（emoji 字符统一 + 字段名对齐）
 
-原前端用 `mood_type` + `date`，后端 `MoodCheckin` 用 `mood_emoji` + `check_date`；前端兼容旧字段但优先用后端字段名。修复：
-- [app/utils/constants.py](../app/utils/constants.py) `MOOD_INFO` 7 种心情：ecstatic 🤩 / happy 😊 / calm 😌 / tired 😪 / anxious 😰 / angry 😠 / sad 😢
-- 前端 `MOOD_INFO` 同步 7 种 + 日历加心情图例（legend）解决「emoji 显示不全」问题
+- `MoodCheckin` 用 `mood_emoji` + `check_date`；`MOOD_INFO` 7 种心情：ecstatic 🤩 / happy 😊 / calm 😌 / tired 😪 / anxious 😰 / angry 😠 / sad 😢。
+- 一天可多条；今日记录可删除；30 天趋势柱状图在 v2.5.3 移除，罗素情绪环保留。
 
-### 1.1.7.9 树洞改进（统一图标 + 文本输入 + 文件式聊天历史 + 留存提示）
+### 1.1.7.9 静屿角落（v2.6.0 取代 AI 树洞）
 
-- **统一图标**：AIChatView + AppLayout 导航 + tabbar 全部用 🌳 树形 emoji（心语树洞）
-- **文本输入**：[AIChatView.vue](../frontend/src/views/ai/AIChatView.vue) 加 `<textarea>` 多行输入框（原仅单行 input）
-- **文件式聊天历史**：[app/services/chat_history_service.py](../app/services/chat_history_service.py) 新增——存于 `data/chat_history/<user_id>/<conversation_id>.json`；函数 `create_conversation` / `load_messages` / `append_message` / `list_conversations` / `delete_conversation` / `get_or_create_conversation`；单对话上限 100 条；每次 AI 调用前加载历史
-- **留存提示**：每次聊天结束时树洞询问用户是否保留记录；选「不保留」则 `delete_conversation` 删文件
-- **上下文增强**：树洞根据用户当日 `MoodCheckin.mood_emoji` + 当日 `Diary.content`（若 `send_to_ai_hole=True`）提供针对性聊天和安慰
+- **背景**：v2.6.0 删除 AI 树洞对话、会话历史与「树洞倾心」徽章；原「不放入漂流瓶」的私密日记需要一个集中入口。
+- **实现**：`is_public=False` 的日记统一视为「静屿角落」碎碎念，`GET /api/diary/corner` 按 `user_id + is_public=False` 返回；前端 `/corner` 页面可写、可看、可删。
+- **为什么复用 `diaries` 而不是新表**：内容结构完全一致，复用可避免两套写入/删除/权限逻辑；`is_public` 已经是「公开/私密」的天然分界。
+- **旧数据**：原 `send_to_ai_hole=True` 的日记自动落入角落（因为它们本来就是 `is_public=False`）；旧 AI 对话文件已删除。
 
 ### 1.1.7.10 数据库迁移（`_migrate_legacy_columns()` 一次性自动加列）
 
 [app/database.py](../app/database.py) `_migrate_legacy_columns()` 新增：
 - `users` 加 `leaves INTEGER DEFAULT 0 NOT NULL`（`total_energy` 即露水，原已存在不改）
-- `diaries` 加 `content TEXT NOT NULL DEFAULT ''` + `send_to_ai_hole BOOLEAN DEFAULT 0 NOT NULL`
+- `diaries` 加 `content TEXT NOT NULL DEFAULT ''`（`send_to_ai_hole` 是 v2.6.0 前遗留列，保留映射只为兼容老库）
 - `shop_items` 加 `cost_currency VARCHAR(20) DEFAULT 'dew' NOT NULL`
 - `musics` 加 `category VARCHAR(20) DEFAULT 'classic' NOT NULL`
 - 新表 `user_flowers` / `notifications` 由 `init_db()` 自动建表（`Base.metadata.create_all`）
@@ -457,9 +455,9 @@ send_to_ai_hole: Mapped[bool] = mapped_column(Boolean, default=False, nullable=F
 
 ## 1.1.8 v2.4.0 头像/昵称编辑 + 一天多条心情 + 花坊扩充（2026-08-10 加）
 
-> 设计原则：**「情绪多变允许多次记录 + 头像个性化同步树洞 + 花坊扩充丰富经济」** —— 情绪是多变的，一天可以有多次心情打卡；用户头像/昵称可自定义并同步到树洞对话；花坊扩充花种/装扮/徽章让双资源经济更丰富。
+> 设计原则：**「情绪多变允许多次记录 + 头像个性化 + 花坊扩充丰富经济」** —— 情绪是多变的，一天可以有多次心情打卡；用户头像/昵称可自定义；花坊扩充花种/装扮/徽章让双资源经济更丰富。
 
-### 1.1.8.1 头像/昵称编辑流程（User.avatar + PATCH /api/profile + ProfileUpdateIn + 头像同步树洞）
+### 1.1.8.1 头像/昵称编辑流程（User.avatar + PATCH /api/profile + ProfileUpdateIn）
 
 **模型**（[app/models/user.py](../app/models/user.py)）：
 ```python
@@ -484,7 +482,7 @@ class ProfileUpdateIn(BaseModel):
 **前端**：
 - [ProfileView.vue](../frontend/src/views/profile/ProfileView.vue) 头像/昵称编辑弹窗（24 个可选 emoji + 图片上传）
 - [stores/user.js](../frontend/src/stores/user.js) 新增 `updateProfile` action（调用 `PATCH /api/profile`）
-- **头像同步树洞**：[AIChatView.vue](../frontend/src/views/ai/AIChatView.vue) 使用 `userStore.avatar` 显示头像（与个人主页一致）
+- **头像展示**：AI 树洞已删除；当前头像只用于个人主页 / 导航。
 
 **调用流**：
 ```
@@ -496,13 +494,13 @@ class ProfileUpdateIn(BaseModel):
   ├─────────────────────────────────────→│
   │                                      │ 1. get_current_user 鉴权
   │                                      │ 2. nickname 查重（409 冲突）
-  │                                      │ 3. avatar 长度校验（1-16 字符）
+  │                                      │ 3. avatar 长度校验（1-255 字符）
   │                                      │ 4. UPDATE users SET ... 
   │                                      │ 5. 返回更新后 user 对象
   │ ←─ 200 + {user}                      │
   │                                      │
   │ Pinia userStore.setUser(user)        │
-  │ → AIChatView 头像同步更新            │
+  │ → 个人主页 / 导航头像更新            │
 ```
 
 ### 1.1.8.2 一天多条心情数据模型（mood_checkins 唯一约束移除 + add_checkin + get_today_moods + 平均分）
@@ -554,14 +552,14 @@ CREATE INDEX ix_mood_checkins_check_date ON mood_checkins (check_date);
 | service 函数 | `upsert_checkin` | `add_checkin` + `get_today_moods` |
 | 30 天趋势 | 单条直接读 | 多条取**平均分**（MOOD_SCORE 映射） |
 
-### 1.1.8.3 落叶花坊双资源经济（DEFAULT_SHOP_ITEMS 29 件 + 每板块徽章）
+### 1.1.8.3 落叶花坊双资源经济（DEFAULT_SHOP_ITEMS 28 件 + 每板块徽章）
 
 **命名**：模块名「落叶花坊」（v2.4.3 起；早期叫「花坊 / 落叶画坊」）。
 
-**常量**（[app/utils/constants.py](../app/utils/constants.py) `DEFAULT_SHOP_ITEMS` 共 29 件）：
+**常量**（[app/utils/constants.py](../app/utils/constants.py) `DEFAULT_SHOP_ITEMS` 共 28 件）：
 - 11 花种（leaves 资源）：向日葵 / 竹子 / 雏菊 / 莲花 / 薰衣草 / 郁金香 / 樱花 / 桃花 / 青松 / 小麦 / 青叶
 - 12 装扮（dew 资源）：竹编帽 / 茶具 / 小鸟 / 折扇 / 小鸭 / 油纸伞 / 小狗 / 斗篷 / 鱼竿 / 橘猫 / 乌篷船 / 火烈鸟
-- 6 徽章（dew 资源，自动触发，**每板块徽章**）：琴音知音 / 日记达人 / 七日静心 / 拾瓶旅人 / 树洞倾心 / 花间客
+- 5 徽章（dew 资源，自动触发）：琴音知音 / 日记达人 / 七日静心 / 拾瓶旅人 / 花间客
 
 **每板块徽章对应关系**：
 
@@ -571,7 +569,6 @@ CREATE INDEX ix_mood_checkins_check_date ON mood_checkins (check_date);
 | 日记达人 | 日记海岸 | 累计写 30 篇日记 |
 | 七日静心 | 情绪日历 | 连续打卡 7 天 |
 | 拾瓶旅人 | 拾瓶 / 鼓励 | 留言鼓励满 10 次 |
-| 树洞倾心 | 心语树洞 | 树洞对话满 20 次 |
 | 花间客 | 屿上花田 | 种满 10 朵花 |
 
 ### 1.1.8.4 其他 v2.4.0 改动
@@ -579,9 +576,9 @@ CREATE INDEX ix_mood_checkins_check_date ON mood_checkins (check_date);
 - **首页文案**：'海上有座岛，岛上有人听' → '潮声不止，心安自屿'，删除'静屿'副标题 + 删除'今日打卡'板块
 - **'漂流日记'入口统一**：直接显示'日记海岸'界面（含拾瓶/写日记模块）
 - **情绪日历 emoji 显示/选择修复**：[MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue) 多条打卡支持
-- **心语树洞 AI 系统提示词 humanize**：更接地气、像朋友聊天
+- **心语树洞 AI 系统提示词 humanize**：更接地气、像朋友聊天（该模块已在 v2.6.0 删除）
 - **花田 AI 显示基于实际种花情况**：[GardenView.vue](../frontend/src/views/garden/GardenView.vue) 没种花不显示 AI
-- **'我的'页面修复**：'收到鼓励'/'岛上物件'可点击跳转，删除重复'岛上物件'，新增**静屿使用指南**（7 个模块详细介绍：琴音疗心 / 日记海岸 / 情绪日历 / 心语树洞 / 花坊 / 屿上花田 / 我的）
+- **'我的'页面修复**：'收到鼓励'/'岛上物件'可点击跳转，删除重复'岛上物件'，新增**静屿使用指南**（7 个模块详细介绍；AI 树洞已在 v2.6.0 删除）
 - **露水累加修复**：写日记和留言鼓励后正确发放露水
 
 ---
@@ -771,12 +768,14 @@ shop_items 1:N garden_items
 | `users.is_admin` / `avatar` | bool / str | 后台管理员 / 头像（emoji 或上传图片 URL） |
 | `diaries.content` | text | **明文日记**（v2.3 起） |
 | `diaries.content_encrypted` | str? | **遗留字段**，仅兼容老库，新数据不写 |
-| `diaries.is_public` / `send_to_ai_hole` | bool | 放入漂流瓶 / 不放入时同步树洞 |
+| `diaries.is_public` | bool | True=漂流瓶；False=静屿角落（仅自己可见） |
 | `mood_checkins.check_date` | date | 一天可多条（v2.4 移除唯一约束） |
-| `energy_records.source` | str | `listen_music` / `write_diary` / `checkin` / `streak_7` / `encourage` / `exchange` / `chat` / `admin_adjust` |
+| `energy_records.source` | str | `listen_music` / `write_diary` / `checkin` / `streak_7` / `encourage` / `baduanjin` / `exchange` / `admin_adjust` |
 | `garden_items.item_id` | int | FK → `shop_items.id` |
 | `user_flowers.stage` | str | `seed` / `sprout` / `bud` / `bloom` / `wilted` |
 | `encouragements.from_user_id` | int | 留言者；`to_user_id` 是作者（用于通知） |
+| `baduanjin_checkins` | user_id, check_date, move_key | 八段锦跟练打卡（用户+日期唯一） |
+| `therapy_interests` | user_id, product_key, product_name | 好物预约意向（不涉及支付） |
 
 ### 4.3 单日能量上限
 
@@ -788,6 +787,7 @@ DAILY_ENERGY_LIMITS = {
     "write_diary": 10,
     "checkin": 5,
     "encourage": 10,
+    "baduanjin": 1,
 }
 ```
 
@@ -937,57 +937,36 @@ def clear_pycaches(...):
 
 ## 6.6 AI 层架构（2026-07-17 加，可选）
 
-> 设计原则：**「渐进增强」+「不污染数据」+「治愈系温柔语气」** —— AI 是「锦上添花」而非核心功能，没配 key 也能跑；AI 输出不写入数据库（树洞历史是用户可选的本地文件记录）。
+> 设计原则：**「渐进增强」+「不污染数据」+「治愈系温柔语气」** —— AI 是「锦上添花」而非核心功能，没配 key 也能跑；AI 输出不写入数据库。
 
 ### 6.6.1 模块组成
 
 | 层 | 文件 | 说明 |
 |---|---|---|
-| 配置 | [app/config.py](../app/config.py) | `Settings` 类新增 `nvidia_api_key` / `ai_model` / `ai_base_url` 3 字段，从 `.env` 读 |
-| Schema | [app/schemas/ai.py](../app/schemas/ai.py) | 7 个 Pydantic 模型：`ChatMessage` / `AIChatIn` / `AIChatOut` / `AIEncouragementIn` / `AIHealingIn` / `AIMusicRecommendIn` / `AIMusicRecommendOut`；已注册到 [app/schemas/__init__.py](../app/schemas/__init__.py) 的 `__all__` + `model_rebuild()` |
-| Service | [app/services/ai_service.py](../app/services/ai_service.py) | `AIServiceUnavailable` 异常 + 4 个系统提示词常量 + `_call_nvidia()` 底层同步调用 + 4 个上层方法 |
-| Router | [app/routers/ai.py](../app/routers/ai.py) | 4 个端点（全部 `Depends(get_current_user)` + 全部 try/except 降级），prefix=`/api/ai` |
-| 入口注册 | [app/main.py](../app/main.py) | `app.include_router(ai.router, prefix="/api/ai")` |
-| 外部依赖 | NVIDIA NIM API | `https://integrate.api.nvidia.com/v1/chat/completions`（OpenAI 兼容格式），当前模型 `z-ai/glm-5.3-flash`；`_call_nvidia` 带 3 次线性退避重试；glm 为 reasoning 模型，`max_tokens` 需 900–1200，见 [HANDOFF §5.7](HANDOFF.md) |
-| 依赖 | [requirements.txt](../requirements.txt) | 新增 `httpx>=0.27.0,<0.29.0` |
+| 配置 | [app/config.py](../app/config.py) | `nvidia_api_key` / `ai_model` / `ai_base_url`，从 `.env` 读 |
+| Schema | [app/schemas/ai.py](../app/schemas/ai.py) | 4 个模型：`AIEncouragementIn` / `AIHealingIn` / `AIMusicRecommendIn` / `AIMusicRecommendOut` |
+| Service | [app/services/ai_service.py](../app/services/ai_service.py) | `AIServiceUnavailable` + 3 个系统提示词 + `_call_nvidia()` + 3 个上层方法 |
+| Router | [app/routers/ai.py](../app/routers/ai.py) | 3 个端点（全部需登录 + 全部 try/except 降级），prefix=`/api/ai` |
+| 入口注册 | [app/main.py](../app/main.py) | `app.include_router(ai.router)` |
+| 外部依赖 | NVIDIA NIM API | `https://integrate.api.nvidia.com/v1/chat/completions`，当前模型 `z-ai/glm-5.3-flash`；3 次线性退避重试；reasoning 模型 `max_tokens` 需 900–1200 |
 
-### 6.6.2 调用流（4 个场景同构）
+### 6.6.2 调用流（3 个场景同构）
 
 ```
-浏览器                          FastAPI                          NVIDIA NIM
-  │                                │                                │
-  │ POST /api/ai/<scene>           │                                │
-  │ Cookie: qi_session=...         │                                │
-  │ { ... 入参 ... }               │                                │
-  ├───────────────────────────────→│                                │
-  │                                │ 1. get_current_user 鉴权        │
-  │                                │ 2. try:                         │
-  │                                │    ai_service.generate_xxx()    │
-  │                                │    → _call_nvidia(              │
-  │                                │        system_prompt,           │
-  │                                │        user_content,           │
-  │                                │        history=...,             │
-  │                                │      )                          │
-  │                                │    ────────────────────────────→│
-  │                                │    POST /chat/completions       │
-  │                                │    Authorization: Bearer        │
-  │                                │      ${QI_NVIDIA_API_KEY}      │
-  │                                │  ←─────── 200 + AI 文案 ────────│
-  │                                │ 3. except AIServiceUnavailable: │
-  │                                │    return available:false + 友好提示
-  │                                │                                │
-  │ ←─ 200 { available:true/false, message }                        │
-  │                                │                                │
+浏览器 → POST /api/ai/<scene> → get_current_user → ai_service.generate_xxx()
+      → _call_nvidia(system_prompt, user_content) → NVIDIA /chat/completions
+      → 200 + 文案；失败 → 200 + available:false + 友好提示
 ```
 
-### 6.6.3 4 个场景
+### 6.6.3 3 个场景
 
 | # | 场景 | 端点 | 前端集成点 | AI 文案去向 |
 |---|---|---|---|---|
-| 1 | AI 树洞对话 | `POST /api/ai/chat`（另有 `GET/POST/DELETE /api/ai/conversations*` 管理历史） | [AIChatView.vue](../frontend/src/views/ai/AIChatView.vue)（`/ai-chat`） | 多轮对话；历史存 `data/chat_history/` 文件，用户可删除，**AI 输出不入库** |
-| 2 | 漂流瓶 AI 鼓励语 | `POST /api/ai/encouragement` | [PickBottleView.vue](../frontend/src/views/diary/PickBottleView.vue) | 给读者看的现场文案，**不写库**，不污染作者收件箱；日记内容传 AI 时**只取前 120 字** |
-| 3 | 情绪日历 AI 治愈语 | `POST /api/ai/healing` | [MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue) | 显示在今日心情卡片下方，**不落库** |
-| 4 | 音乐 AI 心情推荐 | `POST /api/ai/recommend-music` | [MusicListView.vue](../frontend/src/views/music/MusicListView.vue) / 首页「AI 帮我选音」 | 返回宫商角徵羽之一 + 理由 + 跳转 `/music/{yin}`；service 层有容错 JSON 解析 |
+| 1 | 漂流瓶 AI 鼓励语 | `POST /api/ai/encouragement` | [PickBottleView.vue](../frontend/src/views/diary/PickBottleView.vue) | 现场文案，**不写库**；日记内容只取前 120 字 |
+| 2 | 情绪日历 AI 治愈语 | `POST /api/ai/healing` | [MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue) | 今日心情卡片下方，**不落库** |
+| 3 | 音乐 AI 心情推荐 | `POST /api/ai/recommend-music` | [MusicListView.vue](../frontend/src/views/music/MusicListView.vue) | 五音之一 + 理由，**不落库** |
+
+> AI 树洞对话、会话历史与「树洞倾心」徽章已在 v2.6.0 删除；私密碎碎念改存「静屿角落」。
 
 ### 6.6.4 降级策略（核心）
 
@@ -1005,7 +984,6 @@ def clear_pycaches(...):
 
 | 场景 | 数据流向 | 入库？ |
 |---|---|---|
-| AI 树洞对话 | 浏览器 → POST /api/ai/chat → NVIDIA → 浏览器；历史文件由 `chat_history_service` 另存 | ❌ AI 输出不入库 |
 | 漂流瓶 AI 鼓励语 | 后端读日记明文 → **截断到前 120 字** → NVIDIA → 返回文案给读者 | ❌ 文案不入库 |
 | 情绪日历 AI 治愈语 | 心情 emoji + 可选 note → NVIDIA → 返回治愈语 | ❌ 不入库 |
 | 音乐 AI 心情推荐 | 用户描述的状态文本 → NVIDIA → 返回五音之一 + 理由 | ❌ 不入库 |
@@ -1085,18 +1063,36 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 
 > AI 接入必须遵守「输出不落库、正文最小化发送」的边界。
 
-**4 条边界**：
-1. **AI 输出不写入数据库**——对话回复 / 鼓励语 / 治愈语 / 推荐理由只在 HTTP 响应或用户主动保留的聊天文件里，不写 SQLite。
-2. **树洞历史由用户控制**——多轮历史存 `data/chat_history/<user_id>/<conversation_id>.json`；用户选「不保留」会删除该文件。
-3. **日记正文调用 AI 时截断到前 120 字**——漂流瓶 AI 鼓励语只发前 120 字预览，减少 token 与暴露面。
-4. **API key 不入仓**——`QI_NVIDIA_API_KEY` 只在 `.env`（git 忽略），[.env.example](../.env.example) 只放注释占位。
+**3 条边界**：
+1. **AI 输出不写入数据库**——鼓励语 / 治愈语 / 推荐理由只在 HTTP 响应里，不写 SQLite。
+2. **日记正文调用 AI 时截断到前 120 字**——漂流瓶 AI 鼓励语只发前 120 字预览，减少 token 与暴露面。
+3. **API key 不入仓**——`QI_NVIDIA_API_KEY` 只在 `.env`（git 忽略），[.env.example](../.env.example) 只放注释占位。
 
 **外部依赖边界**：
 - 第三方服务：NVIDIA NIM API（`https://integrate.api.nvidia.com/v1`），会收到日记前 120 字 + 心情 emoji + 用户描述文本。
 - 换自部署 vLLM / 其他厂商 → 只改 `QI_AI_BASE_URL` + `QI_AI_MODEL`（OpenAI 兼容格式）。
-- 完全离线 → 不配 `QI_NVIDIA_API_KEY`，4 个端点自动降级返回治愈系提示，业务正常跑。
+- 完全离线 → 不配 `QI_NVIDIA_API_KEY`，3 个端点自动降级返回治愈系提示，业务正常跑。
 
 详见 [§6.6 AI 层架构](#66-ai-层架构2026-07-17-加可选) / [HANDOFF §5.7](HANDOFF.md)。
+
+---
+
+## 6.7 身心调理架构（v2.6.0）
+
+> 设计原则：**规则可解释、结果可测试、不做医疗诊断**。问题 → 五类建议的映射写在 [app/services/therapy_service.py](../app/services/therapy_service.py)，不依赖 AI。
+
+| 层 | 文件 | 说明 |
+|---|---|---|
+| 内容目录 | [therapy_service.py](../app/services/therapy_service.py) | `BADUANJIN` 8 式、`SACHETS`、`BRACELETS`、`FOODS`、`PROBLEM_RULES` |
+| 推荐 | `recommend(db, problem, tags)` | 关键词/标签匹配 → 曲（按 yin 取第一首 classic）+ 2 式八段锦 + 香囊 + 手串 + 食疗 + 免责声明 |
+| 打卡 | `checkin_baduanjin()` | `baduanjin_checkins` 每天唯一 + `EnergyRecord(source="baduanjin", +1)` |
+| 好物 | `record_interest()` | `therapy_interests` 记录预约意向；当前不接支付/库存/发货 |
+| API | [app/routers/therapy.py](../app/routers/therapy.py) | `POST /api/therapy/recommend`、`GET /catalog`、`POST /baduanjin/checkin`、`GET /baduanjin/status`、`POST /interest` |
+
+**边界**：
+- 香囊/手串/食疗只做传统养生与生活方式参考，不承诺疗效；食疗必须展示过敏原。
+- 商品当前是「橱窗 + 预约/外链」，不是商城；购买赠露水等交易闭环未实现。
+- 八段锦当前是跟练打卡，没有视频上传/审核/防作弊。
 
 ---
 
@@ -1162,7 +1158,7 @@ QI_DATABASE_URL=mysql+pymysql://user:pw@localhost:3306/healing?charset=utf8mb4
 1. 音频槽位是 `static/audio/tracks/{曲名}.mp3`（22 首，与 `musics.title` 一一对应）。
 2. 放真实音频：同名覆盖即可，无需改代码；`seed.py` 启动时会按真实 MP3 校准 `duration`。
 3. 新增曲目：改 [app/seed.py](../app/seed.py) 的 `SEED_MUSIC` → 重启（自动补行 + 生成占位）→ 放音频。
-4. 当前状态：16 首古琴曲已有真实音频；6 首西洋改编是 0 字节占位，需补文件。
+4. 当前状态：16 首古琴曲已有真实音频；6 首西洋改编是 5338 字节静音占位，需补文件。
 
 ### 9.6 PWA / 离线
 - `static/manifest.json` + service worker

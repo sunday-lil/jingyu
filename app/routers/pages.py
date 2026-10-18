@@ -5,8 +5,8 @@
 - 生产：访问 http://127.0.0.1:5000，FastAPI 挂载 static/dist 并 SPA fallback
 
 本模块只保留旧 SSR 链接到新 SPA 路由的 302 重定向（兼容历史书签）。
-新前端路由：/ /login /register /music /music/:yin /diary /diary/write
-            /diary/pick /calendar /ai-chat /garden /shop
+新前端路由：/ /login /register /music /music/:yin /music/therapy /diary /diary/write
+            /diary/pick /corner /calendar /garden /shop /profile /notifications
 """
 
 from __future__ import annotations

@@ -98,11 +98,7 @@ def _migrate_legacy_columns() -> None:
                     "ALTER TABLE diaries ADD COLUMN content TEXT NOT NULL DEFAULT ''"
                 ))
                 logger.info("[MIGRATE] diaries.content 已添加（明文，v2.3）")
-            if "send_to_ai_hole" not in d_cols:
-                conn.execute(text(
-                    "ALTER TABLE diaries ADD COLUMN send_to_ai_hole BOOLEAN DEFAULT 0 NOT NULL"
-                ))
-                logger.info("[MIGRATE] diaries.send_to_ai_hole 已添加（v2.3）")
+            # send_to_ai_hole 是 v2.6.0 前的遗留列，保留映射只为兼容老库 NOT NULL
             # content_encrypted 老库是 NOT NULL，放宽为 NULL 兼容新数据不写密文
             if "content_encrypted" in d_cols:
                 # SQLite 不支持 ALTER COLUMN，只能靠新表；这里仅记录，新代码不再写该列

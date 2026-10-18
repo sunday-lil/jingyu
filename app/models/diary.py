@@ -17,7 +17,7 @@ class Diary(Base):
     - ``content_encrypted``：遗留字段（v2.3 前的 Fernet 密文），保留只为兼容老库，新数据不再写入。
     - ``mood_type``：关联心情枚举字符串（也可为空）。
     - ``is_public``：是否放入漂流瓶（公开可见，允许所有人查看和评论）。
-    - ``send_to_ai_hole``：不放入漂流瓶时，是否同步至树洞（仅自己可见 + AI 对话）。
+    - ``is_public=False``：留在「静屿角落」，仅自己可见。
     """
 
     __tablename__ = "diaries"
@@ -30,6 +30,7 @@ class Diary(Base):
     content_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     mood_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # 遗留列：v2.6.0 前用于「同步树洞」，现在不再读取；保留映射只为兼容老库 NOT NULL
     send_to_ai_hole: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.current_timestamp(), nullable=False, index=True

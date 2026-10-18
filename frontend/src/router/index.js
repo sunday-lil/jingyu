@@ -29,6 +29,12 @@ const routes = [
     name: 'music-western',
     component: () => import('@/views/music/MusicWesternView.vue'),
   },
+  // 身心调理（必须放在 :yin 动态段前面）
+  {
+    path: '/music/therapy',
+    name: 'music-therapy',
+    component: () => import('@/views/music/TherapyView.vue'),
+  },
   {
     path: '/music/:yin',
     name: 'music-detail',
@@ -61,12 +67,12 @@ const routes = [
     component: () => import('@/views/mood/MoodCalendarView.vue'),
     meta: { requiresAuth: true },
   },
-  // AI 树洞（全屏布局：移动端不显示底部 tabbar，让聊天区占满视口）
+  // 静屿角落（不放入漂流瓶的私密碎碎念）
   {
-    path: '/ai-chat',
-    name: 'ai-chat',
-    component: () => import('@/views/ai/AIChatView.vue'),
-    meta: { requiresAuth: true, fullscreen: true },
+    path: '/corner',
+    name: 'corner',
+    component: () => import('@/views/diary/CornerView.vue'),
+    meta: { requiresAuth: true },
   },
   // 精神花园
   {

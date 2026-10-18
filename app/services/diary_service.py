@@ -32,13 +32,11 @@ def create_diary(
     content: str,
     mood_type: Optional[str] = None,
     is_public: bool = False,
-    send_to_ai_hole: bool = False,
 ) -> Diary:
     """写入一条日记（明文）。
 
     - is_public=True：放入漂流瓶，公开可见，允许评论。
-    - is_public=False & send_to_ai_hole=True：仅自己可见，同步至树洞。
-    - is_public=False & send_to_ai_hole=False：仅自己可见。
+    - is_public=False：留在静屿角落，仅自己可见。
     """
     diary = Diary(
         user_id=user.id,
@@ -46,7 +44,7 @@ def create_diary(
         content_encrypted="",  # 老库 NOT NULL 兼容占位，新代码不使用
         mood_type=mood_type,
         is_public=is_public,
-        send_to_ai_hole=send_to_ai_hole,
+        send_to_ai_hole=False,  # 遗留列，固定 False
     )
     db.add(diary)
     db.flush()
@@ -63,9 +61,12 @@ def list_my_diaries(
     *,
     page: int = 1,
     per_page: int = 20,
+    is_public: Optional[bool] = None,
 ) -> tuple[list[Diary], int]:
-    """我的日记列表（时间倒序）。"""
+    """我的日记列表（时间倒序）。is_public=None 返回全部。"""
     q = db.query(Diary).filter(Diary.user_id == user_id)
+    if is_public is not None:
+        q = q.filter(Diary.is_public == is_public)
     total = q.count()
     diaries = (
         q.order_by(Diary.created_at.desc())

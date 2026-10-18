@@ -152,6 +152,7 @@ onBeforeUnmount(() => {
           <p class="diary-header__verse">"每一篇日记，都是被海风温柔保存的回声"</p>
         </div>
         <div class="diary-header__actions">
+          <button class="btn btn--ghost" @click="router.push('/corner')">🏝️ 静屿角落</button>
           <button class="btn btn--ghost" @click="goPick">🍾 拾瓶</button>
           <button class="btn btn--primary" @click="goWrite">✍️ 写日记</button>
         </div>
@@ -174,14 +175,14 @@ onBeforeUnmount(() => {
           @click="openDetail(d)"
         >
           <div class="diary-item__dot" :class="{ 'diary-item__dot--bottle': d.is_public, 'diary-item__dot--secret': !d.is_public }">
-            {{ d.is_public ? '🍾' : '🌳' }}
+            {{ d.is_public ? '🍾' : '🏝️' }}
           </div>
           <div class="diary-item__body">
             <div class="diary-item__date">{{ formatDate(d.created_at) }}</div>
             <div class="diary-item__preview">{{ (d.content || '').slice(0, 60) }}{{ (d.content || '').length > 60 ? '…' : '' }}</div>
             <div class="diary-item__meta">
               <span class="diary-item__tag" :class="d.is_public ? 'diary-item__tag--bottle' : 'diary-item__tag--secret'">
-                {{ d.is_public ? '漂流瓶' : '树洞' }}
+                {{ d.is_public ? '漂流瓶' : '静屿角落' }}
               </span>
               <span v-if="d.encouragement_count > 0" class="diary-item__encouragements">
                 收到 {{ d.encouragement_count }} 句鼓励 💛
@@ -200,11 +201,11 @@ onBeforeUnmount(() => {
           <div v-if="detailModal.loading" class="modal-loading">日记加载中…</div>
           <template v-else-if="detailModal.diary">
             <div class="modal-card__head">
-              <div class="modal-card__icon">{{ detailModal.diary.is_public ? '🍾' : '🌳' }}</div>
+              <div class="modal-card__icon">{{ detailModal.diary.is_public ? '🍾' : '🏝️' }}</div>
               <div>
                 <div class="modal-card__date">{{ formatDate(detailModal.diary.created_at) }}</div>
                 <div class="modal-card__tag" :class="detailModal.diary.is_public ? 'modal-card__tag--bottle' : 'modal-card__tag--secret'">
-                  {{ detailModal.diary.is_public ? '放入漂流瓶 · 公开可见' : '不放入漂流瓶 · 同步树洞' }}
+                  {{ detailModal.diary.is_public ? '放入漂流瓶 · 公开可见' : '留在静屿角落 · 仅自己可见' }}
                 </div>
               </div>
             </div>

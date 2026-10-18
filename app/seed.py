@@ -285,7 +285,8 @@ def seed_shop_items(db: Session) -> int:
 
     # ── v2.4.2 删除废弃徽章 ──
     # 「古琴初学者」废弃（保留「琴音知音」）；删 shop_items 行 + 已发放的 GardenItem
-    DEPRECATED_BADGES = ["古琴初学者"]
+    # 「琴音知音」改名前的旧徽章 + v2.6.0 移除 AI 树洞后的「树洞倾心」
+    DEPRECATED_BADGES = ["古琴初学者", "树洞倾心"]
     for badge_name in DEPRECATED_BADGES:
         rows = db.query(ShopItem).filter(ShopItem.name == badge_name).all()
         for r in rows:

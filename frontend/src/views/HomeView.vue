@@ -17,7 +17,7 @@ const userStore = useUserStore()
 // 岛上指南手风琴展开状态（v2.5.0：复用共享指南数据，与个人主页一致）
 const guideOpen = ref(null)
 
-// 六个功能板块入口（v2.3：四字文艺命名 + 岛屿图标）
+// 七个功能板块入口（v2.3：四字文艺命名 + 岛屿图标）
 // v2.4.2：花坊 → 落叶花坊
 // v2.5.3：漂流日记 → 日记海岸（入口统一 📖）；情绪日历 🌙 → 🗓；新增「我的」入口
 // v2.5.0：reward「怎么玩」一行 —— 与 islandGuide.js 的 reward 字段保持同步
@@ -47,11 +47,11 @@ const modules = [
     color: 'linear-gradient(135deg, #C5C5E8 0%, #E8D5E8 100%)',
   },
   {
-    label: '心语树洞',
-    desc: '说给一棵树听 · 它不会告诉任何人',
-    reward: '倾诉心事 · 对话满 20 次解锁「树洞倾心」徽章',
-    icon: '🌳',
-    to: '/ai-chat',
+    label: '静屿角落',
+    desc: '不放进漂流瓶的碎碎念 · 收在岛上',
+    reward: '每写一篇 +2 露水 · 仅自己可见',
+    icon: '🏝️',
+    to: '/corner',
     color: 'linear-gradient(135deg, #B8C5E8 0%, #A8D8BA 100%)',
   },
   {

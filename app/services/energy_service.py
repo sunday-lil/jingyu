@@ -224,7 +224,6 @@ def check_achievements(db: Session, user: User) -> dict:
     - diary_30：累计写 30 篇日记 → 日记达人
     - streak_7：连续 7 天打卡 → 七日静心
     - pick_10：拾满 10 个漂流瓶 → 拾瓶旅人
-    - chat_20：与树洞对话满 20 次 → 树洞倾心
     - flower_10：种满 10 朵花 → 花间客
 
     v2.4.2：每解锁一个徽章额外发放 BADGE_LEAF_REWARD 片落叶，
@@ -301,21 +300,7 @@ def check_achievements(db: Session, user: User) -> dict:
             newly.append(gi)
             owned_ids.add(trigger_item.id)
 
-    # 5. chat_20：与树洞对话满 20 次
-    chat_count = (
-        db.query(func.count(EnergyRecord.id))
-        .filter(EnergyRecord.user_id == user.id, EnergyRecord.source == "chat")
-        .scalar()
-    )
-    if chat_count >= 20:
-        trigger_item = _find_trigger_item(db, "chat_20")
-        if trigger_item and trigger_item.id not in owned_ids:
-            gi = GardenItem(user_id=user.id, item_id=trigger_item.id)
-            db.add(gi)
-            newly.append(gi)
-            owned_ids.add(trigger_item.id)
-
-    # 6. flower_10：种满 10 朵花
+    # 5. flower_10：种满 10 朵花
     flower_count = (
         db.query(func.count(UserFlower.id))
         .filter(UserFlower.user_id == user.id)
