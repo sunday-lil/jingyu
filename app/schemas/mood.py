@@ -6,14 +6,14 @@ from pydantic import BaseModel, Field
 
 
 class MoodCheckinIn(BaseModel):
-    mood_emoji: str = Field(..., description="心情枚举字符串")
+    mood_emoji: str = Field(..., max_length=20, description="心情枚举字符串")
     note: Optional[str] = Field(None, max_length=200)
     check_date: Optional[date] = None  # 默认今天
 
 
 class MoodBatchIn(BaseModel):
     """批量打卡（一次选多个心情）。"""
-    mood_emojis: List[str] = Field(..., description="心情枚举字符串列表")
+    mood_emojis: List[str] = Field(..., min_length=1, max_length=10, description="心情枚举字符串列表")
     note: Optional[str] = Field(None, max_length=200)
 
 

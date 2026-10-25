@@ -175,8 +175,8 @@ def delete_checkin(
 
 @router.get("/calendar")
 def calendar(
-    year: int = Query(default=None),
-    month: int = Query(default=None),
+    year: int = Query(default=None, ge=1970, le=2100),
+    month: int = Query(default=None, ge=1, le=12),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

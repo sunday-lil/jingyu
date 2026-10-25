@@ -4,14 +4,14 @@
 
 > 🔒 **改了本文件涉及的部署配置（端口 / Nginx / systemd / HTTPS / 反代 / 前端构建），必须同步更新**：[README §1](../README.md) / [HANDOFF §1](HANDOFF.md) / [AGENTS.md](../AGENTS.md)。详见 [HANDOFF §12](HANDOFF.md) 文档自动同步铁律。
 
-> **当前版本：v2.6.1（2026-10-18）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留当前部署步骤。
+> **当前版本：v2.6.2（2026-10-25）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留当前部署步骤。
 >
 > **部署三件事**：① 拉代码 ② 配置 `.env` ③ `python start.py`（默认生产模式；`static/dist/index.html` 不存在会自动 `npm install + npm run build`）。
 >
 > - 前端源码有改动 → 必须重新构建（`python start.py build` 或 `cd frontend && npm run build`），再重启。
 > - 数据库迁移在启动时自动执行（`_migrate_legacy_columns()` + `Base.metadata.create_all`），不需要手动 ALTER。
 > - AI 可选：`.env` 的 `QI_NVIDIA_API_KEY` 留空也能跑，3 个端点会优雅降级。
-> - 后台入口是 `/admin/login`（`/admin` 无尾斜杠会被 SPA fallback 判 404）。
+> - 后台入口是 `/admin/login`（`/admin` 会 302 到 `/admin/`）。
 
 ---
 

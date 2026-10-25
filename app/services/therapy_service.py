@@ -370,10 +370,13 @@ def checkin_baduanjin(db: Session, user: User, move_key: str = "general") -> dic
     db.add(record)
     db.flush()
 
-    grant_energy(
+    energy = grant_energy(
         db, user, amount=1, source="baduanjin",
         note="八段锦跟练打卡",
     )
+    if energy is None:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="今日露水已达上限，明天再来跟练吧")
     db.commit()
     new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
     return {

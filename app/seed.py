@@ -87,7 +87,8 @@ def _ensure_placeholder_audio():
     )
     for m in SEED_MUSIC:
         path = tracks_dir / f"{m['title']}.mp3"
-        if not path.exists():
+        # 缺失或 0 字节都补静音占位（0 字节文件播放器会直接报错）
+        if not path.exists() or path.stat().st_size == 0:
             path.write_bytes(placeholder)
 
 
@@ -122,20 +123,40 @@ def seed_music(db: Session) -> int:
 
 
 def _mp3_duration_seconds(path: Path) -> int | None:
-    """解析 MP3 时长（秒）。VBR 读 Xing 帧数，CBR 按比特率估算。解析失败返回 None。"""
-    data = path.read_bytes()
-    n = len(data)
+    """解析 MP3 时长（秒）。VBR 读 Xing 帧数，CBR 按比特率估算。
+
+    v2.6.2 优化：只读取文件头部（ID3 + 首帧 + 64KB），CBR 用 stat 文件大小估算，
+    不再把 10–27MB 的整首音频读进内存（启动校准 16 首可少读约 250MB）。
+    """
+    file_size = path.stat().st_size
+    with path.open("rb") as f:
+        first = f.read(10)
+        if first[:3] == b"ID3" and len(first) >= 10:
+            tag_size = (
+                ((first[6] & 0x7F) << 21)
+                | ((first[7] & 0x7F) << 14)
+                | ((first[8] & 0x7F) << 7)
+                | (first[9] & 0x7F)
+            )
+            audio_start = 10 + tag_size
+            f.seek(audio_start)
+            data = f.read(65536)
+        else:
+            audio_start = 0
+            f.seek(len(first))
+            data = first + f.read(65536 - len(first))
+
+    if len(data) < 4:
+        return None
+
     i = 0
-    if data[:3] == b"ID3":  # 跳过 ID3v2 标签
-        size = ((data[6] & 0x7F) << 21) | ((data[7] & 0x7F) << 14) | \
-               ((data[8] & 0x7F) << 7) | (data[9] & 0x7F)
-        i = 10 + size
-    while i < n - 4:  # 找帧同步字
+    while i < len(data) - 4:  # 找帧同步字
         if data[i] == 0xFF and (data[i + 1] & 0xE0) == 0xE0:
             break
         i += 1
     else:
         return None
+
     b1, b2, b3 = data[i + 1], data[i + 2], data[i + 3]
     ver_bits, layer = (b1 >> 3) & 0x03, (b1 >> 1) & 0x03
     if ver_bits not in (0, 2, 3) or layer != 1:  # 仅支持 Layer III
@@ -153,15 +174,17 @@ def _mp3_duration_seconds(path: Path) -> int | None:
         samples_per_frame, side_info = 576, 17
     if ((b3 >> 6) & 0x03) == 3:  # 单声道 side info 减半
         side_info //= 2
+
     x = i + 4 + side_info
-    if data[x:x + 4] in (b"Xing", b"Info"):  # VBR：帧数最准
+    if x + 12 <= len(data) and data[x:x + 4] in (b"Xing", b"Info"):  # VBR：帧数最准
         flags = int.from_bytes(data[x + 4:x + 8], "big")
         if flags & 1:
             frames = int.from_bytes(data[x + 8:x + 12], "big")
             return round(frames * samples_per_frame / samplerate)
+
     if bitrate == 0:
         return None
-    return round((n - i) * 8 / bitrate)  # CBR 估算
+    return round((file_size - audio_start - i) * 8 / bitrate)  # CBR 估算
 
 
 def sync_durations_from_audio(db: Session) -> int:

@@ -118,8 +118,9 @@ onBeforeUnmount(() => {
           class="form-input content-area"
           placeholder="此刻心里在想什么…"
           rows="10"
+          maxlength="5000"
         ></textarea>
-        <div class="content-hint">日记将以明文保存，可随时回看</div>
+        <div class="content-hint">日记将以明文保存（最多 5000 字），可随时回看</div>
       </div>
 
       <!-- 发布选项 -->

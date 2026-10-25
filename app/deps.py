@@ -18,15 +18,10 @@ from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.database import get_db as _get_db
+from app.database import get_db
 from app.models.user import User
 from app.security import make_session_token, parse_session_token
 from app.config import settings
-
-
-def get_db() -> Session:
-    """FastAPI 依赖：DB session。"""
-    yield from _get_db()
 
 
 def _read_session_uid(request: Request) -> Optional[int]:

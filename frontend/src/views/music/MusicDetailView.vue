@@ -180,7 +180,7 @@ const reportListenComplete = async () => {
   try {
     const res = await api.post('/music/listen-complete', {
       music_id: currentMusic.value.id,
-      progress: Math.round(progress.value * 100),
+      progress: Math.min(1, progress.value),  // 后端要求 0-1，不是百分比
     })
     // v2.4.2：api 拦截器已返回 response.data，直接用 res
     if (res?.granted) {
@@ -201,7 +201,8 @@ const reportListenComplete = async () => {
       }
     }
   } catch (e) {
-    // 静默失败，不影响聆听体验
+    // 失败允许下次 timeupdate 重试（如网络抖动/后端 422）
+    listenReported.value = false
   }
 }
 

@@ -177,6 +177,8 @@ def generate_encouragement(
     mood_label: Optional[str] = None,
 ) -> str:
     """漂流瓶 AI 鼓励语。"""
+    # 只发送前 120 字，减少 token 与隐私暴露面（与文档一致）
+    diary_preview = (diary_preview or "")[:120]
     parts = []
     if mood_label:
         parts.append(f"作者此刻的心情大概是：{mood_label}。")

@@ -167,24 +167,24 @@ def get_recent_trend(db: Session, user_id: int, days: int = 30) -> list[dict]:
 
 
 def get_current_streak(db: Session, user_id: int) -> int:
-    """从今天往前数连续打卡天数。允许今天没打卡但昨天及之前连续。"""
+    """从今天往前数连续打卡天数（一次查询，避免逐日 N+1）。
+
+    今天没打卡时，允许从昨天开始算；昨天也没有则为 0。
+    """
     today = date.today()
+    rows = (
+        db.query(MoodCheckin.check_date)
+        .filter(MoodCheckin.user_id == user_id)
+        .distinct()
+        .all()
+    )
+    dates = {row[0] for row in rows}
+    if not dates:
+        return 0
+
+    d = today if today in dates else today - timedelta(days=1)
     streak = 0
-    # 从今天开始，往前找
-    d = today
-    while True:
-        exists = (
-            db.query(MoodCheckin)
-            .filter(MoodCheckin.user_id == user_id, MoodCheckin.check_date == d)
-            .first()
-        )
-        if exists is not None:
-            streak += 1
-            d = d - timedelta(days=1)
-        else:
-            # 如果是今天且没有，容许从昨天开始
-            if d == today:
-                d = d - timedelta(days=1)
-                continue
-            break
+    while d in dates:
+        streak += 1
+        d -= timedelta(days=1)
     return streak

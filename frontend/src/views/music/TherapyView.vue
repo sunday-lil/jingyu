@@ -110,6 +110,7 @@ const onTimeUpdate = async () => {
       showToast(res.reason)
     }
   } catch (e) {
+    rewardClaimed.value = false
     showToast(e.message || '露水发放失败')
   }
 }

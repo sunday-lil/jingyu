@@ -14,6 +14,7 @@ from app.services.diary_service import (
     pick_random_bottle,
     leave_encouragement,
     list_diary_encouragements,
+    encouragement_counts,
 )
 from app.services.mood_service import (
     add_checkin,
@@ -27,6 +28,6 @@ __all__ = [
     "grant_energy", "can_grant_today", "today_grant_total",
     "exchange_item", "check_achievements",
     "create_diary", "list_my_diaries", "get_diary_detail",
-    "pick_random_bottle", "leave_encouragement", "list_diary_encouragements",
+    "pick_random_bottle", "leave_encouragement", "list_diary_encouragements", "encouragement_counts",
     "add_checkin", "get_today_moods", "get_month_checkins", "get_recent_trend", "get_current_streak",
 ]

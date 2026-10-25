@@ -4,7 +4,7 @@
 
 > 🔒 **改了本文件涉及的代码，必须同步更新**：[HANDOFF §12](HANDOFF.md) / [AGENTS.md](../AGENTS.md) / [DEVELOPMENT §1.8](DEVELOPMENT.md) 列出的对应文档。改代码不改文档 = 改了一半。
 
-> **当前版本：v2.6.1（2026-10-18）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
+> **当前版本：v2.6.2（2026-10-25）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
 
 ---
 
@@ -758,6 +758,10 @@ diaries 1:N encouragements
 shop_items 1:N garden_items
 ```
 
+> **Session 规则（v2.6.2）**：routers 和 [app/deps.py](../app/deps.py) 必须引用**同一个** `app.database.get_db`。如果 deps 再包一层 `get_db`，FastAPI 会创建两个 session，`get_current_user` 返回的 `user` 与端点 `db` 分离，`db.refresh(user)` 会报 `Instance is not persistent`，写操作也可能静默失效。详见 [HANDOFF §6.25](HANDOFF.md)。
+
+> **外键**：SQLite 连接建立时执行 `PRAGMA foreign_keys=ON`，让 `ondelete="CASCADE"` 真正生效（v2.6.2）。
+
 ### 4.2 关键表字段
 
 | 表 | 关键字段 | 业务含义 |
@@ -1077,7 +1081,7 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 
 ---
 
-## 6.7 身心调理架构（v2.6.1）
+## 6.7 身心调理架构（v2.6.2）
 
 > 设计原则：**规则可解释、结果可测试、不做医疗诊断**。问题 → 五类建议的映射写在 [app/services/therapy_service.py](../app/services/therapy_service.py)，不依赖 AI。
 

@@ -77,12 +77,13 @@ export const useUserStore = defineStore('user', {
     },
 
     async logout() {
+      // 先清本地，避免 401 拦截器再次调用 logout 造成递归
+      this.clearLocal()
       try {
         await api.post('/auth/logout')
       } catch {
-        // 忽略：本地清掉就行
+        // 忽略：本地已经清掉
       }
-      this.clearLocal()
     },
 
     clearLocal() {

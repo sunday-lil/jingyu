@@ -178,13 +178,13 @@ const reportListenComplete = async () => {
   try {
     const res = await api.post('/music/listen-complete', {
       music_id: currentMusic.value.id,
-      progress: Math.round(progress.value * 100),
+      progress: Math.min(1, progress.value),  // 后端要求 0-1，不是百分比
     })
     if (res?.granted) {
       showToast('+1 露水 💧')
     }
   } catch {
-    // 静默
+    listenReported.value = false
   }
 }
 

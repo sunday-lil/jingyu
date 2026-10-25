@@ -133,7 +133,7 @@ def leave_encouragement(
 ) -> Encouragement:
     """给一条漂流瓶留一条匿名鼓励，并通知漂流瓶所有者。"""
     diary = db.get(Diary, diary_id)
-    if diary is None:
+    if diary is None or not diary.is_public:
         raise HTTPException(status_code=404, detail="漂流瓶不存在")
     if diary.user_id == from_user.id:
         raise HTTPException(status_code=400, detail="不能给自己鼓励哦")
@@ -155,6 +155,19 @@ def leave_encouragement(
     db.add(notif)
     db.flush()
     return enc
+
+
+def encouragement_counts(db: Session, diary_ids: list[int]) -> dict[int, int]:
+    """批量取多条日记的鼓励数，避免列表接口 N+1。"""
+    if not diary_ids:
+        return {}
+    rows = (
+        db.query(Encouragement.diary_id, func.count(Encouragement.id))
+        .filter(Encouragement.diary_id.in_(diary_ids))
+        .group_by(Encouragement.diary_id)
+        .all()
+    )
+    return {int(diary_id): int(count) for diary_id, count in rows}
 
 
 def list_diary_encouragements(

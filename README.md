@@ -6,7 +6,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Status](https://img.shields.io/badge/status-v2.6.1-success)]()
+[![Status](https://img.shields.io/badge/status-v2.6.2-success)]()
 
 **English** — Jingyu (静屿, "Quiet Isle") is a non-commercial healing web app: guqin five-tone music, a body-mind therapy recommender (Baduanjin / sachet / bracelet / food), drifting diary bottles, a private island corner, a Russell-circumplex mood calendar, and a garden that grows with your daily check-ins. Built with FastAPI + Vue 3 + Three.js. Self-host in two commands.
 
@@ -50,7 +50,7 @@ python start.py    # 浏览器打开 http://127.0.0.1:5000
 # 以下为开发者参考，普通用户可跳过
 
 > 🤖 **接手项目先读**：[AGENTS.md](AGENTS.md)（工作规则）→ [docs/HANDOFF.md](docs/HANDOFF.md)（交接）→ [docs/README.md](docs/README.md)（文档地图）。
-> 📜 **版本更新历史**：[docs/CHANGELOG.md](docs/CHANGELOG.md)（v2.2.2 → v2.6.1）。
+> 📜 **版本更新历史**：[docs/CHANGELOG.md](docs/CHANGELOG.md)（v2.2.2 → v2.6.2）。
 
 ## 0. 一句话速览
 
@@ -170,7 +170,7 @@ webwrold/
 
 - **生产态**（`static/dist/index.html` 存在）：从 `static/dist/` 读取静态文件（`EXT_TO_MIME` 映射 MIME），未命中返回 `index.html` 让 Vue Router 接管。
 - **开发态**（dist 未构建）：返回提示页，引导访问 Vite :5000。
-- **排除路径**：`/api/`、`/static/`、`/admin`、`/docs`、`/openapi.json`；注意 `/admin` 无尾斜杠会被判 404，入口请用 `/admin/login`。
+- **排除路径**：`/api/`、`/static/`、`/admin`、`/docs`、`/openapi.json`；`/admin` 会 302 到 `/admin/`，入口请用 `/admin/login`。
 
 ### 3.2 鉴权与会话
 
@@ -309,7 +309,7 @@ YIN_INFO = {
 4. **GSAP 入场动画只做位移**，不设 `opacity:0` / `scale:0`；列表动画在 fetch 成功后 + `querySelector` 守卫。
 5. **Vite host 写 `127.0.0.1`**；`base` 仅在 build 时设为 `/static/dist/`。
 6. **SPA fallback 必须排除 `/api`、`/static`、`/admin`、`/docs`**。
-7. **后台路径用 `/admin/login`**：`/admin` 无尾斜杠当前会 404。
+7. **后台路径用 `/admin/login`**：`/admin` 会 302 到 `/admin/`。
 8. **AI 模型会下架**：换模型同时改 `.env` 与 `config.py`；reasoning 模型给小 `max_tokens` 会静默空回复。
 
 ---

@@ -11,7 +11,7 @@ v2.3 新增：漂流瓶评论返回发布者后的消息提醒机制。
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/notifications", tags=["notification"])
 
 @router.get("")
 def list_notifications(
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=200),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

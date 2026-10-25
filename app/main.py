@@ -20,8 +20,9 @@ except Exception:
     pass
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
@@ -73,7 +74,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="静屿 — 治愈系身心疗愈平台",
         description="古琴五音 · 漂流瓶日记 · 心情手帐 · 精神花园",
-        version="2.6.1",
+        version="2.6.2",
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url=None,
@@ -193,11 +194,13 @@ def create_app() -> FastAPI:
     async def spa_fallback(request: Request, full_path: str):
         # 排除 API / 静态 / 后台 / 文档
         admin_prefix = settings.admin_path_prefix.lstrip("/")
+        if full_path == admin_prefix:
+            # /admin -> /admin/，避免后台入口被 SPA fallback 判 404
+            return RedirectResponse(f"/{admin_prefix}/", status_code=302)
         if (
             full_path.startswith("api/")
             or full_path.startswith("static/")
             or full_path.startswith(admin_prefix + "/")
-            or full_path == admin_prefix
             or full_path.startswith("docs")
             or full_path == "openapi.json"
             or full_path.startswith("redoc")
@@ -245,7 +248,7 @@ def create_app() -> FastAPI:
     async def validation_handler(request: Request, exc: RequestValidationError):
         return JSONResponse(
             status_code=422,
-            content={"error": "参数有误", "details": exc.errors()},
+            content={"error": "参数有误", "details": jsonable_encoder(exc.errors())},
         )
 
     @app.exception_handler(Exception)

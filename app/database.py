@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import logging
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
 from app.config import settings
@@ -23,6 +23,14 @@ engine = create_engine(
     echo=False,
     future=True,
 )
+
+if settings.database_url.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def _sqlite_foreign_keys(dbapi_connection, connection_record):
+        """SQLite 默认不启用外键；开启后才能让 ondelete=CASCADE 真正生效。"""
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 SessionLocal = sessionmaker(
     bind=engine,

@@ -2,7 +2,7 @@
 
 > 改代码前**必读**。这里汇总了当前仍然有效的开发铁律 + 踩坑复现与修法；逐版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **当前版本：v2.6.1（2026-10-18）**。逐版本变更见 [CHANGELOG.md](CHANGELOG.md)；本文只保留仍然有效的开发约定与踩坑。
+> **当前版本：v2.6.2（2026-10-25）**。逐版本变更见 [CHANGELOG.md](CHANGELOG.md)；本文只保留仍然有效的开发约定与踩坑。
 
 ---
 
@@ -1108,6 +1108,11 @@ curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
 - 露水 = `users.total_energy`；落叶 = `users.leaves`；**没有** `users.dew` / `EnergyRecord.resource_type` / `ShopItem.cost_resource` 这些字段（旧文档曾写错）。
 - 兑换时看 `ShopItem.cost_currency`（`dew` / `leaves`）；发放露水用 `grant_energy()`，加落叶用显式 `UPDATE users SET leaves = leaves + N`。
 - 详细规则见 [README §3.4](../README.md) / [ARCHITECTURE §1.1.7.2](ARCHITECTURE.md)。
+
+### 3.16 依赖与单位两个高频坑（v2.6.2）
+
+1. **`get_db` 只能有一个定义**：routers 用 `from app.database import get_db`，[deps.py](../app/deps.py) 也必须用同一个函数，不能在 deps 里再写 `def get_db(): yield from ...`。否则 `get_current_user` 的 `user` 与端点 `db` 不在同一 session，`db.refresh(user)` 会报 `Instance is not persistent`，写操作也可能静默不生效。详见 [HANDOFF §6.25](HANDOFF.md)。
+2. **听曲进度是 0–1**：`ListenCompleteIn.progress` 有 `ge=0, le=1`；前端上报 `Math.min(1, progress.value)`，不要乘 100。失败时复位 `listenReported` 允许重试。详见 [HANDOFF §6.26](HANDOFF.md)。
 
 ---
 

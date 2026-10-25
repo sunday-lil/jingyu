@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 class DiaryCreateIn(BaseModel):
     """创建日记。v2.3 起明文；v2.6.0 用 is_public 区分漂流瓶 / 静屿角落。"""
-    content: str = Field(..., min_length=1, description="日记明文内容")
+    content: str = Field(..., min_length=1, max_length=5000, description="日记明文内容（1-5000 字）")
     mood_type: Optional[str] = Field(None, max_length=20)
     is_public: bool = Field(False, description="True=放入漂流瓶（公开）；False=留在静屿角落（仅自己可见）")
 

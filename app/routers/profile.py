@@ -129,10 +129,7 @@ def update_my_profile(
         changed = True
 
     if changed:
-        db.query(User).filter(User.id == user.id).update({
-            "nickname": user.nickname,
-            "avatar": user.avatar,
-        })
+        # 直接提交 ORM 对象属性（用户对象来自同一请求 session，安全）
         db.commit()
         db.refresh(user)
 
@@ -171,7 +168,7 @@ def upload_avatar(
     upload_dir.mkdir(parents=True, exist_ok=True)
     (upload_dir / filename).write_bytes(data)
     avatar_url = f"/static/uploads/avatars/{filename}"
-    db.query(User).filter(User.id == user.id).update({"avatar": avatar_url})
+    user.avatar = avatar_url
     db.commit()
     return {"avatar": avatar_url}
 

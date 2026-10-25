@@ -20,7 +20,7 @@ api.interceptors.response.use(
     // 401 → 清登录态 + 跳登录
     if (status === 401) {
       const userStore = useUserStore()
-      userStore.logout()
+      userStore.clearLocal()
       if (window.location.pathname !== '/login') {
         window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`
       }

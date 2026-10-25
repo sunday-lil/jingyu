@@ -6,7 +6,7 @@ v2.6.0 调整：移除 AI 树洞同步；is_public=False 的日记统一留在�
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -23,6 +23,7 @@ from app.services.diary_service import (
     pick_random_bottle,
     leave_encouragement,
     list_diary_encouragements,
+    encouragement_counts,
 )
 from app.services.energy_service import grant_energy, check_achievements
 
@@ -48,8 +49,8 @@ def create_my_diary(
         is_public=body.is_public,
     )
 
-    # 写日记发 +2 露水
-    grant_energy(db, user, amount=2, source="write_diary", note="写日记")
+    # 写日记发 +2 露水（达到每日上限时 granted_energy 为 0）
+    energy_record = grant_energy(db, user, amount=2, source="write_diary", note="写日记")
     achievement = check_achievements(db, user)
     db.commit()
     new_total = db.query(User.total_energy).filter(User.id == user.id).scalar()
@@ -57,7 +58,7 @@ def create_my_diary(
     return {
         "id": diary.id,
         "created_at": diary.created_at.isoformat() if diary.created_at else None,
-        "granted_energy": 2,
+        "granted_energy": 2 if energy_record else 0,
         "new_total_energy": new_total,
         # v2.4.2：附加资源变动信息
         "new_leaves": achievement.get("new_leaves", 0),
@@ -68,13 +69,14 @@ def create_my_diary(
 
 @router.get("/mine")
 def list_mine(
-    page: int = 1,
-    per_page: int = 20,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """我的日记列表（明文）。"""
     diaries, total = list_my_diaries(db, user.id, page=page, per_page=per_page)
+    counts = encouragement_counts(db, [d.id for d in diaries])
     return {
         "total": total,
         "page": page,
@@ -86,7 +88,7 @@ def list_mine(
                 "mood_type": d.mood_type,
                 "is_public": d.is_public,
                 "created_at": d.created_at.isoformat() if d.created_at else None,
-                "encouragement_count": len(list_diary_encouragements(db, d.id)),
+                "encouragement_count": counts.get(d.id, 0),
             }
             for d in diaries
         ],
@@ -95,8 +97,8 @@ def list_mine(
 
 @router.get("/corner")
 def list_corner(
-    page: int = 1,
-    per_page: int = 50,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=100),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -104,6 +106,7 @@ def list_corner(
     diaries, total = list_my_diaries(
         db, user.id, page=page, per_page=per_page, is_public=False
     )
+    counts = encouragement_counts(db, [d.id for d in diaries])
     return {
         "total": total,
         "page": page,
@@ -114,7 +117,7 @@ def list_corner(
                 "content": d.content,
                 "mood_type": d.mood_type,
                 "created_at": d.created_at.isoformat() if d.created_at else None,
-                "encouragement_count": len(list_diary_encouragements(db, d.id)),
+                "encouragement_count": counts.get(d.id, 0),
             }
             for d in diaries
         ],
@@ -177,8 +180,8 @@ def encourage(
 ):
     """给一条漂流瓶留匿名鼓励语（评论返回发布者 + 消息提醒）。"""
     enc = leave_encouragement(db, user, diary_id, body.content)
-    # 留言鼓励发 +1 露水
-    grant_energy(db, user, amount=1, source="encourage", note="留言鼓励")
+    # 留言鼓励发 +1 露水（达到每日上限时 granted_energy 为 0）
+    energy_record = grant_energy(db, user, amount=1, source="encourage", note="留言鼓励")
     # v2.4.2：拾满 10 个漂流瓶 → 拾瓶旅人徽章（encourage 计数即拾瓶计数）
     achievement = check_achievements(db, user)
     db.commit()
@@ -187,7 +190,7 @@ def encourage(
         "id": enc.id,
         "content": enc.content,
         "created_at": enc.created_at.isoformat(),
-        "granted_energy": 1,
+        "granted_energy": 1 if energy_record else 0,
         "new_total_energy": new_total,
         # v2.4.2：附加资源变动信息
         "new_leaves": achievement.get("new_leaves", 0),

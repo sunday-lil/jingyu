@@ -3,7 +3,7 @@
 > 写给接手这个项目的下一个 AI（Cursor / Copilot / Devin / 任何 Agent）。
 > 本文 = 项目元信息 + 关键决策 + 踩坑清单；完整文档地图见 [README.md](README.md)。
 
-> **当前版本：v2.6.1（2026-10-18）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
+> **当前版本：v2.6.2（2026-10-25）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
 
 ---
 
@@ -13,7 +13,7 @@
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 隐私边界清晰 / 轻运营
 **代码体量**：约 2 500 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.6.1（2026-10-18）——移除 AI 树洞、新增静屿角落、身心调理推荐、八段锦跟练打卡 + B 站跟练视频、好物橱窗。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
+**当前阶段**：v2.6.2（2026-10-25）——移除 AI 树洞、新增静屿角落、身心调理推荐、八段锦跟练打卡 + B 站跟练视频、好物橱窗；本轮完成全量 bug 修复与性能优化（听曲露水、资料保存、私密日记留言、输入边界、N+1、启动 IO）。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
 
 ---
 
@@ -45,7 +45,7 @@ python start.py --init-db # 启动前重置数据库
 > - **应用模式**（`--dev`）：Vite 监听 :5000（用户入口，HMR 热更新）+ FastAPI 改听 :5001（API 后端，由 `start.py` 设置 `QI_PORT=5001`）；Vite proxy 把 `/api`、`/static`、`/admin`、`/docs`、`/openapi.json` 转发到 :5001；自动检测 `frontend/node_modules` 不存在则 `npm install`（约 7 分钟，仅首次）
 > - 详见 [HANDOFF §5.9](#59-为什么开发模式让-vite-占5000-fastapi-改50012026-07-19-加) 决策 + [§6.16](#616-fastapi-代理转发-vite-内部路径含特殊字符失败2026-07-19-加) 踩坑
 
-**秘密后台**：`http://127.0.0.1:5000/admin/login`（默认入口；`/admin` 无尾斜杠当前会被 SPA fallback 判 404）
+**秘密后台**：`http://127.0.0.1:5000/admin/login`（默认入口；`/admin` 会 302 到 `/admin/`）
 - 首次启动会自动创建管理员 `admin`，密码**随机生成并写入 `logs/healing.log`**（看 `[ADMIN] password :` 一行）
 - 强烈建议在 `.env` 里设置 `QI_ADMIN_USERNAME` + `QI_ADMIN_PASSWORD` 固定一个强密码
 - 不在任何前台页面放链接，纯粹靠 URL 入口
@@ -231,7 +231,7 @@ webwrold/
 
 ## 4. 实现阶段（摘要）
 
-> 逐版本细节（v2.2.2 → v2.6.1）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
+> 逐版本细节（v2.2.2 → v2.6.2）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
 
 | 阶段 | 主要内容 | 代码落点 |
 |---|---|---|
@@ -246,6 +246,7 @@ webwrold/
 | v2.5.3（09-13） | 日记海岸改名 + 西洋曲谱并入六宫格 + 打卡可删除 + AI 模型切 `z-ai/glm-5.3-flash` | [music.py](../app/routers/music.py) / [mood.py](../app/routers/mood.py) / [ai_service.py](../app/services/ai_service.py) |
 | v2.6.0（10-18） | 删除 AI 树洞 + 静屿角落 + 身心调理推荐 + 八段锦打卡 + 好物橱窗 | [therapy_service.py](../app/services/therapy_service.py) / [therapy.py](../app/routers/therapy.py) / [CornerView.vue](../frontend/src/views/diary/CornerView.vue) |
 | v2.6.1（10-18） | 八段锦结果卡嵌入 B 站跟练视频 + CSP `frame-src` | [TherapyView.vue](../frontend/src/views/music/TherapyView.vue) / [app/main.py](../app/main.py) |
+| v2.6.2（10-25） | 全量 bug 修复：听曲露水 422、资料保存 session、`/admin` 404、私密日记留言、输入边界、N+1/启动 IO 优化 | [deps.py](../app/deps.py) / [diary.py](../app/routers/diary.py) / [MusicDetailView.vue](../frontend/src/views/music/MusicDetailView.vue) |
 
 **当前代码规模**：Python 约 3k 行；Vue/JS 约 3k 行；12 张表；约 70 个 API 端点（含后台 13 个）。
 
@@ -905,6 +906,22 @@ onBeforeUnmount(() => {
 
 **铁律**：Safari / iOS 兼容 3 大坑（`webglcontextlost` 上下文恢复 / `hasWebGL` 须区分 WebGL1+2 + 检测扩展 / emoji 须用 SVG 统一而非系统字体）**必须同时满足**。新建 3D 组件时直接复制 [HeroScene.vue](../frontend/src/components/HeroScene.vue) 的 `webglcontextlost` / `webglcontextrestored` 监听 + iOS 降级逻辑作为模板。
 
+### 6.25 两个 `get_db` 导致鉴权 user 与端点不在同一 session（2026-10-25 v2.6.2 加）
+
+**症状**：`PATCH /api/profile` 改昵称/头像一直 500，日志为 `InvalidRequestError: Instance '<User ...>' is not persistent within this Session`；数据库偶发被改了一半。
+
+**根因**：[app/deps.py](../app/deps.py) 定义了 `def get_db(): yield from _get_db()` 包装，而所有 routers 直接 `from app.database import get_db`。FastAPI 按「依赖 callable」缓存，两个函数不是同一个，于是 `get_current_user` 用一个 session、端点 `db` 用另一个 session；`user` 是 detach 的，`db.commit()/refresh(user)` 自然失败。
+
+**修复**（v2.6.2）：`deps.py` 直接 `from app.database import get_db`，删掉包装函数；所有 router 继续用同一个 `get_db`。**铁律**：全项目只允许一个 `get_db` 定义，不要在 deps 里再包一层；需要新依赖时传 `Depends(get_db)`。
+
+### 6.26 听曲进度单位 0–1 vs 0–100（2026-10-25 v2.6.2 加）
+
+**症状**：听满 90% 后露水从未到账，前端静默失败；`POST /api/music/listen-complete` 实际返回 422。
+
+**根因**：[MusicDetailView.vue](../frontend/src/views/music/MusicDetailView.vue) / [MusicWesternView.vue](../frontend/src/views/music/MusicWesternView.vue) 的 `progress` 是 0–1，但上报时 `Math.round(progress.value * 100)` 传了 90/100；后端 `ListenCompleteIn.progress` 要求 0–1。
+
+**修复**（v2.6.2）：统一传 `Math.min(1, progress.value)`；失败时把 `listenReported` 复位，允许下一次 `timeupdate` 重试。新增同类上报时先看 schema 的 `ge/le`，不要凭感觉传百分比。
+
 ---
 
 ## 7. 改动指南
@@ -1282,4 +1299,4 @@ Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yello
 ---
 
 > 最后更新：2026-10-18（文档结构整理：去重版本块、按代码修正事实、历史细节归入 [CHANGELOG.md](CHANGELOG.md)）。
-> 代码版本：v2.6.1（2026-10-18）。
+> 代码版本：v2.6.2（2026-10-25）。
