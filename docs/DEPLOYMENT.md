@@ -533,7 +533,7 @@ curl -I http://127.0.0.1:5000/static/audio/tracks/流水.mp3   # 200（已接入
 curl http://127.0.0.1:5000/api/music | head           # 22 首（16 classic + 6 western）
 curl http://127.0.0.1:5000/api/music?category=western | head   # v2.3 加：仅 6 首西方改编
 curl http://127.0.0.1:5000/api/garden/shop | head     # 28 件商品（含 cost_currency 字段）
-curl http://127.0.0.1:5000/api/therapy/catalog | head # v2.6.1：八段锦 + 好物目录
+curl http://127.0.0.1:5000/api/therapy/catalog | head # v2.6.2：八段锦 + 好物目录
 
 # 3b. v2.3 新路由（无需登录也能拿 200 / 302）
 curl -I http://127.0.0.1:5000/music                  # 200（琴音疗心顶级路由）

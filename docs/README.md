@@ -34,7 +34,7 @@
 
 1. **代码**是唯一事实来源；文档与代码冲突时，以代码为准并立即修文档。
 2. **CHANGELOG** 是历史事实；其他文档只保留「当前仍有效」的信息。
-3. 版本号以 [app/main.py](../app/main.py) `FastAPI(version=...)` 为准（当前 `2.5.3`）。
+3. 版本号以 [app/main.py](../app/main.py) `FastAPI(version=...)` 为准（当前 `2.6.2`）。
 
 ## 四、维护规则
 

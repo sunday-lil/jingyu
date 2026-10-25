@@ -767,7 +767,7 @@ text.value = res.text
 #### 第 5 步：测试降级（必做）
 **先不配 `QI_NVIDIA_API_KEY`**，确认端点返回 `available:false` + 友好提示；**再配 key** 跑一遍，确认 `available:true` + AI 文案。详见 [§3.14](#314-ai-端点降级测试方法)。
 
-### 2.8 加一条身心调理规则（v2.6.1）
+### 2.8 加一条身心调理规则（v2.6.2）
 
 1. 在 [app/services/therapy_service.py](../app/services/therapy_service.py) 的 `PROBLEM_RULES` 加一条：关键词、`yin`、两式 `moves`、`sachet`、`bracelet`、`food`。
 2. 若新增香囊/手串/食疗，分别加到 `SACHETS` / `BRACELETS` / `FOODS`，必须写 `price`、`purchase_url`、`available` 与过敏原/材质/成分。
