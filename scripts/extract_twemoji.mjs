@@ -18,7 +18,7 @@ const NEEDED = [
   'wrapped-gift', 'sparkles', 'musical-notes', 'deciduous-tree', 'evergreen-tree',
   'spiral-shell', 'clinking-glasses', 'bottle-with-popping-cork',
   'left-pointing-magnifying-glass', 'gear', 'door', 'memo', 'amphora',
-  'bust-in-silhouette', 'spiral-calendar', 'musical-score',
+  'bust-in-silhouette', 'spiral-calendar', 'musical-score', 'desert-island',
 ]
 
 function resolve(name, depth = 0) {

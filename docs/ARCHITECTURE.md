@@ -4,7 +4,7 @@
 
 > 🔒 **改了本文件涉及的代码，必须同步更新**：[HANDOFF §12](HANDOFF.md) / [AGENTS.md](../AGENTS.md) / [DEVELOPMENT §1.8](DEVELOPMENT.md) 列出的对应文档。改代码不改文档 = 改了一半。
 
-> **当前版本：v2.6.2（2026-10-25）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
+> **当前版本：v2.6.3（2026-11-08）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
 
 ---
 
@@ -224,6 +224,8 @@ const FlowerField = defineAsyncComponent(() =>
 | [frontend/src/components/SceneHint.vue](../frontend/src/components/SceneHint.vue) | **3D 场景交互指引（v2.2 加）** | 被 HeroScene / FlowerField 引用 | `pointer-events: none` 不阻挡 3D 交互；3 秒后自动淡出 |
 | [frontend/src/components/SceneControls.vue](../frontend/src/components/SceneControls.vue) | **3D 场景视图控制（v2.2 加）** | 被 HeroScene / FlowerField 引用 | emit 事件由父组件处理；玻璃拟态样式 + 8px 圆角 |
 | [frontend/src/components/EmojiIcon.vue](../frontend/src/components/EmojiIcon.vue) | **跨浏览器 emoji 组件（v2.3.3 加）** | 被 AppLayout.vue / ProfileView.vue 引用（品牌 / 导航 / 通知 / 资源 / 统计 / 快捷入口 / 花朵阶段） | **Iconify** + `@iconify-json/twemoji` 离线 **SVG emoji**，确保 **跨浏览器一致**（解决 Safari Apple Color Emoji vs 系统 emoji 字体差异）；无降级（SVG 本身就是跨浏览器方案） |
+
+> **首页 Hero（v2.6.3）**：HeroScene 作为整块 hero 的绝对定位背景（HomeView 用 `:deep(.hero-scene)` 覆盖组件自身的 `position:relative`）；文案层 `.hero__content` 设 `pointer-events:none`，仅品牌/理念卡接收指针，空白区可拖拽/点击 3D；移动端隐藏 SceneControls/SceneHint 与滚动提示，避免压住理念卡。详见 [HANDOFF §6.27](HANDOFF.md)。
 
 **核心架构决策**：
 
@@ -1081,7 +1083,7 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 
 ---
 
-## 6.7 身心调理架构（v2.6.2）
+## 6.7 身心调理架构（v2.6.3）
 
 > 设计原则：**规则可解释、结果可测试、不做医疗诊断**。问题 → 五类建议的映射写在 [app/services/therapy_service.py](../app/services/therapy_service.py)，不依赖 AI。
 

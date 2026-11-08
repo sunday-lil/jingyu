@@ -3,7 +3,7 @@
 > 写给接手这个项目的下一个 AI（Cursor / Copilot / Devin / 任何 Agent）。
 > 本文 = 项目元信息 + 关键决策 + 踩坑清单；完整文档地图见 [README.md](README.md)。
 
-> **当前版本：v2.6.2（2026-10-25）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
+> **当前版本：v2.6.3（2026-11-08）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
 
 ---
 
@@ -12,8 +12,8 @@
 **项目名**：静屿（代号，可改）
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 隐私边界清晰 / 轻运营
-**代码体量**：约 2 500 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.6.2（2026-10-25）——移除 AI 树洞、新增静屿角落、身心调理推荐、八段锦跟练打卡 + B 站跟练视频、好物橱窗；本轮完成全量 bug 修复与性能优化（听曲露水、资料保存、私密日记留言、输入边界、N+1、启动 IO）。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
+**代码体量**：约 3 000 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
+**当前阶段**：v2.6.3（2026-11-08）——移除 AI 树洞、新增静屿角落、身心调理推荐、八段锦跟练打卡 + B 站跟练视频、好物橱窗；v2.6.2 完成全量后端 bug/性能修复，v2.6.3 完成首页 Hero 响应式修复与 Playwright 浏览器全量回归。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
 
 ---
 
@@ -231,7 +231,7 @@ webwrold/
 
 ## 4. 实现阶段（摘要）
 
-> 逐版本细节（v2.2.2 → v2.6.2）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
+> 逐版本细节（v2.2.2 → v2.6.3）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
 
 | 阶段 | 主要内容 | 代码落点 |
 |---|---|---|
@@ -247,6 +247,7 @@ webwrold/
 | v2.6.0（10-18） | 删除 AI 树洞 + 静屿角落 + 身心调理推荐 + 八段锦打卡 + 好物橱窗 | [therapy_service.py](../app/services/therapy_service.py) / [therapy.py](../app/routers/therapy.py) / [CornerView.vue](../frontend/src/views/diary/CornerView.vue) |
 | v2.6.1（10-18） | 八段锦结果卡嵌入 B 站跟练视频 + CSP `frame-src` | [TherapyView.vue](../frontend/src/views/music/TherapyView.vue) / [app/main.py](../app/main.py) |
 | v2.6.2（10-25） | 全量 bug 修复：听曲露水 422、资料保存 session、`/admin` 404、私密日记留言、输入边界、N+1/启动 IO 优化 | [deps.py](../app/deps.py) / [diary.py](../app/routers/diary.py) / [MusicDetailView.vue](../frontend/src/views/music/MusicDetailView.vue) |
+| v2.6.3（11-08） | 首页 Hero 三列/裁切修复 + 3D 指针穿透 + 平板短导航 + `🏝️` 图标 + SEO 去树洞 | [HomeView.vue](../frontend/src/views/HomeView.vue) / [AppLayout.vue](../frontend/src/components/AppLayout.vue) / [index.html](../frontend/index.html) |
 
 **当前代码规模**：Python 约 3k 行；Vue/JS 约 3k 行；12 张表；约 70 个 API 端点（含后台 13 个）。
 
@@ -922,6 +923,14 @@ onBeforeUnmount(() => {
 
 **修复**（v2.6.2）：统一传 `Math.min(1, progress.value)`；失败时把 `listenReported` 复位，允许下一次 `timeupdate` 重试。新增同类上报时先看 schema 的 `ge/le`，不要凭感觉传百分比。
 
+### 6.27 HeroScene 子组件 `position: relative` 覆盖父级绝对定位（2026-11-08 v2.6.3 加）
+
+**症状**：首页 Hero 在桌面变成「3D 场景 / 静屿品牌 / 理念卡」三列，移动端文案被挤到右侧并裁切；3D 拖动提示可见但点到的是文字容器。
+
+**根因**：[HeroScene.vue](../frontend/src/components/HeroScene.vue) 自身 scoped 的 `.hero-scene { position: relative; width: 100% }` 与 HomeView 的 `.hero__scene { position:absolute; inset:0 }` 同优先级，组件样式后注入时覆盖父级，HeroScene 变成 flex 子项；`.hero__content` 全屏覆盖又拦住了 canvas 指针。
+
+**修复**（v2.6.3）：HomeView 用 `.hero :deep(.hero-scene)` 提高优先级并 `height:100% !important` 覆盖内联高度；`.hero__content` 设 `pointer-events:none`，只让品牌/理念卡接收指针；移动端隐藏 3D 控制条与滚动提示。**铁律**：子组件根节点若自带定位样式，父级想改布局必须用 `:deep()` 或明确的更高优先级，不能只写同名 class。
+
 ---
 
 ## 7. 改动指南
@@ -1299,4 +1308,4 @@ Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yello
 ---
 
 > 最后更新：2026-10-18（文档结构整理：去重版本块、按代码修正事实、历史细节归入 [CHANGELOG.md](CHANGELOG.md)）。
-> 代码版本：v2.6.2（2026-10-25）。
+> 代码版本：v2.6.3（2026-11-08）。

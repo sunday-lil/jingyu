@@ -37,14 +37,14 @@ onBeforeUnmount(() => {
 // v2.4.2：静屿 🏝️ → 🌊；花坊 → 落叶花坊
 // v2.5.3：漂流日记 → 日记海岸；情绪日历 🌙 → 🗓
 const navItems = [
-  { name: 'home', label: '静屿', path: '/', icon: '🌊' },
-  { name: 'music-list', label: '琴音疗心', path: '/music', icon: '🎵' },
-  { name: 'diary-list', label: '日记海岸', path: '/diary', icon: '📖' },
-  { name: 'calendar', label: '情绪日历', path: '/calendar', icon: '🗓' },
-  { name: 'corner', label: '静屿角落', path: '/corner', icon: '🏝️' },
-  { name: 'shop', label: '落叶花坊', path: '/shop', icon: '🍂' },
-  { name: 'garden', label: '屿上花田', path: '/garden', icon: '🌸' },
-  { name: 'profile', label: '我的', path: '/profile', icon: '👤' },
+  { name: 'home', label: '静屿', short: '静屿', path: '/', icon: '🌊' },
+  { name: 'music-list', label: '琴音疗心', short: '琴音', path: '/music', icon: '🎵' },
+  { name: 'diary-list', label: '日记海岸', short: '日记', path: '/diary', icon: '📖' },
+  { name: 'calendar', label: '情绪日历', short: '日历', path: '/calendar', icon: '🗓' },
+  { name: 'corner', label: '静屿角落', short: '角落', path: '/corner', icon: '🏝️' },
+  { name: 'shop', label: '落叶花坊', short: '花坊', path: '/shop', icon: '🍂' },
+  { name: 'garden', label: '屿上花田', short: '花田', path: '/garden', icon: '🌸' },
+  { name: 'profile', label: '我的', short: '我的', path: '/profile', icon: '👤' },
 ]
 
 // 当前激活的导航项
@@ -173,7 +173,7 @@ onBeforeUnmount(() => {
             :title="item.label"
           >
             <EmojiIcon :emoji="item.icon" class="nav-link__icon" />
-            <span class="nav-link__label--compact">{{ item.label }}</span>
+            <span class="nav-link__label--compact">{{ item.short || item.label }}</span>
           </router-link>
         </nav>
 

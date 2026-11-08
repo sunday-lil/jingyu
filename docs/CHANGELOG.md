@@ -1,7 +1,11 @@
 # 静屿 · 更新日志（CHANGELOG）
 
-> 全部版本变更记录（v2.2.2 → v2.6.2），按版本倒序排列。
+> 全部版本变更记录（v2.2.2 → v2.6.3），按版本倒序排列。
 > 各版本部署须知见 [DEPLOYMENT.md](DEPLOYMENT.md)；决策背景与踩坑见 [HANDOFF.md](HANDOFF.md)。
+
+---
+
+> 🖥️ **2026-11-08 v2.6.3 首页 Hero 响应式修复 + 浏览器全量回归**：① **修复首页三列/裁切**：`HeroScene.vue` 自身 `.hero-scene { position: relative }` 覆盖了父级 `.hero__scene { position: absolute }`，导致 3D 场景变成 flex 子项——桌面变成「场景/品牌/理念」三列，移动端文案被挤到右侧并裁切。父级改用 `.hero :deep(.hero-scene)` 强制绝对定位背景，桌面改为品牌居左、理念卡居右、浮岛居中，移动端恢复上下堆叠。② **3D 交互穿透**：`.hero__content` 设 `pointer-events:none`，只有 `.hero__brand/.hero__intro` 接收指针，空白区可拖拽/点击浮岛；移动端隐藏 3D 控制条与滚动提示，避免压住理念卡。③ **平板导航**：7 项在 769–1024px 改用短标签（琴音/日记/日历/角落/花坊/花田/我的），并补上缺失的 `🏝️ → twemoji:desert-island` 映射（此前 fallback 系统 emoji 高 30.6px，把「角落」挤到第二行）。④ **SEO**：[frontend/index.html](../frontend/index.html) 的 description/keywords/OG/Twitter/JSON-LD 去掉已删除的「AI 树洞」，改为身心调理 / 静屿角落 / 花坊花田。版本号 2.6.3。**自测**：Playwright + Edge headless 覆盖 1440×900 / 834×1112 / 390×844；首页、音乐、西洋、身心调理、日记、角落、日历、花田、花坊、个人主页、通知、登录、注册、后台入口、404 全部 200；无 console error、无横向溢出；移动端 tabbar + 更多抽屉 + 登录后写日记流程通过 ✅。
 
 ---
 

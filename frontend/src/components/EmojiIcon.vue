@@ -81,6 +81,7 @@ const EMOJI_MAP = {
   '🏺': 'twemoji:amphora',
   '👤': 'twemoji:bust-in-silhouette',
   '🗓': 'twemoji:spiral-calendar',
+  '🏝️': 'twemoji:desert-island',
 }
 
 const iconName = computed(() => EMOJI_MAP[props.emoji] || null)

@@ -240,15 +240,31 @@ onMounted(() => {
   height: 100%;
   z-index: 1;
 }
+/* HeroScene 组件自身是 position: relative（可独立使用），
+   在首页必须作为整块 hero 的绝对定位背景，否则会变成 flex 子项把文案挤成三列。
+   用 :deep 提高优先级，覆盖子组件 scoped 的 .hero-scene 规则与内联高度。 */
+.hero :deep(.hero-scene) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100% !important;
+  z-index: 1;
+}
 .hero__content {
   position: relative;
   z-index: 2;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 56px;
   width: 100%;
-  padding: 60px 48px;
+  padding: 60px 96px;
+  /* 让空白区域可以拖动/点击背后的 3D 浮岛，只有文案卡本身拦截指针 */
+  pointer-events: none;
+}
+.hero__brand,
+.hero__intro {
+  pointer-events: auto;
 }
 /* 左侧品牌（🌊 + slogan + 大字），保留原文字投影保证雾海上可读 */
 .hero__brand {
@@ -599,6 +615,7 @@ onMounted(() => {
   }
   .hero__content {
     flex-direction: column;
+    justify-content: center;
     gap: 22px;
     padding: 32px 16px;
   }
@@ -628,8 +645,12 @@ onMounted(() => {
     margin: 0 0 12px;
   }
   .hero__scroll-hint {
-    bottom: 12px;
-    font-size: 11px;
+    display: none;
+  }
+  /* 手机上 3D 控制条/提示会压住理念卡；触屏本身可拖拽，直接隐藏 */
+  .hero :deep(.scene-controls),
+  .hero :deep(.scene-hint) {
+    display: none;
   }
 
   .section-title {
