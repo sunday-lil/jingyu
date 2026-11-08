@@ -36,7 +36,7 @@ def create_diary(
     """写入一条日记（明文）。
 
     - is_public=True：放入漂流瓶，公开可见，允许评论。
-    - is_public=False：留在静屿角落，仅自己可见。
+    - is_public=False：埋进“时光胶囊”，仅自己可见。
     """
     diary = Diary(
         user_id=user.id,

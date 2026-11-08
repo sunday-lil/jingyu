@@ -4,7 +4,7 @@
 
 > 🔒 **改了本文件涉及的代码，必须同步更新**：[HANDOFF §12](HANDOFF.md) / [AGENTS.md](../AGENTS.md) / [DEVELOPMENT §1.8](DEVELOPMENT.md) 列出的对应文档。改代码不改文档 = 改了一半。
 
-> **当前版本：v2.6.3（2026-11-08）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
+> **当前版本：v2.6.4（2026-11-08）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
 
 ---
 
@@ -102,26 +102,26 @@
 |---|---|---|---|
 | 框架 | Vue 3 `<script setup>` | [frontend/package.json](../frontend/package.json) | ^3.4，组合式 API |
 | 构建 | Vite 5 | [frontend/vite.config.js](../frontend/vite.config.js) | dev HMR + build Rollup；dev 监听 :5000（用户入口）；dev proxy /api、/static、/admin、/docs、/openapi.json → FastAPI :5001（详见 [§1.2](#12-开发生产模式切换2026-07-19-v20-加)） |
-| 路由 | Vue Router 4 | [frontend/src/router/index.js](../frontend/src/router/index.js) | 16 条业务路由 + 404，`meta.requiresAuth` 守卫 |
+| 路由 | Vue Router 4 | [frontend/src/router/index.js](../frontend/src/router/index.js) | 17 条业务路由 + 旧书签重定向 + 404，`meta.requiresAuth` 守卫 |
 | 状态 | Pinia 2 | [frontend/src/stores/user.js](../frontend/src/stores/user.js) | user store；cookie session 模式，**不存 token**，只缓存 user 对象到 localStorage |
 | 样式 | Tailwind CSS 3.4 | [frontend/tailwind.config.js](../frontend/tailwind.config.js) | 治愈系色彩 token（mist/ink/五音色/accent）+ 动画（breathe/float/fade-up） |
 | 动效 | GSAP 3.12 + @vueuse/motion 2.2 | 各 .vue 视图 | 入场 stagger + 呼吸动效；`prefers-reduced-motion` 自动降级 |
 | 3D | Three.js 0.168 | [frontend/src/components/FlowerField.vue](../frontend/src/components/FlowerField.vue) | 治愈系 3D 花田场景（60 朵花 × 5 瓣 = 300 InstancedMesh），异步加载（详见 [§1.1.5](#115-3d-花田组件-flowerfieldvue2026-07-19-v201-加)） |
 | HTTP | axios 1.7 | [frontend/src/api/index.js](../frontend/src/api/index.js) | `baseURL=/api`，`withCredentials=true`，401 自动跳 `/login` |
 
-### 1.1.2 16 条业务路由 + 404（[frontend/src/router/index.js](../frontend/src/router/index.js)）
+### 1.1.2 17 条业务路由 + 旧书签重定向 + 404（[frontend/src/router/index.js](../frontend/src/router/index.js)）
 
 | 路径 | 视图 | requiresAuth | 说明 |
 |---|---|---|---|
 | `/` | HomeView.vue | 否 | 首页：Hero + 模块卡 + 岛上指南 |
-| `/login` / `/register` | auth/LoginView.vue / RegisterView.vue | 否 | 登录 / 注册 |
+| `/login` / `/register` / `/forgot-password` | auth/LoginView.vue / RegisterView.vue / ForgotPasswordView.vue | 否 | 登录 / 注册 / 恢复码重置密码 |
 | `/music` | music/MusicListView.vue | 否 | 五音 + 西洋曲谱六宫格 + AI 选音 |
 | `/music/western` | music/MusicWesternView.vue | 否 | 西洋曲谱独立列表（必须排在 `:yin` 前） |
 | `/music/therapy` | music/TherapyView.vue | 否 | 身心调理：问题 → 曲/八段锦/香囊/手串/食疗 |
 | `/music/:yin` | music/MusicDetailView.vue | 否 | 单音曲目 + 播放器 + 90% 发放露水 |
-| `/diary` / `/diary/write` / `/diary/pick` | diary/* | 是 | 时间线 / 写日记（明文）/ 拾瓶 |
+| `/diary` / `/diary/write` / `/diary/pick` / `/diary/capsule` | diary/* | 是 | 时间线 / 写日记 / 拾瓶 / 时光胶囊 |
 | `/calendar` | mood/MoodCalendarView.vue | 是 | 日历 + 罗素情绪环 + 今日打卡删除 |
-| `/corner` | diary/CornerView.vue | 是 | 静屿角落：不公开的私密碎碎念 |
+| `/corner` | 重定向 → `/diary/capsule` | 否 | 旧书签兼容，不再是独立板块 |
 | `/garden` / `/shop` | garden/* | 是 | 花田 / 落叶花坊 |
 | `/profile` | profile/ProfileView.vue | 是 | 个人主页 / 头像昵称 |
 | `/notifications` | notification/NotificationsView.vue | 是 | 通知中心 |
@@ -281,13 +281,13 @@ const FlowerField = defineAsyncComponent(() =>
 | 琴音疗心 | `/music` | [MusicListView.vue](../frontend/src/views/music/MusicListView.vue) | `/api/music/*` |
 | 日记海岸 | `/diary` | [DiaryListView.vue](../frontend/src/views/diary/DiaryListView.vue) | `/api/diary/*` |
 | 情绪日历 | `/calendar` | [MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue) | `/api/mood/*` |
-| 静屿角落 | `/corner` | [CornerView.vue](../frontend/src/views/diary/CornerView.vue) | `/api/diary/corner` |
+| 身心调理 | `/music/therapy` | [TherapyView.vue](../frontend/src/views/music/TherapyView.vue) | `/api/therapy/*` |
 | 落叶花坊 | `/shop` | [ShopView.vue](../frontend/src/views/garden/ShopView.vue) | `/api/garden/shop` + `/api/energy/exchange` |
 | 屿上花田 | `/garden` | [GardenView.vue](../frontend/src/views/garden/GardenView.vue)（含花田生长网格） | `/api/garden/*` + `/api/garden/flowers/*` |
 
-辅助入口：拾瓶 `/diary/pick`（日记海岸子路由）/ 我的 `/profile`（个人主页，`requiresAuth`）；通知中心 `/notifications`（独立页，`requiresAuth`）。
+辅助入口：拾瓶 `/diary/pick`、时光胶囊 `/diary/capsule`（日记海岸子路由）/ 我的 `/profile`（个人主页，`requiresAuth`）；通知中心 `/notifications`（独立页，`requiresAuth`）。
 
-[AppLayout.vue](../frontend/src/components/AppLayout.vue) 顶部品牌图标为 🏝️ 岛屿；桌面/平板/移动三档导航同步四字短标签；移动端 tabbar 固定核心项 + 中央「更多」抽屉。
+[AppLayout.vue](../frontend/src/components/AppLayout.vue) 顶部品牌图标为 🌊 海浪；桌面/平板/移动三档导航同步四字短标签；移动端 tabbar 固定核心项 + 中央「更多」抽屉。
 
 ### 1.1.7.2 双资源系统（露水 + 落叶）
 
@@ -406,7 +406,7 @@ category: Mapped[str] = mapped_column(String(20), default="classic", nullable=Fa
 
 **前端**：[MusicListView.vue](../frontend/src/views/music/MusicListView.vue) 把西洋曲作为第六张卡并入六宫格；[MusicWesternView.vue](../frontend/src/views/music/MusicWesternView.vue) 为独立列表页。路由 `/music/western` **必须放在 `/music/:yin` 前面**避免动态段捕获。
 
-### 1.1.7.7 日记与静屿角落（明文 + is_public）
+### 1.1.7.7 日记与时光胶囊（明文 + is_public）
 
 **模型**（[app/models/diary.py](../app/models/diary.py)）：
 ```python
@@ -419,21 +419,22 @@ send_to_ai_hole: Mapped[bool] = mapped_column(Boolean, default=False, nullable=F
 
 **发布选项**（前端 radio）：
 - 放入漂流瓶：`is_public=True`，公开可见 + 允许评论。
-- 留在静屿角落：`is_public=False`，仅自己可见，集中显示在 `/corner`。
+- 埋进时光胶囊：`is_public=False`，仅自己可见，集中显示在 `/diary/capsule`（树下的胶囊动画）。
 
-**前端**：[DiaryWriteView.vue](../frontend/src/views/diary/DiaryWriteView.vue) 两个选项；[CornerView.vue](../frontend/src/views/diary/CornerView.vue) 读取 `GET /api/diary/corner`，可删除。
+**前端**：[DiaryWriteView.vue](../frontend/src/views/diary/DiaryWriteView.vue) 两个选项；[CapsuleView.vue](../frontend/src/views/diary/CapsuleView.vue) 读取 `GET /api/diary/capsule`，用树下插画 + GSAP 埋胶囊动画展示，可删除。
 
 ### 1.1.7.8 情绪日历对齐修复（emoji 字符统一 + 字段名对齐）
 
 - `MoodCheckin` 用 `mood_emoji` + `check_date`；`MOOD_INFO` 7 种心情：ecstatic 🤩 / happy 😊 / calm 😌 / tired 😪 / anxious 😰 / angry 😠 / sad 😢。
 - 一天可多条；今日记录可删除；30 天趋势柱状图在 v2.5.3 移除，罗素情绪环保留。
 
-### 1.1.7.9 静屿角落（v2.6.0 取代 AI 树洞）
+### 1.1.7.9 时光胶囊（v2.6.4 取代静屿角落）
 
-- **背景**：v2.6.0 删除 AI 树洞对话、会话历史与「树洞倾心」徽章；原「不放入漂流瓶」的私密日记需要一个集中入口。
-- **实现**：`is_public=False` 的日记统一视为「静屿角落」碎碎念，`GET /api/diary/corner` 按 `user_id + is_public=False` 返回；前端 `/corner` 页面可写、可看、可删。
+- **背景**：v2.6.0 删除 AI 树洞后曾把私密日记放在 `/corner`；v2.6.4 按用户反馈删除独立板块，全部收进日记海岸内的「时光胶囊」。
+- **实现**：`is_public=False` 的日记统一视为胶囊，`GET /api/diary/capsule` 按 `user_id + is_public=False` 返回；`GET /api/diary/corner` 保留为 deprecated 别名；前端 `/diary/capsule` 可写、可看、可删。
+- **视觉**：树下插画 + `capsule-orb` 漂浮 + 写完跳转 `?buried=1` 时 GSAP 播「胶囊落进树根」动画；移动端隐藏多余装饰。
 - **为什么复用 `diaries` 而不是新表**：内容结构完全一致，复用可避免两套写入/删除/权限逻辑；`is_public` 已经是「公开/私密」的天然分界。
-- **旧数据**：原 `send_to_ai_hole=True` 的日记自动落入角落（因为它们本来就是 `is_public=False`）；旧 AI 对话文件已删除。
+- **旧数据**：原 `/corner` 的 `is_public=False` 日记自动出现在胶囊页；`/corner` 仅做 302 兼容。
 
 ### 1.1.7.10 数据库迁移（`_migrate_legacy_columns()` 一次性自动加列）
 
@@ -747,6 +748,7 @@ routers/  →  services/  →  models/  →  database
 2. 前端不保存 token；只把 user 对象缓存到 localStorage。
 3. 日记是明文存储，读接口按 `user_id` 做属主校验，不存在「服务端解密」步骤。
 4. 详细依赖：`get_current_user` / `get_current_user_optional` 见 [app/deps.py](../app/deps.py)；会话签名见 [app/security.py](../app/security.py)。
+5. **忘记密码**：注册/老用户首次登录时一次性返回 `recovery_code`（库中只存 bcrypt 哈希）；`POST /api/auth/reset-password` 用「昵称 + 恢复码 + 新密码」重置，成功后恢复码置空，下次登录补发。无恢复码时由管理员在 `/admin` 重置。
 
 ---
 
@@ -774,7 +776,7 @@ shop_items 1:N garden_items
 | `users.is_admin` / `avatar` | bool / str | 后台管理员 / 头像（emoji 或上传图片 URL） |
 | `diaries.content` | text | **明文日记**（v2.3 起） |
 | `diaries.content_encrypted` | str? | **遗留字段**，仅兼容老库，新数据不写 |
-| `diaries.is_public` | bool | True=漂流瓶；False=静屿角落（仅自己可见） |
+| `diaries.is_public` | bool | True=漂流瓶；False=时光胶囊（仅自己可见） |
 | `mood_checkins.check_date` | date | 一天可多条（v2.4 移除唯一约束） |
 | `energy_records.source` | str | `listen_music` / `write_diary` / `checkin` / `streak_7` / `encourage` / `baduanjin` / `exchange` / `admin_adjust` |
 | `garden_items.item_id` | int | FK → `shop_items.id` |
@@ -972,7 +974,7 @@ def clear_pycaches(...):
 | 2 | 情绪日历 AI 治愈语 | `POST /api/ai/healing` | [MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue) | 今日心情卡片下方，**不落库** |
 | 3 | 音乐 AI 心情推荐 | `POST /api/ai/recommend-music` | [MusicListView.vue](../frontend/src/views/music/MusicListView.vue) | 五音之一 + 理由，**不落库** |
 
-> AI 树洞对话、会话历史与「树洞倾心」徽章已在 v2.6.0 删除；私密碎碎念改存「静屿角落」。
+> AI 树洞对话、会话历史与「树洞倾心」徽章已在 v2.6.0 删除；私密碎碎念改存「时光胶囊」（埋在树下）。
 
 ### 6.6.4 降级策略（核心）
 
@@ -1083,7 +1085,7 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 
 ---
 
-## 6.7 身心调理架构（v2.6.3）
+## 6.7 身心调理架构（v2.6.4）
 
 > 设计原则：**规则可解释、结果可测试、不做医疗诊断**。问题 → 五类建议的映射写在 [app/services/therapy_service.py](../app/services/therapy_service.py)，不依赖 AI。
 

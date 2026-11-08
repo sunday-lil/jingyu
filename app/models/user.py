@@ -30,6 +30,8 @@ class User(Base):
     leaves: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     avatar: Mapped[str] = mapped_column(String(255), default="🙂", nullable=False)
+    # 忘记密码用的一次性恢复码哈希（v2.6.4）；不在公开字段里返回
+    recovery_code_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.current_timestamp(), nullable=False
     )

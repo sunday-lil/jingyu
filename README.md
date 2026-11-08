@@ -6,18 +6,18 @@
 [![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Status](https://img.shields.io/badge/status-v2.6.3-success)]()
+[![Status](https://img.shields.io/badge/status-v2.6.4-success)]()
 
 **English** — Jingyu (静屿, "Quiet Isle") is a non-commercial healing web app: guqin five-tone music, a body-mind therapy recommender (Baduanjin / sachet / bracelet / food), drifting diary bottles, a private island corner, a Russell-circumplex mood calendar, and a garden that grows with your daily check-ins. Built with FastAPI + Vue 3 + Three.js. Self-host in two commands.
 
-**每一种情绪，都值得温柔安放。** 静屿是一座只属于你的心灵港湾：古琴五音疗愈、身心调理、日记海岸、静屿角落、情绪日历，还有一座随你心情慢慢生长的花田。无广告、无内购、无算法推荐。
+**每一种情绪，都值得温柔安放。** 静屿是一座只属于你的心灵港湾：古琴五音疗愈、身心调理、日记海岸、时光胶囊、情绪日历，还有一座随你心情慢慢生长的花田。无广告、无内购、无算法推荐。
 
 > ⚠️ **隐私说明（重要）**：日记自 v2.3 起为**明文存储**（`diaries.content`），后台 API 不返回正文，但数据库本身没有加密。旧版 README 的「端到端加密」描述已过时；如你需要强隐私，请先阅读 [ARCHITECTURE §7.3](docs/ARCHITECTURE.md)。
 
 ## 你可能需要它的 3 个瞬间
 
 - 🌙 **深夜睡不着** —— 打开「琴音疗心」，听一曲《流水》，让古琴的余音把呼吸带慢
-- 🍾 **有句话不想告诉任何人** —— 写进日记海岸，让它漂向远方；或者收进静屿角落，只留给自己
+- 🍾 **有句话不想告诉任何人** —— 写进日记海岸，让它漂向远方；或者埋进树下的时光胶囊，只留给自己
 - 📅 **说不清这个月过得怎么样** —— 情绪日历把你每天随手一记的心情，画成一张看得懂的图
 
 ## 一览
@@ -30,7 +30,7 @@
 |:---:|:---:|
 | ![diary](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_03_diary.png) | ![calendar](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_04_calendar.png) |
 
-| 静屿角落 · 私密碎碎念 | 屿上花田 · 情绪养成 |
+| 时光胶囊 · 树下私语 | 屿上花田 · 情绪养成 |
 |:---:|:---:|
 | ![corner](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_03_diary.png) | ![garden](https://raw.githubusercontent.com/sunday-lil/jingyu/main/static/img/promo/jingyu_06_garden.png) |
 
@@ -50,13 +50,13 @@ python start.py    # 浏览器打开 http://127.0.0.1:5000
 # 以下为开发者参考，普通用户可跳过
 
 > 🤖 **接手项目先读**：[AGENTS.md](AGENTS.md)（工作规则）→ [docs/HANDOFF.md](docs/HANDOFF.md)（交接）→ [docs/README.md](docs/README.md)（文档地图）。
-> 📜 **版本更新历史**：[docs/CHANGELOG.md](docs/CHANGELOG.md)（v2.2.2 → v2.6.3）。
+> 📜 **版本更新历史**：[docs/CHANGELOG.md](docs/CHANGELOG.md)（v2.2.2 → v2.6.4）。
 
 ## 0. 一句话速览
 
-**FastAPI（纯 API 后端）+ Vue 3 SPA + SQLite** 的中文治愈系 Web 应用。六大模块：琴音疗心（含身心调理）、日记海岸、静屿角落、情绪日历、落叶花坊、屿上花田，另有个人主页 / 通知中心 / 秘密后台。前端 Vue 3 `<script setup>` + Vite 5 + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios；后端约 3 000 行 Python。无商业元素、无广告、无内购。
+**FastAPI（纯 API 后端）+ Vue 3 SPA + SQLite** 的中文治愈系 Web 应用。七大去处：琴音疗心、身心调理、日记海岸（含时光胶囊）、情绪日历、落叶花坊、屿上花田、我的，另有通知中心 / 秘密后台。前端 Vue 3 `<script setup>` + Vite 5 + Vue Router 4 + Pinia + Tailwind CSS + GSAP + @vueuse/motion + Three.js + axios；后端约 3 000 行 Python。无商业元素、无广告、无内购。
 
-**当前规模**：22 首曲目（16 首真实 + 6 首静音占位）、28 件商店物品、12 张表、16 条业务路由 + 404、17 个 Vue 视图。
+**当前规模**：22 首曲目（16 首真实 + 6 首静音占位）、28 件商店物品、12 张表、17 条业务路由 + 旧书签重定向 + 404、18 个 Vue 视图。
 
 **AI（可选）**：NVIDIA NIM API（OpenAI 兼容），当前模型 `z-ai/glm-5.3-flash`，3 个场景——漂流瓶鼓励语、情绪日历治愈语、音乐推荐。未配置 `QI_NVIDIA_API_KEY` 时这些端点返回 200 + `available:false` + 友好提示，业务不中断。AI 输出不写数据库。
 
@@ -147,7 +147,7 @@ webwrold/
 │       ├── data/islandGuide.js
 │       ├── components/           # AppLayout + 4 个视觉组件 + SceneHint/SceneControls/EmojiIcon
 │       ├── utils/                # visual.js / three-helpers.js
-│       └── views/                # 17 个视图（home/auth/music/diary/mood/garden/profile/notification）
+│       └── views/                # 18 个视图（home/auth/music/diary/mood/garden/profile/notification）
 ├── templates/admin/              # 后台 Jinja2 SSR（仅 /admin/*）
 ├── static/
 │   ├── dist/                     # 前端构建产物（git 忽略）
@@ -176,7 +176,8 @@ webwrold/
 
 - **密码哈希**：`bcrypt` 直接使用（passlib 与 bcrypt 4.x 不兼容），密码超 72 字节自动截断。
 - **会话**：`itsdangerous.URLSafeTimedSerializer` 签名 `qi_session`，HttpOnly + SameSite=Lax，30 天有效；不是 JWT，前端不存 token。
-- **登录**：用 `nickname`（不是 username），登录/注册直接返回 user 对象。
+- **登录**：用 `nickname`（不是 username），登录/注册直接返回 user 对象；注册/老用户首次登录会一次性返回 `recovery_code`。
+- **忘记密码**：登录页 → `/forgot-password`，用「昵称 + 恢复码 + 新密码」重置。恢复码只在注册或老用户首次登录时显示一次，数据库只存 bcrypt 哈希；重置成功后旧码作废，下次登录补发新码。没有恢复码时由岛主在 `/admin` 用户详情重置。
 - **日记隐私**：v2.3 起 `diaries.content` 为明文；`content_encrypted` / `encryption_salt` 仅兼容老库。后台 API 只返回统计、不返回正文，但数据库无加密。
 
 ### 3.3 数据表（12 张）
@@ -184,7 +185,7 @@ webwrold/
 | 表 | 关键字段 | 说明 |
 |---|---|---|
 | `users` | id, nickname, password_hash, encryption_salt（遗留）, total_energy（露水）, leaves（落叶）, is_admin, avatar | 用户 |
-| `diaries` | id, user_id, content（明文）, content_encrypted（遗留）, mood_type, is_public | 日记 / 漂流瓶 / 静屿角落（is_public=False） |
+| `diaries` | id, user_id, content（明文）, content_encrypted（遗留）, mood_type, is_public | 日记 / 漂流瓶 / 时光胶囊（is_public=False） |
 | `mood_checkins` | id, user_id, check_date, mood_emoji, note | 心情打卡（一天可多条） |
 | `musics` | id, title, audio_url, cover_image, yin_type, category, duration, tags | 曲目 |
 | `energy_records` | id, user_id, amount, source, note, music_id, created_at | 能量流水 |
@@ -217,7 +218,7 @@ webwrold/
 ### 3.5 前端架构（Vue 3 SPA）
 
 - **入口**：[frontend/src/main.js](frontend/src/main.js)；根组件 [App.vue](frontend/src/App.vue) = `AppLayout` + `<router-view>` + transition。
-- **路由**：[frontend/src/router/index.js](frontend/src/router/index.js) 16 条业务路由 + 404；`meta.requiresAuth` 守卫。
+- **路由**：[frontend/src/router/index.js](frontend/src/router/index.js) 17 条业务路由 + 旧书签重定向 + 404；`meta.requiresAuth` 守卫。
 - **API 客户端**：[frontend/src/api/index.js](frontend/src/api/index.js) axios，`baseURL=/api` + `withCredentials=true` + 401 自动跳登录；**拦截器已解包 `response.data`**，视图里不要再取 `res.data`。
 - **状态**：[frontend/src/stores/user.js](frontend/src/stores/user.js) 只缓存 user 对象到 localStorage，不存 token。
 - **布局**：[AppLayout.vue](frontend/src/components/AppLayout.vue) 桌面顶部导航 / 平板紧凑 / 移动端 topbar + tabbar + 「更多」抽屉。
@@ -241,6 +242,8 @@ YIN_INFO = {
 
 心情 `MOOD_INFO` 共 7 种：ecstatic 🤩 / happy 😊 / calm 😌 / tired 😪 / anxious 😰 / angry 😠 / sad 😢。
 
+**曲目标签**（`musics.tags`）是 UI 上的「这一首」关键词，不是板块级分类：v2.6.4 起每首先写独有落点（如「阳关三叠 = 助消化/旅途」「流水 = 松肩颈/行云」），避免每首都重复「健脾 / 古典 / 送别」。改标签只改 [app/seed.py](app/seed.py) 的 `SEED_MUSIC`，启动时同步老库。
+
 ### 3.7 AI 接入（NVIDIA NIM，可选）
 
 3 个场景全部走 OpenAI 兼容的 `/chat/completions`，当前模型 `z-ai/glm-5.3-flash`。未配置 key 或调用失败时返回 200 + `available:false` + 治愈系提示，前端照常显示，不报错。
@@ -251,7 +254,7 @@ YIN_INFO = {
 | 情绪日历 AI 治愈语 | `/calendar` | `POST /api/ai/healing` | 现场文案，不写库 |
 | 音乐 AI 心情推荐 | `/music` / 首页 | `POST /api/ai/recommend-music` | 推荐五音之一 + 理由，不写库 |
 
-> AI 树洞对话、会话历史与「树洞倾心」徽章已在 v2.6.0 删除；不私密的碎碎念改存「静屿角落」。
+> AI 树洞对话、会话历史与「树洞倾心」徽章已在 v2.6.0 删除；不私密的碎碎念改存「时光胶囊」（埋在树下）。
 
 **配置**（[.env.example](.env.example) 末尾，默认注释）：
 
@@ -270,7 +273,7 @@ YIN_INFO = {
 |---|---|---|
 | 身心调理 | `/music/therapy` | [therapy.py](app/routers/therapy.py) / [therapy_service.py](app/services/therapy_service.py)（含 B 站八段锦跟练视频） |
 | 日记海岸 | `/diary`、`/diary/write`、`/diary/pick` | [diary.py](app/routers/diary.py) / [diary_service.py](app/services/diary_service.py) |
-| 静屿角落 | `/corner` | [diary.py](app/routers/diary.py) `GET /api/diary/corner` / [CornerView.vue](frontend/src/views/diary/CornerView.vue) |
+| 时光胶囊 | `/diary/capsule` | [diary.py](app/routers/diary.py) `GET /api/diary/capsule` / [CapsuleView.vue](frontend/src/views/diary/CapsuleView.vue) |
 | 情绪日历 | `/calendar` | [mood.py](app/routers/mood.py) / [mood_service.py](app/services/mood_service.py) |
 | 屿上花田 | `/garden` | [garden.py](app/routers/garden.py) / [flower_service.py](app/services/flower_service.py) |
 | 落叶花坊 | `/shop` | [garden.py](app/routers/garden.py) / [energy.py](app/routers/energy.py) |
@@ -329,7 +332,7 @@ curl -I http://127.0.0.1:5000/api/garden/shop  # 200（28 件）
 curl -I http://127.0.0.1:5000/api/therapy/catalog # 200（八段锦 + 好物目录）
 curl -I http://127.0.0.1:5000/api/auth/me      # 401（未登录）
 curl -I http://127.0.0.1:5000/admin/login      # 200
-curl -I http://127.0.0.1:5000/corner          # 200（SPA fallback）
+curl -I http://127.0.0.1:5000/diary/capsule   # 200（SPA fallback）
 curl -I http://127.0.0.1:5000/music/therapy   # 200（SPA fallback）
 
 # 3. 前端改动必须重新构建
@@ -364,7 +367,7 @@ curl -X POST http://127.0.0.1:5000/api/auth/register \
 | 会话签名 | [app/security.py](app/security.py) |
 | 能量规则 | [app/services/energy_service.py](app/services/energy_service.py) |
 | 身心调理推荐 / 八段锦 / 好物 | [app/services/therapy_service.py](app/services/therapy_service.py) / [app/routers/therapy.py](app/routers/therapy.py) |
-| 静屿角落页面 | [frontend/src/views/diary/CornerView.vue](frontend/src/views/diary/CornerView.vue) |
+| 时光胶囊页面 | [frontend/src/views/diary/CapsuleView.vue](frontend/src/views/diary/CapsuleView.vue) |
 | 身心调理页面 | [frontend/src/views/music/TherapyView.vue](frontend/src/views/music/TherapyView.vue) |
 | 花朵生命周期 | [app/services/flower_service.py](app/services/flower_service.py) |
 | 5 音 / 心情 / 商店常量 | [app/utils/constants.py](app/utils/constants.py) |

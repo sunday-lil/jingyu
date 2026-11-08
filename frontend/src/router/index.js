@@ -17,6 +17,11 @@ const routes = [
     name: 'register',
     component: () => import('@/views/auth/RegisterView.vue'),
   },
+  {
+    path: '/forgot-password',
+    name: 'forgot-password',
+    component: () => import('@/views/auth/ForgotPasswordView.vue'),
+  },
   // 五音音乐
   {
     path: '/music',
@@ -67,13 +72,15 @@ const routes = [
     component: () => import('@/views/mood/MoodCalendarView.vue'),
     meta: { requiresAuth: true },
   },
-  // 静屿角落（不放入漂流瓶的私密碎碎念）
+  // 时光胶囊（不放入漂流瓶的日记，埋在树下；入口在日记海岸内）
   {
-    path: '/corner',
-    name: 'corner',
-    component: () => import('@/views/diary/CornerView.vue'),
+    path: '/diary/capsule',
+    name: 'diary-capsule',
+    component: () => import('@/views/diary/CapsuleView.vue'),
     meta: { requiresAuth: true },
   },
+  // 旧书签兼容：静屿角落已并入日记海岸的时光胶囊
+  { path: '/corner', redirect: '/diary/capsule' },
   // 精神花园
   {
     path: '/garden',

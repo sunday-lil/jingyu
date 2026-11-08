@@ -47,12 +47,12 @@ const modules = [
     color: 'linear-gradient(135deg, #C5C5E8 0%, #E8D5E8 100%)',
   },
   {
-    label: '静屿角落',
-    desc: '不放进漂流瓶的碎碎念 · 收在岛上',
-    reward: '每写一篇 +2 露水 · 仅自己可见',
-    icon: '🏝️',
-    to: '/corner',
-    color: 'linear-gradient(135deg, #B8C5E8 0%, #A8D8BA 100%)',
+    label: '身心调理',
+    desc: '说说不舒服的地方 · 配一曲、一式与温和好物',
+    reward: '古琴 + 八段锦 + 香囊/手串/食疗 · 跟练打卡 +1 露水',
+    icon: '🌿',
+    to: '/music/therapy',
+    color: 'linear-gradient(135deg, #B8D8C5 0%, #D8E8C5 100%)',
   },
   {
     label: '落叶花坊',
@@ -137,11 +137,10 @@ onMounted(() => {
         </div>
         <!-- v2.5.0：心灵港湾理念卡（私密 · 疗愈 · 生长三句） -->
         <div class="hero__intro">
-          <p class="hero__intro-lead">每一种情绪，都值得温柔安放。</p>
+          <p class="hero__intro-lead">建造一座只属于你的疗愈小岛。</p>
           <p class="hero__intro-body">
-            静屿是一座只属于你的心灵港湾——<br>
-            听一曲古琴，写一封漂流的信，<br>
-            把说不出口的，种成一朵会开的花。
+            用古琴五音与中医养生，<br>
+            把身体和情绪，慢慢安放。
           </p>
         </div>
       </div>

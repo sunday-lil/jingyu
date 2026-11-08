@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import RecoveryCodeModal from '@/components/RecoveryCodeModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,6 +13,7 @@ const password = ref('')
 const showPassword = ref(false)
 const errorMsg = ref('')
 const loading = ref(false)
+const recoveryCode = ref('')
 
 onMounted(() => {
   // 已登录直接跳转
@@ -32,13 +34,20 @@ async function handleSubmit() {
   errorMsg.value = ''
   loading.value = true
   try {
-    await userStore.login(nickname.value.trim(), password.value)
+    const result = await userStore.login(nickname.value.trim(), password.value)
+    if (result?.recoveryCode) {
+      recoveryCode.value = result.recoveryCode
+      return
+    }
     router.push(route.query.next || '/')
   } catch (e) {
     errorMsg.value = e.message || '登录失败'
   } finally {
     loading.value = false
   }
+}
+function finishLogin() {
+  router.push(route.query.next || '/')
 }
 </script>
 
@@ -79,6 +88,10 @@ async function handleSubmit() {
           </div>
         </div>
 
+        <div class="forgot-row">
+          <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link>
+        </div>
+
         <div v-if="errorMsg" class="form-error">{{ errorMsg }}</div>
 
         <button type="submit" class="btn btn--primary auth-submit" :disabled="loading">
@@ -90,6 +103,11 @@ async function handleSubmit() {
         还没来过？<router-link to="/register">开启静屿</router-link>
       </div>
     </div>
+    <RecoveryCodeModal
+      v-if="recoveryCode"
+      :code="recoveryCode"
+      @done="finishLogin"
+    />
   </div>
 </template>
 
@@ -157,6 +175,17 @@ async function handleSubmit() {
   transition: opacity 0.2s;
 }
 .password-toggle:hover { opacity: 1; }
+
+.forgot-row {
+  text-align: right;
+  margin: -4px 0 10px;
+}
+.forgot-link {
+  color: #9A8F7E;
+  font-size: 12.5px;
+  text-decoration: none;
+}
+.forgot-link:hover { color: #8B7B5E; text-decoration: underline; }
 
 .form-error {
   color: #C57878;

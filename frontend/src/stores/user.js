@@ -18,20 +18,22 @@ export const useUserStore = defineStore('user', {
   },
 
   actions: {
-    // 登录用 nickname
+    // 登录用 nickname；后端可能一次性返回 recovery_code
     async login(nickname, password) {
-      const user = await api.post('/auth/login', { nickname, password })
+      const data = await api.post('/auth/login', { nickname, password })
+      const { recovery_code: recoveryCode = null, ...user } = data || {}
       this.user = user
       localStorage.setItem('qi_user', JSON.stringify(user))
-      return user
+      return { user, recoveryCode }
     },
 
-    // 注册只用 nickname + password
+    // 注册只用 nickname + password；恢复码只返回一次，不写 localStorage
     async register(nickname, password) {
-      const user = await api.post('/auth/register', { nickname, password })
+      const data = await api.post('/auth/register', { nickname, password })
+      const { recovery_code: recoveryCode = null, ...user } = data || {}
       this.user = user
       localStorage.setItem('qi_user', JSON.stringify(user))
-      return user
+      return { user, recoveryCode }
     },
 
     // 刷新当前用户信息（从后端拉最新）

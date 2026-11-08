@@ -15,8 +15,8 @@ const submitting = ref(false)
 
 // 发布选项：默认放入漂流瓶（公开可见）
 // - bottle: 放入漂流瓶（公开可见，允许评论）
-// - corner: 留在静屿角落（仅自己可见）
-const publishChoice = ref(route.query.mode === 'corner' ? 'corner' : 'bottle')
+// - capsule: 埋进时光胶囊（埋在树下，仅自己可见）
+const publishChoice = ref((route.query.mode === 'capsule' || route.query.mode === 'corner') ? 'capsule' : 'bottle')
 
 // 简易 toast
 const toastVisible = ref(false)
@@ -34,7 +34,7 @@ const showToast = (text, duration = 2200) => {
 // 提交日记（明文，无密码加密）
 const handleSubmit = async () => {
   if (!content.value.trim()) {
-    showToast('写点什么再让它漂出去吧')
+    showToast(publishChoice.value === 'bottle' ? '写点什么再让它漂出去吧' : '写点什么再埋进树下吧')
     return
   }
   if (submitting.value) return
@@ -58,10 +58,10 @@ const handleSubmit = async () => {
       const badgeTexts = res.new_badges.map(b => `${b.image} 解锁徽章「${b.name}」· 赠 ${res.new_leaves} 落叶`)
       showToast(badgeTexts.join('  '))
     } else {
-      showToast(isPublic ? '日记已放入海中 🌊' : '碎碎念已收进静屿角落 🏝️')
+      showToast(isPublic ? '日记已放入海中 🌊' : '胶囊已埋进树下 🌳')
     }
     setTimeout(() => {
-      router.push(isPublic ? '/diary' : '/corner')
+      router.push(isPublic ? '/diary' : '/diary/capsule?buried=1')
     }, 700)
   } catch (e) {
     showToast(e.message || '提交失败，请稍后再试')
@@ -145,18 +145,18 @@ onBeforeUnmount(() => {
           </label>
           <label
             class="publish-option"
-            :class="{ 'is-active': publishChoice === 'corner' }"
+            :class="{ 'is-active': publishChoice === 'capsule' }"
           >
             <input
               type="radio"
               v-model="publishChoice"
-              value="corner"
+              value="capsule"
               class="publish-option__radio"
             >
-            <span class="publish-option__icon">🏝️</span>
+            <span class="publish-option__icon">🌳</span>
             <span class="publish-option__body">
-              <span class="publish-option__title">留在静屿角落</span>
-              <span class="publish-option__desc">仅自己可见 · 碎碎念集中收好</span>
+              <span class="publish-option__title">埋进时光胶囊</span>
+              <span class="publish-option__desc">埋在树下 · 仅自己可见，等时间替你保管</span>
             </span>
           </label>
         </div>
@@ -164,7 +164,7 @@ onBeforeUnmount(() => {
 
       <!-- 提交 -->
       <button class="btn btn--primary submit-btn" :disabled="submitting" @click="handleSubmit">
-        {{ submitting ? '正在送出…' : (publishChoice === 'bottle' ? '🌊 放入海中' : '🏝️ 收进角落') }}
+        {{ submitting ? '正在送出…' : (publishChoice === 'bottle' ? '🌊 放入海中' : '🌳 埋进树下') }}
       </button>
     </div>
 

@@ -41,7 +41,7 @@ const navItems = [
   { name: 'music-list', label: '琴音疗心', short: '琴音', path: '/music', icon: '🎵' },
   { name: 'diary-list', label: '日记海岸', short: '日记', path: '/diary', icon: '📖' },
   { name: 'calendar', label: '情绪日历', short: '日历', path: '/calendar', icon: '🗓' },
-  { name: 'corner', label: '静屿角落', short: '角落', path: '/corner', icon: '🏝️' },
+  { name: 'music-therapy', label: '身心调理', short: '调理', path: '/music/therapy', icon: '🌿' },
   { name: 'shop', label: '落叶花坊', short: '花坊', path: '/shop', icon: '🍂' },
   { name: 'garden', label: '屿上花田', short: '花田', path: '/garden', icon: '🌸' },
   { name: 'profile', label: '我的', short: '我的', path: '/profile', icon: '👤' },
@@ -55,7 +55,7 @@ const isFullscreen = computed(() => !!route.meta?.fullscreen)
 
 // 移动端 tabbar：4 个固定核心 + 中央「更多」按钮
 // v2.3 调整：固定 静屿 / 日记海岸 / [更多] / 情绪日历 / 我的
-// 「更多」展开后访问：琴音疗心 / 静屿角落 / 落叶花坊 / 屿上花田
+// 「更多」展开后访问：琴音疗心 / 身心调理 / 落叶花坊 / 屿上花田
 const tabbarFixed = computed(() => [
   navItems[0],  // 静屿
   navItems[2],  // 日记海岸
@@ -64,7 +64,7 @@ const tabbarFixed = computed(() => [
 ])
 const tabbarMore = computed(() => [
   navItems[1],  // 琴音疗心
-  navItems[4],  // 静屿角落
+  navItems[4],  // 身心调理
   navItems[5],  // 落叶花坊
   navItems[6],  // 屿上花田
 ])

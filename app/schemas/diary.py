@@ -1,7 +1,7 @@
 """日记 / 漂流瓶相关 Pydantic。
 
 v2.3：日记改明文。
-v2.6.0：移除 AI 树洞同步，is_public=False 统一进入「静屿角落」。
+v2.6.4：is_public=False 统一进入「时光胶囊」，入口在日记海岸内。
 """
 
 from typing import Optional
@@ -9,10 +9,10 @@ from pydantic import BaseModel, Field
 
 
 class DiaryCreateIn(BaseModel):
-    """创建日记。v2.3 起明文；v2.6.0 用 is_public 区分漂流瓶 / 静屿角落。"""
+    """创建日记。v2.3 起明文；v2.6.0 用 is_public 区分漂流瓶 / 时光胶囊。"""
     content: str = Field(..., min_length=1, max_length=5000, description="日记明文内容（1-5000 字）")
     mood_type: Optional[str] = Field(None, max_length=20)
-    is_public: bool = Field(False, description="True=放入漂流瓶（公开）；False=留在静屿角落（仅自己可见）")
+    is_public: bool = Field(False, description="True=放入漂流瓶（公开）；False=埋进时光胶囊（仅自己可见）")
 
 
 class DiaryOut(BaseModel):

@@ -82,6 +82,9 @@ onMounted(() => {
       duration: 0.8,
       stagger: 0.12,
       ease: 'power3.out',
+      // 动画结束清掉 inline transform，避免和卡片 hover transition 叠加后
+      // 个别卡片停在半路（用户看到「宫」单独凸出、其余没对齐）。
+      clearProps: 'transform',
     })
   })
 })
@@ -305,7 +308,7 @@ onMounted(() => {
   cursor: pointer;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(150, 130, 110, 0.15);
-  transition: transform 0.35s ease, box-shadow 0.35s ease;
+  transition: box-shadow 0.35s ease;
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 .yin-card::before {

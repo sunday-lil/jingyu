@@ -1,7 +1,7 @@
-"""漂流瓶日记 / 静屿角落 API。
+"""漂流瓶日记 / 时光胶囊 API。
 
 v2.3 调整：移除密码加密，日记改明文存储。
-v2.6.0 调整：移除 AI 树洞同步；is_public=False 的日记统一留在「静屿角落」。
+v2.6.0 调整：移除 AI 树洞同步；is_public=False 的日记统一留在「时光胶囊」，入口在日记海岸内。
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ def create_my_diary(
     """写一篇日记。
 
     - is_public=True：放入漂流瓶，公开可见，允许评论。
-    - is_public=False：留在静屿角落，仅自己可见。
+    - is_public=False：埋进时光胶囊，仅自己可见。
     """
     diary = create_diary(
         db, user,
@@ -95,14 +95,18 @@ def list_mine(
     }
 
 
-@router.get("/corner")
-def list_corner(
+@router.get("/capsule")
+@router.get("/corner", deprecated=True)
+def list_capsule(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=100),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """静屿角落：所有不放入漂流瓶的私密日记/碎碎念。"""
+    """时光胶囊：所有不放入漂流瓶、埋在树下的私密日记。
+
+    /corner 是 v2.6.4 前的旧路径，保留别名兼容旧书签。
+    """
     diaries, total = list_my_diaries(
         db, user.id, page=page, per_page=per_page, is_public=False
     )

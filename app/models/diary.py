@@ -17,7 +17,7 @@ class Diary(Base):
     - ``content_encrypted``：遗留字段（v2.3 前的 Fernet 密文），保留只为兼容老库，新数据不再写入。
     - ``mood_type``：关联心情枚举字符串（也可为空）。
     - ``is_public``：是否放入漂流瓶（公开可见，允许所有人查看和评论）。
-    - ``is_public=False``：留在「静屿角落」，仅自己可见。
+    - ``is_public=False``：埋进「时光胶囊」，仅自己可见。
     """
 
     __tablename__ = "diaries"

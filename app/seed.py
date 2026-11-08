@@ -28,40 +28,41 @@ logger = logging.getLogger(__name__)
 
 # 真实古琴曲名（16 首已放真实音频，6 首西洋改编暂为占位——时长为实测值/估值）
 SEED_MUSIC: list[dict] = [
-    # 宫音（土）
-    {"title": "梅花三弄",  "yin_type": "gong",   "category": "classic", "duration": 418, "tags": "健脾,古典"},
-    {"title": "阳关三叠",  "yin_type": "gong",   "category": "classic", "duration": 364, "tags": "助消化,送别"},
-    {"title": "平沙落雁",  "yin_type": "gong",   "category": "classic", "duration": 471, "tags": "健脾,秋意"},
+    # 宫音（土）—— 标签只写「这一首」独有的身体/情绪落点，
+    # 不再重复板块级「健脾」或曲类「古典/送别」（v2.6.4）
+    {"title": "梅花三弄",  "yin_type": "gong",   "category": "classic", "duration": 418, "tags": "清神,寒香"},
+    {"title": "阳关三叠",  "yin_type": "gong",   "category": "classic", "duration": 364, "tags": "助消化,旅途"},
+    {"title": "平沙落雁",  "yin_type": "gong",   "category": "classic", "duration": 471, "tags": "润喉,秋空"},
 
     # 商音（金）
-    {"title": "潇湘水云",  "yin_type": "shang",  "category": "classic", "duration": 461, "tags": "润肺,山水"},
-    {"title": "长门怨",    "yin_type": "shang",  "category": "classic", "duration": 352, "tags": "舒缓,古意"},
-    {"title": "佩兰",      "yin_type": "shang",  "category": "classic", "duration": 481, "tags": "润肺,雅正"},
+    {"title": "潇湘水云",  "yin_type": "shang",  "category": "classic", "duration": 461, "tags": "宽胸,云水"},
+    {"title": "长门怨",    "yin_type": "shang",  "category": "classic", "duration": 352, "tags": "释闷,低回"},
+    {"title": "佩兰",      "yin_type": "shang",  "category": "classic", "duration": 481, "tags": "化湿,兰草"},
 
     # 角音（木）
-    {"title": "流水",      "yin_type": "jue",    "category": "classic", "duration": 528, "tags": "疏肝,解郁,抗焦虑"},
-    {"title": "渔樵问答",  "yin_type": "jue",    "category": "classic", "duration": 553, "tags": "疏肝,问答"},
-    {"title": "鸥鹭忘机",  "yin_type": "jue",    "category": "classic", "duration": 386, "tags": "解郁,自在"},
+    {"title": "流水",      "yin_type": "jue",    "category": "classic", "duration": 528, "tags": "松肩颈,行云"},
+    {"title": "渔樵问答",  "yin_type": "jue",    "category": "classic", "duration": 553, "tags": "解烦,问答"},
+    {"title": "鸥鹭忘机",  "yin_type": "jue",    "category": "classic", "duration": 386, "tags": "松心,忘机"},
 
     # 徵音（火）
-    {"title": "醉渔唱晚",  "yin_type": "zhi",    "category": "classic", "duration": 283, "tags": "养心,渔歌"},
-    {"title": "山居吟",    "yin_type": "zhi",    "category": "classic", "duration": 333, "tags": "安神,山居"},
-    {"title": "神人畅",    "yin_type": "zhi",    "category": "classic", "duration": 299, "tags": "养心,古意"},
+    {"title": "醉渔唱晚",  "yin_type": "zhi",    "category": "classic", "duration": 283, "tags": "提神,晚霞"},
+    {"title": "山居吟",    "yin_type": "zhi",    "category": "classic", "duration": 333, "tags": "静坐,山风"},
+    {"title": "神人畅",    "yin_type": "zhi",    "category": "classic", "duration": 299, "tags": "开怀,远古"},
 
     # 羽音（水）
-    {"title": "广陵散",    "yin_type": "yu",     "category": "classic", "duration": 442, "tags": "宁心,助眠,古曲"},
-    {"title": "大胡笳",    "yin_type": "yu",     "category": "classic", "duration": 706, "tags": "助眠,胡笳"},
-    {"title": "幽兰",      "yin_type": "yu",     "category": "classic", "duration": 605, "tags": "宁心,兰香"},
-    {"title": "普庵咒",    "yin_type": "yu",     "category": "classic", "duration": 342, "tags": "助眠,梵音"},
+    {"title": "广陵散",    "yin_type": "yu",     "category": "classic", "duration": 442, "tags": "定惊,夜听"},
+    {"title": "大胡笳",    "yin_type": "yu",     "category": "classic", "duration": 706, "tags": "深睡,低吟"},
+    {"title": "幽兰",      "yin_type": "yu",     "category": "classic", "duration": 605, "tags": "独处,幽香"},
+    {"title": "普庵咒",    "yin_type": "yu",     "category": "classic", "duration": 342, "tags": "入静,木鱼"},
 
     # ── 古琴弹西洋曲谱（v2.3 新增子板块） ──
     # 用古琴演绎西洋经典旋律，yin_type 取最贴近的五音归类
-    {"title": "绿袖子",      "yin_type": "yu",   "category": "western", "duration": 220, "tags": "西洋,民谣,古琴改编"},
-    {"title": "卡农",        "yin_type": "gong", "category": "western", "duration": 260, "tags": "西洋,古典,古琴改编"},
-    {"title": "致爱丽丝",    "yin_type": "jue",  "category": "western", "duration": 180, "tags": "西洋,钢琴改编,古琴"},
-    {"title": "月光奏鸣曲",  "yin_type": "yu",   "category": "western", "duration": 300, "tags": "西洋,贝多芬,古琴改编"},
-    {"title": "天鹅湖",      "yin_type": "shang","category": "western", "duration": 280, "tags": "西洋,芭蕾,古琴改编"},
-    {"title": "昨日重现",    "yin_type": "zhi",  "category": "western", "duration": 240, "tags": "西洋,怀旧,古琴改编"},
+    {"title": "绿袖子",      "yin_type": "yu",   "category": "western", "duration": 220, "tags": "旧信,温柔"},
+    {"title": "卡农",        "yin_type": "gong", "category": "western", "duration": 260, "tags": "循环安心,层叠"},
+    {"title": "致爱丽丝",    "yin_type": "jue",  "category": "western", "duration": 180, "tags": "轻快,清晨"},
+    {"title": "月光奏鸣曲",  "yin_type": "yu",   "category": "western", "duration": 300, "tags": "夜航,潮汐"},
+    {"title": "天鹅湖",      "yin_type": "shang","category": "western", "duration": 280, "tags": "舒展,湖面"},
+    {"title": "昨日重现",    "yin_type": "zhi",  "category": "western", "duration": 240, "tags": "回忆,老照片"},
 ]
 
 
@@ -100,10 +101,17 @@ def seed_music(db: Session) -> int:
     """
     _ensure_placeholder_audio()
 
-    existing_titles = {t for (t,) in db.query(Music.title).all()}
+    existing = {m.title: m for m in db.query(Music).all()}
     new_rows: list[Music] = []
+    updated = 0
     for m in SEED_MUSIC:
-        if m["title"] in existing_titles:
+        row = existing.get(m["title"])
+        if row is not None:
+            # v2.6.4：曲目标签是运营文案，老库也要跟着种子更新，
+            # 否则页面永远显示旧的「健脾/古典/送别」。
+            if row.tags != m["tags"]:
+                row.tags = m["tags"]
+                updated += 1
             continue
         new_rows.append(Music(
             title=m["title"],
@@ -114,11 +122,14 @@ def seed_music(db: Session) -> int:
             duration=float(m["duration"]),
             tags=m["tags"],
         ))
-    if not new_rows:
-        return 0
-    db.add_all(new_rows)
-    db.commit()
-    logger.info("已插入 %d 首古琴曲目", len(new_rows))
+    if new_rows:
+        db.add_all(new_rows)
+    if new_rows or updated:
+        db.commit()
+    if updated:
+        logger.info("已同步 %d 首曲目的独特标签", updated)
+    if new_rows:
+        logger.info("已插入 %d 首古琴曲目", len(new_rows))
     return len(new_rows)
 
 

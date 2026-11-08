@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import RecoveryCodeModal from '@/components/RecoveryCodeModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,6 +13,7 @@ const password = ref('')
 const showPassword = ref(false)
 const errorMsg = ref('')
 const loading = ref(false)
+const recoveryCode = ref('')
 
 onMounted(() => {
   if (userStore.isLoggedIn) {
@@ -31,13 +33,20 @@ async function handleSubmit() {
   errorMsg.value = ''
   loading.value = true
   try {
-    await userStore.register(nickname.value.trim(), password.value)
+    const result = await userStore.register(nickname.value.trim(), password.value)
+    if (result?.recoveryCode) {
+      recoveryCode.value = result.recoveryCode
+      return
+    }
     router.push(route.query.next || '/')
   } catch (e) {
     errorMsg.value = e.message || '注册失败'
   } finally {
     loading.value = false
   }
+}
+function finishRegister() {
+  router.push(route.query.next || '/')
 }
 </script>
 
@@ -60,7 +69,7 @@ async function handleSubmit() {
             <input v-model="password" :type="showPassword ? 'text' : 'password'" class="form-input" placeholder="至少 6 位" autocomplete="new-password">
             <button type="button" class="password-toggle" @click="showPassword = !showPassword">{{ showPassword ? '🙈' : '👁' }}</button>
           </div>
-          <p class="form-hint">密码用于加密你的日记，请务必记牢</p>
+          <p class="form-hint">至少 6 位，请务必记牢</p>
         </div>
 
         <div v-if="errorMsg" class="form-error">{{ errorMsg }}</div>
@@ -74,6 +83,11 @@ async function handleSubmit() {
         已经有岛了？<router-link to="/login">回到静屿</router-link>
       </div>
     </div>
+    <RecoveryCodeModal
+      v-if="recoveryCode"
+      :code="recoveryCode"
+      @done="finishRegister"
+    />
   </div>
 </template>
 

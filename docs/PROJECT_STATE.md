@@ -1,6 +1,6 @@
 # 项目现状快照
 
-> 当前版本：**v2.6.3**（2026-11-08）
+> 当前版本：**v2.6.4**（2026-11-08）
 > 本文件只回答「现在是什么状态、能不能跑、还剩什么问题」。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 1. 总体状态
@@ -11,7 +11,7 @@
 | 前端构建 | ✅ | `static/dist/` 已构建；改 `frontend/src/` 后必须重新 `npm run build` |
 | 后端 | ✅ | FastAPI + SQLAlchemy + SQLite，约 3k 行 Python |
 | 数据库 | ✅ | `data/healing.db`，12 张表，启动自动建表 + 轻量迁移 + 种子 |
-| 前端 | ✅ | Vue 3 SPA，16 条业务路由 + 404，17 个 `.vue` 视图 |
+| 前端 | ✅ | Vue 3 SPA，17 条业务路由 + 旧书签重定向 + 404，18 个 `.vue` 视图 |
 | AI（可选） | ✅ | 3 个场景：漂流瓶鼓励语 / 情绪日历治愈语 / 音乐推荐；树洞对话已删除 |
 | 身心调理 | ✅ | 问题输入 → 曲 / 八段锦 / 香囊 / 手串 / 食疗；八段锦跟练打卡 +1 露水/日 |
 | 商品 | 🟡 橱窗 | 好物展示 + 预约/外链；**未接支付、库存、发货** |
@@ -26,17 +26,16 @@
 | 首页 | `/` | [HomeView.vue](../frontend/src/views/HomeView.vue) | SPA fallback | ✅ |
 | 琴音疗心 | `/music`、`/music/western`、`/music/:yin` | `views/music/MusicListView / MusicWesternView / MusicDetailView` | [music.py](../app/routers/music.py) | ✅ 22 首（16 真实 + 6 静音占位） |
 | 身心调理 | `/music/therapy` | [TherapyView.vue](../frontend/src/views/music/TherapyView.vue) | [therapy.py](../app/routers/therapy.py) / [therapy_service.py](../app/services/therapy_service.py) | ✅ 推荐 + 八段锦打卡 + B 站跟练视频 + 好物橱窗 |
-| 日记海岸 | `/diary`、`/diary/write`、`/diary/pick` | `views/diary/*` | [diary.py](../app/routers/diary.py) | ✅ 明文日记 + 漂流瓶 |
-| 静屿角落 | `/corner` | [CornerView.vue](../frontend/src/views/diary/CornerView.vue) | [diary.py](../app/routers/diary.py) `/api/diary/corner` | ✅ 私密碎碎念（is_public=False） |
+| 日记海岸 | `/diary`、`/diary/write`、`/diary/pick`、`/diary/capsule` | `views/diary/*` | [diary.py](../app/routers/diary.py) | ✅ 明文日记 + 漂流瓶 + 时光胶囊 |
 | 情绪日历 | `/calendar` | [MoodCalendarView.vue](../frontend/src/views/mood/MoodCalendarView.vue) | [mood.py](../app/routers/mood.py) | ✅ 一天多条 + 罗素环 + 今日可删 |
 | 落叶花坊 | `/shop` | [ShopView.vue](../frontend/src/views/garden/ShopView.vue) | [garden.py](../app/routers/garden.py) / [energy.py](../app/routers/energy.py) | ✅ 28 件商品 |
 | 屿上花田 | `/garden` | [GardenView.vue](../frontend/src/views/garden/GardenView.vue) | [flower_service.py](../app/services/flower_service.py) | ✅ 5 阶段生长 |
 | 我的 | `/profile` | [ProfileView.vue](../frontend/src/views/profile/ProfileView.vue) | [profile.py](../app/routers/profile.py) | ✅ 头像/昵称/统计 |
 | 通知 | `/notifications` | [NotificationsView.vue](../frontend/src/views/notification/NotificationsView.vue) | [notification.py](../app/routers/notification.py) | ✅ 60s 轮询未读 |
-| 登录/注册 | `/login`、`/register` | `views/auth/*` | [auth.py](../app/routers/auth.py) | ✅ cookie session |
+| 登录/注册/找回 | `/login`、`/register`、`/forgot-password` | `views/auth/*` | [auth.py](../app/routers/auth.py) | ✅ cookie session + 恢复码重置 |
 | 后台 | `/admin/*` | `templates/admin/*` | [admin.py](../app/routers/admin.py) / [admin_pages.py](../app/routers/admin_pages.py) | ✅ 秘密入口 |
 
-## 3. 数据快照（2026-10-18 本地库）
+## 3. 数据快照（2026-11-08 本地库）
 
 | 表 | 行数 | 备注 |
 |---|---|---|

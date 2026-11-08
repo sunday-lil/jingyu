@@ -3,7 +3,7 @@
 > 写给接手这个项目的下一个 AI（Cursor / Copilot / Devin / 任何 Agent）。
 > 本文 = 项目元信息 + 关键决策 + 踩坑清单；完整文档地图见 [README.md](README.md)。
 
-> **当前版本：v2.6.3（2026-11-08）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
+> **当前版本：v2.6.4（2026-11-08）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
 
 ---
 
@@ -13,7 +13,7 @@
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 隐私边界清晰 / 轻运营
 **代码体量**：约 3 000 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.6.3（2026-11-08）——移除 AI 树洞、新增静屿角落、身心调理推荐、八段锦跟练打卡 + B 站跟练视频、好物橱窗；v2.6.2 完成全量后端 bug/性能修复，v2.6.3 完成首页 Hero 响应式修复与 Playwright 浏览器全量回归。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
+**当前阶段**：v2.6.4（2026-11-08）——琴音标签重写、宫卡对齐、静屿角落并入日记海岸的「时光胶囊」、身心调理独立首页板块、压缩 Hero 文案、新增忘记密码恢复码流程。v2.6.2 完成全量后端 bug/性能修复，v2.6.3 完成首页 Hero 响应式修复与 Playwright 回归。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
 
 ---
 
@@ -90,7 +90,7 @@ npm run dev         # Vite dev server :5000
 | 模板 | **Jinja2**（仅后台 `/admin/*`） | 2026-07-19 Vue 3 重构后，前台不再用 Jinja2，仅后台 SSR 保留 |
 | 静态 | **FastAPI StaticFiles** | `/static/*` 一条命令挂载；Vue 构建产物在 `/static/dist/` |
 | 前端 | **Vue 3 `<script setup>` + Vite 5** | 2026-07-19 全站重构，从原生 HTML/CSS/JS 迁移到 Vue 3 SPA |
-| 前端路由 | **Vue Router 4** | 16 条业务路由 + 404 catch-all，`requiresAuth` 守卫 |
+| 前端路由 | **Vue Router 4** | 17 条业务路由 + 旧书签重定向 + 404 catch-all，`requiresAuth` 守卫 |
 | 前端状态 | **Pinia** | user store（cookie session 模式，不存 token） |
 | 前端样式 | **Tailwind CSS 3.4** | 治愈系色彩 token + 动画（breathe/float/fade-up） |
 | 前端动效 | **GSAP 3.12 + @vueuse/motion 2.2** | 入场 stagger + 呼吸动效，`prefers-reduced-motion` 降级 |
@@ -194,7 +194,7 @@ webwrold/
 │   ├── index.html
 │   └── src/
 │       ├── main.js / App.vue
-│       ├── router/index.js   ← 16 条业务路由 + 404 + requiresAuth 守卫
+│       ├── router/index.js   ← 17 条业务路由 + 旧书签重定向 + 404 + requiresAuth 守卫
 │       ├── stores/user.js    ← Pinia user store（cookie session 模式，不存 token）
 │       ├── api/index.js      ← axios 实例（baseURL=/api，withCredentials=true，401 自动跳登录；拦截器已解包 response.data）
 │       ├── assets/styles/main.css
@@ -207,11 +207,12 @@ webwrold/
 │       │   ├── AudioVisualizer.vue  ← 4 模式音波可视化 + 节拍检测（挂在 MusicDetailView）
 │       │   ├── SceneHint.vue        ← 3D 交互指引横幅
 │       │   ├── SceneControls.vue    ← 3D 视图控制工具栏
-│       │   └── EmojiIcon.vue        ← 离线 twemoji SVG emoji（跨浏览器一致）
+│       │   ├── EmojiIcon.vue        ← 离线 twemoji SVG emoji（跨浏览器一致）
+│       │   └── RecoveryCodeModal.vue ← 注册/首次登录时一次性显示恢复码
 │       ├── utils/
 │       │   ├── visual.js      ← 视觉能力检测 + smartRAF
 │       │   └── three-helpers.js ← Three.js PBR 工具集（9 个共享函数）
-│       └── views/             ← 17 个视图（Home / auth / music / diary / mood / garden / profile / notification / NotFound）
+│       └── views/             ← 18 个视图（Home / auth / music / diary / mood / garden / profile / notification / NotFound）
 │
 ├── docs/                      ← 全部项目文档（根目录仅留 README / AGENTS）
 │   ├── README.md              ← 【文档地图】各文档职责与阅读顺序
@@ -231,7 +232,7 @@ webwrold/
 
 ## 4. 实现阶段（摘要）
 
-> 逐版本细节（v2.2.2 → v2.6.3）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
+> 逐版本细节（v2.2.2 → v2.6.4）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
 
 | 阶段 | 主要内容 | 代码落点 |
 |---|---|---|
@@ -244,12 +245,13 @@ webwrold/
 | v2.5.1（09-12） | GSAP 列表动画改到 fetch 成功后 + querySelector 守卫 | [DiaryListView.vue](../frontend/src/views/diary/DiaryListView.vue) / [ShopView.vue](../frontend/src/views/garden/ShopView.vue) |
 | v2.5.2（09-12） | 16 首真实音频入库 + 启动时按 MP3 实际时长自动校准 `musics.duration` | [seed.py](../app/seed.py) |
 | v2.5.3（09-13） | 日记海岸改名 + 西洋曲谱并入六宫格 + 打卡可删除 + AI 模型切 `z-ai/glm-5.3-flash` | [music.py](../app/routers/music.py) / [mood.py](../app/routers/mood.py) / [ai_service.py](../app/services/ai_service.py) |
-| v2.6.0（10-18） | 删除 AI 树洞 + 静屿角落 + 身心调理推荐 + 八段锦打卡 + 好物橱窗 | [therapy_service.py](../app/services/therapy_service.py) / [therapy.py](../app/routers/therapy.py) / [CornerView.vue](../frontend/src/views/diary/CornerView.vue) |
+| v2.6.0（10-18） | 删除 AI 树洞 + 私密日记角落 + 身心调理推荐 + 八段锦打卡 + 好物橱窗 | [therapy_service.py](../app/services/therapy_service.py) / [therapy.py](../app/routers/therapy.py) / [CapsuleView.vue](../frontend/src/views/diary/CapsuleView.vue) |
 | v2.6.1（10-18） | 八段锦结果卡嵌入 B 站跟练视频 + CSP `frame-src` | [TherapyView.vue](../frontend/src/views/music/TherapyView.vue) / [app/main.py](../app/main.py) |
 | v2.6.2（10-25） | 全量 bug 修复：听曲露水 422、资料保存 session、`/admin` 404、私密日记留言、输入边界、N+1/启动 IO 优化 | [deps.py](../app/deps.py) / [diary.py](../app/routers/diary.py) / [MusicDetailView.vue](../frontend/src/views/music/MusicDetailView.vue) |
 | v2.6.3（11-08） | 首页 Hero 三列/裁切修复 + 3D 指针穿透 + 平板短导航 + `🏝️` 图标 + SEO 去树洞 | [HomeView.vue](../frontend/src/views/HomeView.vue) / [AppLayout.vue](../frontend/src/components/AppLayout.vue) / [index.html](../frontend/index.html) |
+| v2.6.4（11-08） | 22 首曲目标签重写 + 宫卡对齐 + 时光胶囊（树+埋胶囊动画）+ 身心调理独立板块 + Hero 文案压缩 + 忘记密码恢复码 | [seed.py](../app/seed.py) / [CapsuleView.vue](../frontend/src/views/diary/CapsuleView.vue) / [auth.py](../app/routers/auth.py) |
 
-**当前代码规模**：Python 约 3k 行；Vue/JS 约 3k 行；12 张表；约 70 个 API 端点（含后台 13 个）。
+**当前代码规模**：Python 约 3k 行；Vue/JS 约 3k 行；12 张表；约 62 个 API 端点（含后台 13 个）。
 
 ---
 
@@ -304,7 +306,7 @@ webwrold/
 - **模型当前为 `z-ai/glm-5.3-flash`**（2026-09-13 切换）：原 `meta/llama-3.1-8b-instruct` 已于 2026-08-26 从 NVIDIA NIM 下架（410 Gone）。`.env` 的 `QI_AI_MODEL` **会覆盖** `config.py` 默认值，换模型必须两处同步改。glm 是 reasoning 模型，`max_tokens` 需给足 900–1200，否则思考内容会吃光配额并静默返回 `content=None`。
 - **OpenAI 兼容**：将来想换其他厂商（DeepSeek / 智谱 / 自部署 vLLM）只改 `QI_AI_BASE_URL` + `QI_AI_MODEL`，不动业务代码
 - **降级而非报错**：AI 是「锦上添花」不是核心功能，**未配置 key 或调用失败时返回 200 + `available:false` + 治愈系友好提示**（**不报 500**）。前端拿到 `available:false` 仍正常显示文案。这保证：① 没拿到 key 的部署方也能跑；② NVIDIA 限流时业务不中断；③ 用户感知不到「故障」，只感知「AI 在休息」
-- **AI 树洞已移除**：v2.6.0 删除对话端点、`chat_history_service`、树洞徽章与聊天历史；不公开的碎碎念改存「静屿角落」。
+- **AI 树洞已移除**：v2.6.0 删除对话端点、`chat_history_service`、树洞徽章与聊天历史；不公开的碎碎念改存「时光胶囊」（埋在树下）。
 - **日记预览只取前 120 字**：漂流瓶 AI 鼓励语调用时，把作者日记**截断到前 120 字**再发给 AI，避免长文本消耗 token + 减少隐私暴露面
 - **温柔语气系统提示词**：3 个场景的 system_prompt 统一约定「不诊断不开药、危机情况引导求助专业资源、温柔倾听」，与项目治愈系调性一致
 
@@ -396,6 +398,17 @@ webwrold/
 
 详见 [utils/three-helpers.js](../frontend/src/utils/three-helpers.js) + [SceneHint.vue](../frontend/src/components/SceneHint.vue) + [SceneControls.vue](../frontend/src/components/SceneControls.vue) + 4 个 v2 视觉组件。
 
+### 5.12 为什么「忘记密码」用恢复码而不是邮件（v2.6.4 加）
+
+项目没有邮件服务 / 短信通道，也没有采集邮箱，所以不能做「发重置链接」。选择**一次性恢复码**：
+
+- 注册时生成 8 位大写字母/数字恢复码，`users.recovery_code_hash` 只存 bcrypt 哈希；接口响应返回一次明文，前端用模态框要求用户保存。
+- 老用户在升级后**第一次登录**时，如果 `recovery_code_hash` 为空，后端自动补发一枚并在登录响应里返回，同样只显示一次。
+- 登录页「忘记密码？」→ `/forgot-password`：昵称 + 恢复码 + 新密码；`POST /api/auth/reset-password` 校验后更新密码，并把恢复码置空（下次登录补发新的）。
+- 没有恢复码（例如升级前就忘记密码）时，由岛主在 `/admin` 用户详情里重置密码。
+
+**边界**：恢复码等于第二把钥匙，不能通过日志/URL 传递；前端不写 localStorage；忘记保存只能找管理员。未来若接邮件，可在此流程上替换发送渠道，不改变表结构。
+
 ---
 
 ## 6. 已知坑（必读！）
@@ -458,7 +471,7 @@ return templates.TemplateResponse(
 ### 6.6 日记 schema 的字段方向（v2.3 已反转）
 **现状**：[app/schemas/diary.py](../app/schemas/diary.py) `DiaryCreateIn` 的必填字段是 **`content: str`（明文）**，可选 `mood_type` / `is_public`；`content_encrypted` 与 `send_to_ai_hole` 仅为老库兼容/遗留，不应再作为入参。
 - ✅ `content: str`（明文，1 字以上）
-- ✅ `is_public`（True=漂流瓶；False=静屿角落）
+- ✅ `is_public`（True=漂流瓶；False=时光胶囊）
 - ❌ 不要再按 v2.3 之前的文档传 `content_encrypted`（会 422 或写入空内容）
 
 **历史坑**：v2.3 之前 `DiaryCreateIn` 只有 `content_encrypted`，明文 `content` 是禁止字段；如果你看到旧文档 / 旧 commit 说「不要 content」，那是历史版本，已不适用。
@@ -1308,4 +1321,4 @@ Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yello
 ---
 
 > 最后更新：2026-10-18（文档结构整理：去重版本块、按代码修正事实、历史细节归入 [CHANGELOG.md](CHANGELOG.md)）。
-> 代码版本：v2.6.3（2026-11-08）。
+> 代码版本：v2.6.4（2026-11-08）。

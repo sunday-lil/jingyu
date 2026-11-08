@@ -86,6 +86,11 @@ def _migrate_legacy_columns() -> None:
                 "ALTER TABLE users ADD COLUMN avatar VARCHAR(16) DEFAULT '🙂' NOT NULL"
             ))
             logger.info("[MIGRATE] users.avatar 已添加（v2.4，用户头像 emoji）")
+        if "recovery_code_hash" not in cols:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN recovery_code_hash VARCHAR(255)"
+            ))
+            logger.info("[MIGRATE] users.recovery_code_hash 已添加（v2.6.4，忘记密码恢复码）")
 
     # energy_records 表（2026-07-20 加 music_id，用于同歌 24h 去重）
     if insp.has_table("energy_records"):

@@ -4,7 +4,7 @@
 
 > 🔒 **改了本文件涉及的部署配置（端口 / Nginx / systemd / HTTPS / 反代 / 前端构建），必须同步更新**：[README §1](../README.md) / [HANDOFF §1](HANDOFF.md) / [AGENTS.md](../AGENTS.md)。详见 [HANDOFF §12](HANDOFF.md) 文档自动同步铁律。
 
-> **当前版本：v2.6.3（2026-11-08）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留当前部署步骤。
+> **当前版本：v2.6.4（2026-11-08）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留当前部署步骤。
 >
 > **部署三件事**：① 拉代码 ② 配置 `.env` ③ `python start.py`（默认生产模式；`static/dist/index.html` 不存在会自动 `npm install + npm run build`）。
 >
@@ -543,8 +543,9 @@ curl -I http://127.0.0.1:5000/notifications          # 302（未登录跳 /login
 curl -I http://127.0.0.1:5000/api/notifications      # 401 或 200（需登录后访问）
 curl -I http://127.0.0.1:5000/api/admin/stats        # 401（未登录拒绝，符合预期）
 curl -I http://127.0.0.1:5000/admin/login            # 200（后台登录页）
-curl -I http://127.0.0.1:5000/corner                 # 200（静屿角落 SPA）
+curl -I http://127.0.0.1:5000/diary/capsule          # 200（时光胶囊 SPA）
 curl -I http://127.0.0.1:5000/music/therapy          # 200（身心调理 SPA）
+curl -I http://127.0.0.1:5000/forgot-password        # 200（忘记密码 SPA）
 
 # 4. 注册一个测试账号
 curl -X POST http://127.0.0.1:5000/api/auth/register \

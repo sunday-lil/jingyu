@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -13,11 +15,23 @@ from app.deps import (
     clear_session_cookie,
 )
 from app.models.user import User
-from app.schemas.auth import RegisterIn, LoginIn, AuthOut
+from app.schemas.auth import RegisterIn, LoginIn, PasswordResetIn, AuthOut
 from app.utils.crypto import hash_password, verify_password, generate_salt
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+def _new_recovery_code() -> str:
+    """生成 8 位大写恢复码（去掉易混字符）。"""
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "".join(secrets.choice(alphabet) for _ in range(8))
+
+
+def _set_recovery_code(user: User) -> str:
+    code = _new_recovery_code()
+    user.recovery_code_hash = hash_password(code)
+    return code
 
 
 @router.post("/register", response_model=AuthOut, status_code=status.HTTP_201_CREATED)
@@ -38,6 +52,7 @@ def register(body: RegisterIn, response: Response, db: Session = Depends(get_db)
         encryption_salt=generate_salt(),
         total_energy=0,
     )
+    recovery_code = _set_recovery_code(user)
     db.add(user)
     try:
         db.commit()
@@ -47,7 +62,9 @@ def register(body: RegisterIn, response: Response, db: Session = Depends(get_db)
     db.refresh(user)
 
     set_session_cookie(response, user.id)
-    return user.to_public_dict()
+    data = user.to_public_dict()
+    data["recovery_code"] = recovery_code
+    return data
 
 
 @router.post("/login", response_model=AuthOut)
@@ -57,7 +74,37 @@ def login(body: LoginIn, response: Response, db: Session = Depends(get_db)):
     if user is None or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="昵称或密码不对")
     set_session_cookie(response, user.id)
-    return user.to_public_dict()
+    data = user.to_public_dict()
+    # 老用户第一次登录且还没有恢复码时，补发一次并提示保存
+    if not user.recovery_code_hash:
+        data["recovery_code"] = _set_recovery_code(user)
+        db.commit()
+    return data
+
+
+@router.post("/reset-password")
+def reset_password(body: PasswordResetIn, db: Session = Depends(get_db)):
+    """用恢复码重置密码。
+
+    恢复码在注册时 / 老用户首次登录时显示一次；忘记密码且没有恢复码时，
+    由管理员在后台用户详情中重置。
+    """
+    user = db.query(User).filter(User.nickname == body.nickname).first()
+    code = body.recovery_code.strip().upper().replace("-", "").replace(" ", "")
+    if (
+        user is None
+        or not user.recovery_code_hash
+        or not verify_password(code, user.recovery_code_hash)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="昵称或恢复码不对；如果还没有恢复码，请联系岛主重置密码",
+        )
+    user.password_hash = hash_password(body.new_password)
+    # 用过的恢复码作废；下次登录会补发一枚新的
+    user.recovery_code_hash = None
+    db.commit()
+    return {"success": True}
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

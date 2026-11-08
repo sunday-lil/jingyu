@@ -2,7 +2,7 @@
 
 > 改代码前**必读**。这里汇总了当前仍然有效的开发铁律 + 踩坑复现与修法；逐版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **当前版本：v2.6.3（2026-11-08）**。逐版本变更见 [CHANGELOG.md](CHANGELOG.md)；本文只保留仍然有效的开发约定与踩坑。
+> **当前版本：v2.6.4（2026-11-08）**。逐版本变更见 [CHANGELOG.md](CHANGELOG.md)；本文只保留仍然有效的开发约定与踩坑。
 
 ---
 
@@ -126,7 +126,7 @@ python start.py stop
 
 ## 1.9 前端开发模式（Vue 3 SPA，2026-07-19 v2.0 加，v2.0.1 端口策略调整，v2.3.2 默认生产模式）
 
-> 2026-07-19 v2.0 全站 Vue 3 重构后，前台迁移到 Vue 3 SPA（当前 17 个视图）。本节讲**怎么开发前端**，不是讲铁律。架构看 [ARCHITECTURE §1.1](ARCHITECTURE.md)，部署看 [DEPLOYMENT 前端构建](DEPLOYMENT.md)。
+> 2026-07-19 v2.0 全站 Vue 3 重构后，前台迁移到 Vue 3 SPA（当前 18 个视图）。本节讲**怎么开发前端**，不是讲铁律。架构看 [ARCHITECTURE §1.1](ARCHITECTURE.md)，部署看 [DEPLOYMENT 前端构建](DEPLOYMENT.md)。
 
 > 2026-07-19 v2.0.1 端口策略调整：开发模式 Vite 占 :5000（用户入口）+ FastAPI 退到 :5001（API），**用户始终访问 :5000**。理由见 [HANDOFF §6.16](HANDOFF.md)（FastAPI 反代 Vite 内部路径含 null 字节转义 + 冒号失败）。
 
@@ -215,7 +215,7 @@ frontend/
 └── src/
     ├── main.js               ← createApp + Pinia + Router + MotionPlugin
     ├── App.vue               ← AppLayout + router-view + transition
-    ├── router/index.js       ← 16 条业务路由 + 404 + requiresAuth 守卫
+    ├── router/index.js       ← 17 条业务路由 + 旧书签重定向 + 404 + requiresAuth 守卫
     ├── stores/user.js        ← Pinia user store（cookie session，不存 token）
     ├── api/index.js          ← axios 实例（baseURL=/api，withCredentials，401 拦截，已解包 response.data）
     ├── data/islandGuide.js   ← 首页指南 / 模块奖励 / 个人主页指南共享文案
@@ -225,9 +225,9 @@ frontend/
     ├── assets/styles/main.css
     └── views/
         ├── HomeView.vue / NotFoundView.vue
-        ├── auth/ (Login / Register)
+        ├── auth/ (Login / Register / ForgotPassword)
         ├── music/ (MusicList / MusicWestern / MusicDetail / Therapy)
-        ├── diary/ (DiaryList / DiaryWrite / PickBottle / Corner)
+        ├── diary/ (DiaryList / DiaryWrite / PickBottle / Capsule)
         ├── mood/ (MoodCalendar)
         ├── garden/ (Garden / Shop)
         ├── profile/ (Profile)
@@ -775,6 +775,12 @@ text.value = res.text
 4. 若新增每日奖励来源，同步 [app/utils/constants.py](../app/utils/constants.py) 的 `DAILY_ENERGY_LIMITS` 与 [README §3.4](../README.md)。
 5. 重启后跑 `POST /api/therapy/recommend` 与 `POST /api/therapy/baduanjin/checkin`；前端 `npm run build`。
 6. **B 站视频**：`TherapyView.vue` 的八段锦结果卡内嵌 `player.bilibili.com` iframe；修改视频只改 `src` 的 `bvid` / `aid` / `cid`。CSP 的 `frame-src` 已在 [app/main.py](../app/main.py) 放行 B 站域名。
+
+### 2.9 改曲目标签 / 时光胶囊 / 找回密码（v2.6.4）
+
+- **曲目标签**：只改 [app/seed.py](../app/seed.py) 的 `SEED_MUSIC[*]["tags"]`，`seed_music()` 会在启动时把老库同 title 行的 tags 同步过去；不要在数据库手改（重启会被种子覆盖）。
+- **时光胶囊**：数据仍是 `diaries.is_public=False`；API 新路径 `GET /api/diary/capsule`，`/api/diary/corner` 仅 deprecated 别名；前端页面 [CapsuleView.vue](../frontend/src/views/diary/CapsuleView.vue)，入口只在日记海岸，不要再加回顶部导航。
+- **找回密码**：`users.recovery_code_hash` 只存 bcrypt 哈希；注册/老用户首次登录由 `auth.py` 生成并在响应里返回一次 `recovery_code`；`POST /api/auth/reset-password` 校验后把 hash 置空（下次登录补发）。新增邮件通道时替换发送层，不要明文存码。
 
 ---
 

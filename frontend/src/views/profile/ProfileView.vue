@@ -225,7 +225,7 @@ const goShop = () => router.push('/shop')
 const goDiary = () => router.push('/diary')
 const goCalendar = () => router.push('/calendar')
 const goMusic = () => router.push('/music')
-const goCorner = () => router.push('/corner')
+const goTherapy = () => router.push('/music/therapy')
 
 const handleLogout = async () => {
   await userStore.logout()
@@ -363,9 +363,9 @@ onBeforeUnmount(() => {
             <span class="quick-card__emoji"><EmojiIcon emoji="🎵" /></span>
             <span class="quick-card__label">琴音疗心</span>
           </button>
-          <button class="quick-card card" @click="goCorner">
-            <span class="quick-card__emoji"><EmojiIcon emoji="🏝️" /></span>
-            <span class="quick-card__label">静屿角落</span>
+          <button class="quick-card card" @click="goTherapy">
+            <span class="quick-card__emoji"><EmojiIcon emoji="🌿" /></span>
+            <span class="quick-card__label">身心调理</span>
           </button>
         </div>
       </section>
