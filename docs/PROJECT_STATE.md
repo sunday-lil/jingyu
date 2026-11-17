@@ -19,6 +19,8 @@
 | 测试 | ❌ | 无 pytest 套件，依赖手工冒烟 + 浏览器验证 |
 | HTTPS | ❌ | 本地 HTTP；生产需 Nginx + Let's Encrypt |
 
+> **本机环境验证（2026-11-17）**：Python 3.15.2 / Node 26.13.1 / npm 11.20.0；`python -m compileall app`、`npm run build`、`python start.py restart`、浏览器 smoke（首页/音乐/调理/登录/忘记密码/404）均通过，`logs/healing.log` 无 ERROR。
+
 ## 2. 模块矩阵
 
 | 模块 | 路由 | 前端视图 | 后端 | 状态 |

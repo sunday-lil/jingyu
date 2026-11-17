@@ -1222,7 +1222,7 @@ git ls-remote origin refs/heads/main   # 与 git rev-parse HEAD 一致
 
 ### 12.7 Commit 标题 / 脚本标题规范（Conventional Commits）
 
-> 无论代码 commit 还是脚本（如 `push-to-github.ps1`）里的进度输出，**统一**用 Conventional Commits 风格。
+> 无论代码 commit 还是工具脚本里的进度输出，**统一**用 Conventional Commits 风格。
 
 #### 12.7.1 Commit message 格式
 
@@ -1296,29 +1296,13 @@ git commit -m "docs(github): add repo URL + fix topics loop
 
 - HANDOFF.md: GitHub URL in top note + §1
 - PROJECT_STATE.md: add session 3 changelog
-- README.md: add 4 badges
-- push-to-github.ps1: topics now loops (--add-topic accepts 1 arg)"
+- README.md: add 4 badges + sync current version
 
 # 杂事
 git commit -m "chore(deps): bump bcrypt to 4.2"
 ```
 
-#### 12.7.6 脚本/工具里的进度标题
-
-`push-to-github.ps1` 这种工具脚本里，**每一步的输出标题也要遵守 type(scope) 风格**：
-
-```powershell
-Write-Host "[1/6] chore(git): removing broken .git ..." -ForegroundColor Yellow
-Write-Host "[2/6] chore(git): git init -b main ..."       -ForegroundColor Yellow
-Write-Host "[3/6] feat(git): staging files ..."          -ForegroundColor Yellow
-Write-Host "[4/6] feat(git): committing ..."              -ForegroundColor Yellow
-Write-Host "[5/6] feat(github): creating repo + push ..." -ForegroundColor Yellow
-Write-Host "[6/6] feat(github): setting topics ..."       -ForegroundColor Yellow
-```
-
-> 这样跑完脚本，看到日志就能**复述出**「这次提交是 chore(git) + feat(github)」，自动同步到 commit 历史。
-
 ---
 
-> 最后更新：2026-10-18（文档结构整理：去重版本块、按代码修正事实、历史细节归入 [CHANGELOG.md](CHANGELOG.md)）。
+> 最后更新：2026-11-17（环境升级至 Python 3.15.2 / Node 26.13.1；清理过期脚本与旧截图，复核构建与运行）。
 > 代码版本：v2.6.4（2026-11-08）。

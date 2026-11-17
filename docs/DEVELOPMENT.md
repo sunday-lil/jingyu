@@ -119,7 +119,7 @@ python start.py stop
 - type 9 个：`feat` / `fix` / `refactor` / `docs` / `style` / `test` / `chore` / `perf` / `revert`
 - 项目 scope：`auth` / `diary` / `mood` / `music` / `energy` / `garden` / `admin` / `templates` / `static` / `docs` / `deps` / `scripts` …
 - v2.0 起新增 scope：`frontend` / `vue` / `vite` / `tailwind` / `gsap`（[`frontend/`](../frontend/) 相关改动用）
-- 脚本（`push-to-github.ps1`）的进度输出**也**用 `type(scope)` 标题
+- 工具脚本的进度输出**也**用 `type(scope)` 标题
 - 完整规则 + 示例：[HANDOFF §12.7](HANDOFF.md)
 
 ---

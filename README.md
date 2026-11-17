@@ -45,6 +45,8 @@ python start.py    # 浏览器打开 http://127.0.0.1:5000
 
 首次启动会自动安装前端依赖并构建（需 Python 3.11+ 与 Node.js 18+，首次约几分钟），之后秒开；数据库与种子数据全自动，无需任何配置。
 
+> **2026-11-17 环境验证**：已在 Python 3.15.2 / Node 26.13.1 / npm 11.20.0 下通过 `compileall`、`npm run build`、`start.py restart` 与首页/音乐/调理/登录/忘记密码浏览器 smoke；`logs/healing.log` 无 ERROR。环境版本高于最低要求，旧命令仍可直接用。
+
 ---
 
 # 以下为开发者参考，普通用户可跳过
