@@ -2,9 +2,9 @@
 
 规则（与 PRD 一致）：
 - 听完一首曲子（进度 ≥ 90%）：+1 露水（listen_music）
-- 写完一篇日记并成功投入：+2 阳光（write_diary）
-- 完成当日心情手帐：+1 养分（checkin）
-- 连续 7 天打卡：+5 阳光（streak_7）
+- 写完一篇日记并成功投入：+2 露水（write_diary）
+- 完成当日心情手帐：+1 露水（checkin）
+- 连续 7 天打卡：+5 露水（streak_7）
 - 兑换物品：-cost（exchange）
 
 所有「+x」操作都有单日上限（防刷）：
@@ -148,25 +148,29 @@ def exchange_item(db: Session, user: User, item_id: int) -> GardenItem:
     if cost > 0:
         if currency == "leaves":
             # 落叶兑换（理论上 costume 不会走这里，留作扩展）
-            if (user.leaves or 0) < cost:
-                raise HTTPException(status_code=400, detail=f"落叶不足，还差 {cost - user.leaves}")
-            db.query(User).filter(User.id == user.id).update(
-                {User.leaves: User.leaves - cost}
+            # 条件 UPDATE：并发时只有一个请求能扣到余额，避免扣成负数
+            updated = (
+                db.query(User)
+                .filter(User.id == user.id, User.leaves >= cost)
+                .update({User.leaves: User.leaves - cost})
             )
+            if not updated:
+                raise HTTPException(status_code=400, detail="落叶不足")
         else:
-            # 露水兑换
-            if (user.total_energy or 0) < cost:
-                raise HTTPException(status_code=400, detail=f"露水不足，还差 {cost - user.total_energy}")
-            record = EnergyRecord(
+            # 露水兑换（同样用条件 UPDATE 防并发超扣）
+            updated = (
+                db.query(User)
+                .filter(User.id == user.id, User.total_energy >= cost)
+                .update({User.total_energy: User.total_energy - cost})
+            )
+            if not updated:
+                raise HTTPException(status_code=400, detail="露水不足")
+            db.add(EnergyRecord(
                 user_id=user.id,
                 amount=-cost,
                 source="exchange",
                 note=f"兑换 {item.name}",
-            )
-            db.add(record)
-            db.query(User).filter(User.id == user.id).update(
-                {User.total_energy: User.total_energy - cost}
-            )
+            ))
 
     # 写入持有
     garden_item = GardenItem(user_id=user.id, item_id=item_id)
@@ -184,11 +188,13 @@ def _exchange_flower_seed(db: Session, user: User, item: ShopItem) -> GardenItem
 
     cost = item.cost or 0
     if cost > 0:
-        if (user.leaves or 0) < cost:
-            raise HTTPException(status_code=400, detail=f"落叶不足，还差 {cost - user.leaves}")
-        db.query(User).filter(User.id == user.id).update(
-            {User.leaves: User.leaves - cost}
+        updated = (
+            db.query(User)
+            .filter(User.id == user.id, User.leaves >= cost)
+            .update({User.leaves: User.leaves - cost})
         )
+        if not updated:
+            raise HTTPException(status_code=400, detail="落叶不足")
 
     # 种下：flower_type 用 item.name（中文花名）作为 key
     flower = UserFlower(
@@ -249,10 +255,14 @@ def check_achievements(db: Session, user: User) -> dict:
         for gi in db.query(GardenItem).filter(GardenItem.user_id == user.id).all()
     }
 
-    # 1. listen_10：累计 10 条 listen_music 记录
+    # 1. listen_10：累计听完 10 首「不同」曲子（distinct music_id）
     listen_count = (
-        db.query(func.count(EnergyRecord.id))
-        .filter(EnergyRecord.user_id == user.id, EnergyRecord.source == "listen_music")
+        db.query(func.count(func.distinct(EnergyRecord.music_id)))
+        .filter(
+            EnergyRecord.user_id == user.id,
+            EnergyRecord.source == "listen_music",
+            EnergyRecord.music_id.isnot(None),
+        )
         .scalar()
     )
     if listen_count >= 10:

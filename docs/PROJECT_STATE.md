@@ -1,6 +1,6 @@
 # 项目现状快照
 
-> 当前版本：**v2.6.4**（2026-11-08）
+> 当前版本：**v2.6.5**（2026-11-23）
 > 本文件只回答「现在是什么状态、能不能跑、还剩什么问题」。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 1. 总体状态
@@ -19,7 +19,7 @@
 | 测试 | ❌ | 无 pytest 套件，依赖手工冒烟 + 浏览器验证 |
 | HTTPS | ❌ | 本地 HTTP；生产需 Nginx + Let's Encrypt |
 
-> **本机环境验证（2026-11-17）**：Python 3.15.2 / Node 26.13.1 / npm 11.20.0；`python -m compileall app`、`npm run build`、`python start.py restart`、浏览器 smoke（首页/音乐/调理/登录/忘记密码/404）均通过，`logs/healing.log` 无 ERROR。
+> **本机环境验证（2026-11-23）**：Python 3.15.2 / Node 26.13.1 / npm 11.20.0；`python -m compileall app`、`npm run build`、`python start.py restart`、浏览器 smoke（首页/音乐/调理/登录/忘记密码/404）均通过，`logs/healing.log` 无 ERROR。
 
 ## 2. 模块矩阵
 

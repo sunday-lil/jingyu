@@ -14,6 +14,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.music import Music
@@ -368,7 +369,11 @@ def checkin_baduanjin(db: Session, user: User, move_key: str = "general") -> dic
 
     record = BaduanjinCheckin(user_id=user.id, check_date=today, move_key=move_key or "general")
     db.add(record)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="今天已经跟练过啦，明天再来活动一下")
 
     energy = grant_energy(
         db, user, amount=1, source="baduanjin",

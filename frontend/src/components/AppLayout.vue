@@ -47,8 +47,15 @@ const navItems = [
   { name: 'profile', label: '我的', short: '我的', path: '/profile', icon: '👤' },
 ]
 
-// 当前激活的导航项
-const activeNav = computed(() => route.name)
+// 当前激活的导航项；子页面映射到父级，避免 /diary/write 等子路由没有高亮
+const NAV_ALIASES = {
+  'diary-write': 'diary-list',
+  'diary-pick': 'diary-list',
+  'diary-capsule': 'diary-list',
+  'music-western': 'music-list',
+  'music-detail': 'music-list',
+}
+const activeNav = computed(() => NAV_ALIASES[route.name] || route.name)
 
 // 全屏布局：移动端不显示底部 tabbar + 不应用 padding（聊天页等全屏场景）
 const isFullscreen = computed(() => !!route.meta?.fullscreen)

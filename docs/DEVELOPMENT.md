@@ -2,7 +2,7 @@
 
 > 改代码前**必读**。这里汇总了当前仍然有效的开发铁律 + 踩坑复现与修法；逐版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **当前版本：v2.6.4（2026-11-08）**。逐版本变更见 [CHANGELOG.md](CHANGELOG.md)；本文只保留仍然有效的开发约定与踩坑。
+> **当前版本：v2.6.5（2026-11-23）**。逐版本变更见 [CHANGELOG.md](CHANGELOG.md)；本文只保留仍然有效的开发约定与踩坑。
 
 ---
 
@@ -1123,6 +1123,11 @@ curl -b c.txt -X POST http://127.0.0.1:5000/api/ai/healing \
 ### 3.17 子组件根节点定位覆盖父级布局（v2.6.3）
 
 `HeroScene.vue` 自带 `.hero-scene { position: relative }`，父级 HomeView 想把它当绝对定位背景时，同名 class 同优先级会被子组件后注入的 scoped 样式覆盖，结果 HeroScene 变成 flex 子项，桌面三列、移动端裁切。父级覆盖必须用 `.hero :deep(.hero-scene)` 提高优先级，并用 `height:100% !important` 覆盖内联高度；同时给 `.hero__content` 设 `pointer-events:none`，只让文案卡接收指针，空白区才能拖拽 3D。详见 [HANDOFF §6.27](HANDOFF.md)。
+
+### 3.18 文件路径 / 并发扣减两个高危坑（v2.6.5）
+
+1. **SPA fallback 文件读取**：`spa_dist_dir / full_path` 不能只检查 `".."`；Windows 绝对路径 `C:/Windows/win.ini` 会被拼成系统文件。必须 `resolve()` 后 `is_relative_to(dist_root)` 校验，越界回退 `index.html`。详见 [HANDOFF §6.28](HANDOFF.md)。
+2. **余额扣减**：不要「先查余额，再 UPDATE」；并发下两个请求都能通过。用 `WHERE total_energy >= cost` / `WHERE leaves >= cost` 的条件 UPDATE，`rowcount == 0` 即不足。唯一键冲突（昵称、八段锦打卡）捕获 `IntegrityError` 转 409/400。详见 [HANDOFF §6.29](HANDOFF.md)。
 
 ---
 

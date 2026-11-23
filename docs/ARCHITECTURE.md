@@ -4,7 +4,7 @@
 
 > 🔒 **改了本文件涉及的代码，必须同步更新**：[HANDOFF §12](HANDOFF.md) / [AGENTS.md](../AGENTS.md) / [DEVELOPMENT §1.8](DEVELOPMENT.md) 列出的对应文档。改代码不改文档 = 改了一半。
 
-> **当前版本：v2.6.4（2026-11-08）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
+> **当前版本：v2.6.5（2026-11-23）**。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文件只解释当前架构与取舍。
 
 ---
 
@@ -1102,6 +1102,14 @@ FastAPI 用 `response_model=*Out` 序列化时，**只保留 schema 显式声明
 - 商品当前是「橱窗 + 预约/外链」，不是商城；购买赠露水等交易闭环未实现。
 - 八段锦当前是跟练打卡 + Bilibili 跟练视频嵌入（16:9 iframe，`frame-src` 放行 `player.bilibili.com`）；**没有**视频上传/审核/防作弊。
 - 视频仅在 `TherapyView` 的八段锦结果卡内展示，不落库；外链可跳转 B 站原视频。
+
+### 7.9 SPA fallback 文件边界
+
+生产态 SPA fallback 会把 URL 片段拼到 `static/dist` 读取静态文件。只检查 `".."` 不够：Windows 绝对路径（如 `/C:/Windows/win.ini`）不含 `..`，`pathlib` 会把它当成绝对路径。
+
+**规则**：`dist_root = spa_dist_dir.resolve()`；`candidate = (spa_dist_dir / full_path).resolve()`；只有 `candidate.is_file() and candidate.is_relative_to(dist_root)` 才读取，否则回退 `index.html`。详见 [HANDOFF §6.28](HANDOFF.md)。
+
+**并发写**：余额/库存类扣减使用带 `WHERE balance >= cost` 的条件 UPDATE，不能只做「先查后扣」；唯一键冲突要捕获 `IntegrityError` 转 4xx，避免并发 500。详见 [HANDOFF §6.29](HANDOFF.md)。
 
 ---
 

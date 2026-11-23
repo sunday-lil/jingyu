@@ -16,6 +16,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -130,7 +131,12 @@ def update_my_profile(
 
     if changed:
         # 直接提交 ORM 对象属性（用户对象来自同一请求 session，安全）
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            # 并发改同名：先查重通过，但另一个请求抢先写入，唯一约束兜底
+            db.rollback()
+            raise HTTPException(status_code=409, detail="这个名字已经有人用了，换一个吧")
         db.refresh(user)
 
     return _build_profile(db, user, is_self=True)

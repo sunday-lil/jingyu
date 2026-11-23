@@ -150,6 +150,8 @@ const sendEncourage = async () => {
     if (Array.isArray(res?.new_badges) && res.new_badges.length > 0) {
       const badgeTexts = res.new_badges.map(b => `${b.image} 解锁徽章「${b.name}」· 赠 ${res.new_leaves} 落叶`)
       showToast(badgeTexts.join('  '))
+    } else if (res?.granted_energy === 0) {
+      showToast('你的鼓励已被海风带走 💛（今日露水已达上限）')
     } else {
       showToast('你的鼓励已被海风带走 💛 +1露水')
     }

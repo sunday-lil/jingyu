@@ -1,7 +1,11 @@
 # 静屿 · 更新日志（CHANGELOG）
 
-> 全部版本变更记录（v2.2.2 → v2.6.4），按版本倒序排列。
+> 全部版本变更记录（v2.2.2 → v2.6.5），按版本倒序排列。
 > 各版本部署须知见 [DEPLOYMENT.md](DEPLOYMENT.md)；决策背景与踩坑见 [HANDOFF.md](HANDOFF.md)。
+
+---
+
+> 🛡️ **2026-11-23 v2.6.5 安全与并发专项修复**：① **修复 SPA fallback 任意文件读取（高危）**：`@app.get("/{full_path:path}")` 原先只检查 `".."`，`GET /C:/Windows/win.ini` 可通过 Windows 绝对路径读取 dist 之外文件；现在 `resolve()` 后用 `is_relative_to(dist_root)` 限定在 `static/dist` 内，绝对路径/穿越路径统一回退 index.html。② **并发扣资源竞态**：`exchange_item` / `_exchange_flower_seed` 的露水/落叶扣减改为带 `WHERE balance >= cost` 的条件 UPDATE；`water_flower` 同样条件扣 1，避免并发请求把余额扣成负数。③ **昵称/八段锦打卡竞态**：`PATCH /api/profile` 捕获唯一约束并返回 409；`POST /api/therapy/baduanjin/checkin` 捕获唯一约束并返回 400，不再 500。④ **子路由导航**：`/diary/write`、`/diary/pick`、`/diary/capsule`、`/music/western`、`/music/:yin` 映射到父级导航高亮。⑤ **听曲徽章去重**：`listen_10` 改为统计 `distinct music_id`，同一首重复听不再凑满 10 首。⑥ **每日上限提示**：留言鼓励达到上限时返回 `granted_energy=0`，前端不再假报 `+1露水`。版本号 2.6.5。**自测**：`/C:/Windows/win.ini` 已只返回 SPA；临时用户验证资料重名 409、露水不足 400 且余额不变、浇水第二次 400 不回滚成负数、八段锦重复 400；`compileall` / `npm run build` / 浏览器 smoke 通过。
 
 ---
 

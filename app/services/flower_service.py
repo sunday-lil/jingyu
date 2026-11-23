@@ -94,14 +94,14 @@ def water_flower(db: Session, user: User, flower_id: int) -> UserFlower:
     if flower.stage == STAGE_WILTED:
         raise HTTPException(status_code=400, detail="花已枯萎，无法再浇水。可以拾取它化作落叶")
 
-    # 检查露水（盛开后刷新花期同样消耗 1 露水，与文档「每次浇灌消耗 1」一致）
-    if (user.total_energy or 0) < 1:
-        raise HTTPException(status_code=400, detail="露水不足，先去听一曲古琴或写篇日记吧")
-
-    # 扣 1 露水
-    db.query(User).filter(User.id == user.id).update(
-        {User.total_energy: User.total_energy - 1}
+    # 条件扣 1 露水：并发浇水时不会扣成负数（盛开后刷新花期同样消耗 1）
+    updated = (
+        db.query(User)
+        .filter(User.id == user.id, User.total_energy >= 1)
+        .update({User.total_energy: User.total_energy - 1})
     )
+    if not updated:
+        raise HTTPException(status_code=400, detail="露水不足，先去听一曲古琴或写篇日记吧")
 
     if flower.stage == STAGE_BLOOM:
         # 盛开后再浇水：刷新 last_watered_at，延长枯萎时间

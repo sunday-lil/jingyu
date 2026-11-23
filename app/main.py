@@ -74,7 +74,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="静屿 — 治愈系身心疗愈平台",
         description="古琴五音 · 漂流瓶日记 · 心情手帐 · 精神花园",
-        version="2.6.4",
+        version="2.6.5",
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url=None,
@@ -211,9 +211,12 @@ def create_app() -> FastAPI:
         if spa_index_path.exists():
             # 静态资源请求：尝试从 dist 读取对应文件
             if full_path:
-                candidate = spa_dist_dir / full_path
+                # 防目录穿越 / Windows 绝对路径（如 /C:/Windows/win.ini）：
+                # 必须 resolve 后确认仍在 dist 目录内，不能只检查 ".."。
+                dist_root = spa_dist_dir.resolve()
                 try:
-                    if candidate.is_file() and ".." not in full_path:
+                    candidate = (spa_dist_dir / full_path).resolve()
+                    if candidate.is_file() and candidate.is_relative_to(dist_root):
                         ext = candidate.suffix.lower()
                         media_type = EXT_TO_MIME.get(ext, "application/octet-stream")
                         return Response(

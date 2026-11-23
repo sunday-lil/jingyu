@@ -3,7 +3,7 @@
 > 写给接手这个项目的下一个 AI（Cursor / Copilot / Devin / 任何 Agent）。
 > 本文 = 项目元信息 + 关键决策 + 踩坑清单；完整文档地图见 [README.md](README.md)。
 
-> **当前版本：v2.6.4（2026-11-08）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
+> **当前版本：v2.6.5（2026-11-23）**。全部版本变更历史见 [CHANGELOG.md](CHANGELOG.md)；本文只保留交接所需的当前信息。
 
 ---
 
@@ -13,7 +13,7 @@
 **类型**：治愈系身心疗愈 Web 应用
 **性质**：非商业 / 纯治愈 / 隐私边界清晰 / 轻运营
 **代码体量**：约 3 000 行 Python（FastAPI 纯 API 后端 + SPA fallback）+ Vue 3 SPA 工程化前端（`frontend/`，约 3 000 行 `.vue`/`.js`）
-**当前阶段**：v2.6.4（2026-11-08）——琴音标签重写、宫卡对齐、静屿角落并入日记海岸的「时光胶囊」、身心调理独立首页板块、压缩 Hero 文案、新增忘记密码恢复码流程。v2.6.2 完成全量后端 bug/性能修复，v2.6.3 完成首页 Hero 响应式修复与 Playwright 回归。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
+**当前阶段**：v2.6.5（2026-11-23）——在 v2.6.4 功能基础上做安全/并发专项：修复 SPA fallback 任意文件读取、并发扣资源、昵称/八段锦打卡竞态、子路由导航高亮、听曲徽章去重与每日上限假提示。v2.6.2 完成全量后端 bug/性能修复，v2.6.3 完成首页 Hero 响应式修复与 Playwright 回归。更早的版本细节统一见 [CHANGELOG.md](CHANGELOG.md)，本文不再重复。当前状态与已知问题见 [PROJECT_STATE.md](PROJECT_STATE.md)。
 
 ---
 
@@ -232,7 +232,7 @@ webwrold/
 
 ## 4. 实现阶段（摘要）
 
-> 逐版本细节（v2.2.2 → v2.6.4）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
+> 逐版本细节（v2.2.2 → v2.6.5）统一见 [CHANGELOG.md](CHANGELOG.md)。这里只列对交接有影响的主线。
 
 | 阶段 | 主要内容 | 代码落点 |
 |---|---|---|
@@ -250,6 +250,7 @@ webwrold/
 | v2.6.2（10-25） | 全量 bug 修复：听曲露水 422、资料保存 session、`/admin` 404、私密日记留言、输入边界、N+1/启动 IO 优化 | [deps.py](../app/deps.py) / [diary.py](../app/routers/diary.py) / [MusicDetailView.vue](../frontend/src/views/music/MusicDetailView.vue) |
 | v2.6.3（11-08） | 首页 Hero 三列/裁切修复 + 3D 指针穿透 + 平板短导航 + `🏝️` 图标 + SEO 去树洞 | [HomeView.vue](../frontend/src/views/HomeView.vue) / [AppLayout.vue](../frontend/src/components/AppLayout.vue) / [index.html](../frontend/index.html) |
 | v2.6.4（11-08） | 22 首曲目标签重写 + 宫卡对齐 + 时光胶囊（树+埋胶囊动画）+ 身心调理独立板块 + Hero 文案压缩 + 忘记密码恢复码 | [seed.py](../app/seed.py) / [CapsuleView.vue](../frontend/src/views/diary/CapsuleView.vue) / [auth.py](../app/routers/auth.py) |
+| v2.6.5（11-23） | SPA fallback 任意文件读取修复 + 并发扣资源 + 昵称/打卡竞态 + 子路由导航 + 听曲徽章去重 | [main.py](../app/main.py) / [energy_service.py](../app/services/energy_service.py) / [profile.py](../app/routers/profile.py) / [AppLayout.vue](../frontend/src/components/AppLayout.vue) |
 
 **当前代码规模**：Python 约 3k 行；Vue/JS 约 3k 行；12 张表；约 62 个 API 端点（含后台 13 个）。
 
@@ -944,6 +945,24 @@ onBeforeUnmount(() => {
 
 **修复**（v2.6.3）：HomeView 用 `.hero :deep(.hero-scene)` 提高优先级并 `height:100% !important` 覆盖内联高度；`.hero__content` 设 `pointer-events:none`，只让品牌/理念卡接收指针；移动端隐藏 3D 控制条与滚动提示。**铁律**：子组件根节点若自带定位样式，父级想改布局必须用 `:deep()` 或明确的更高优先级，不能只写同名 class。
 
+### 6.28 SPA fallback 绝对路径任意文件读取（2026-11-23 v2.6.5 加）
+
+**症状**：生产模式请求 `GET /C:/Windows/win.ini`（或 `GET /C:%5CWindows%5Cwin.ini`）会返回系统文件内容，绕过 `static/dist` 目录。
+
+**根因**：[app/main.py](../app/main.py) 的 SPA fallback 用 `candidate = spa_dist_dir / full_path` 读取静态资源，原检查只有 `".." not in full_path`。Windows 绝对路径不含 `..`，`pathlib` 会直接丢弃左侧目录，`candidate.is_file()` 对系统文件为真。
+
+**修复**（v2.6.5）：先 `dist_root = spa_dist_dir.resolve()`，再 `candidate = (spa_dist_dir / full_path).resolve()`，只有 `candidate.is_file() and candidate.is_relative_to(dist_root)` 才读取；绝对路径/穿越路径一律回退 `index.html`。**铁律**：任何把 URL 片段拼到文件系统的代码，必须 `resolve()` + 容器目录校验，不能只查 `..`。
+
+### 6.29 并发扣资源与唯一约束竞态（2026-11-23 v2.6.5 加）
+
+**症状**：两个并发请求可能都通过余额检查，把露水/落叶扣成负数；并发改同名返回 500；并发八段锦打卡返回 500。
+
+**修复**（v2.6.5）：
+- [energy_service.py](../app/services/energy_service.py) 的兑换、[flower_service.py](../app/services/flower_service.py) 的浇水改为带 `WHERE balance >= cost` 的条件 `UPDATE`，`rowcount == 0` 即余额不足。
+- [profile.py](../app/routers/profile.py) 昵称唯一约束冲突捕获 `IntegrityError` → 409。
+- [therapy_service.py](../app/services/therapy_service.py) 八段锦唯一约束冲突捕获 → 400。
+- 新增涉及余额/唯一键的写操作时，不要只做「先 SELECT 再 UPDATE」，要把余额条件写进 UPDATE 或捕获唯一约束。
+
 ---
 
 ## 7. 改动指南
@@ -1304,5 +1323,5 @@ git commit -m "chore(deps): bump bcrypt to 4.2"
 
 ---
 
-> 最后更新：2026-11-17（环境升级至 Python 3.15.2 / Node 26.13.1；清理过期脚本与旧截图，复核构建与运行）。
-> 代码版本：v2.6.4（2026-11-08）。
+> 最后更新：2026-11-23（v2.6.5：修复 SPA fallback 任意文件读取、并发扣资源/唯一键竞态、子路由导航与徽章去重；复核构建与浏览器回归）。
+> 代码版本：v2.6.5（2026-11-23）。

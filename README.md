@@ -6,7 +6,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-sunday--lil%2Fjingyu-181717?logo=github)](https://github.com/sunday-lil/jingyu)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Status](https://img.shields.io/badge/status-v2.6.4-success)]()
+[![Status](https://img.shields.io/badge/status-v2.6.5-success)]()
 
 **English** — Jingyu (静屿, "Quiet Isle") is a non-commercial healing web app: guqin five-tone music, a body-mind therapy recommender (Baduanjin / sachet / bracelet / food), drifting diary bottles, a private island corner, a Russell-circumplex mood calendar, and a garden that grows with your daily check-ins. Built with FastAPI + Vue 3 + Three.js. Self-host in two commands.
 
@@ -45,14 +45,14 @@ python start.py    # 浏览器打开 http://127.0.0.1:5000
 
 首次启动会自动安装前端依赖并构建（需 Python 3.11+ 与 Node.js 18+，首次约几分钟），之后秒开；数据库与种子数据全自动，无需任何配置。
 
-> **2026-11-17 环境验证**：已在 Python 3.15.2 / Node 26.13.1 / npm 11.20.0 下通过 `compileall`、`npm run build`、`start.py restart` 与首页/音乐/调理/登录/忘记密码浏览器 smoke；`logs/healing.log` 无 ERROR。环境版本高于最低要求，旧命令仍可直接用。
+> **2026-11-23 环境验证**：已在 Python 3.15.2 / Node 26.13.1 / npm 11.20.0 下通过 `compileall`、`npm run build`、`start.py restart` 与首页/音乐/调理/登录/忘记密码浏览器 smoke；`logs/healing.log` 无 ERROR。环境版本高于最低要求，旧命令仍可直接用。
 
 ---
 
 # 以下为开发者参考，普通用户可跳过
 
 > 🤖 **接手项目先读**：[AGENTS.md](AGENTS.md)（工作规则）→ [docs/HANDOFF.md](docs/HANDOFF.md)（交接）→ [docs/README.md](docs/README.md)（文档地图）。
-> 📜 **版本更新历史**：[docs/CHANGELOG.md](docs/CHANGELOG.md)（v2.2.2 → v2.6.4）。
+> 📜 **版本更新历史**：[docs/CHANGELOG.md](docs/CHANGELOG.md)（v2.2.2 → v2.6.5）。
 
 ## 0. 一句话速览
 
@@ -316,6 +316,8 @@ YIN_INFO = {
 6. **SPA fallback 必须排除 `/api`、`/static`、`/admin`、`/docs`**。
 7. **后台路径用 `/admin/login`**：`/admin` 会 302 到 `/admin/`。
 8. **AI 模型会下架**：换模型同时改 `.env` 与 `config.py`；reasoning 模型给小 `max_tokens` 会静默空回复。
+9. **SPA fallback 文件读取必须 `resolve()` + `is_relative_to(dist_root)`**：Windows 绝对路径不含 `..`，只查 `..` 会读系统文件。
+10. **余额/库存扣减用条件 UPDATE**：`WHERE total_energy >= cost` / `WHERE leaves >= cost`，不要先查后扣；唯一键冲突捕获 `IntegrityError`。
 
 ---
 
